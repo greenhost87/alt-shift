@@ -1,0 +1,34 @@
+# Dependencies and non-Bun lockfiles
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Build and framework output
+.output/
+.nitro/
+.tanstack/
+dist/
+*.tsbuildinfo
+
+# Tests
+coverage/
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Agent and tool artifacts
+.aqg/
+*.log
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
