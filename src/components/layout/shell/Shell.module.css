@@ -14,9 +14,13 @@
   width: 100%;
 }
 
-.brand {
+.brandLink {
   display: block;
   flex: 0 0 auto;
+}
+
+.brand {
+  display: block;
   height: var(--rs-unit-brand-height);
   width: var(--rs-unit-brand-width);
 }

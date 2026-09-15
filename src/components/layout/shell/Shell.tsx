@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { View } from 'reshaped';
 import { useApplicationStore } from '../../../system/state/application';
@@ -33,13 +33,15 @@ export function Shell({ children }: ShellProps) {
         justify="space-between"
         wrap={{ s: true, m: false }}
       >
-        <img
-          alt="Alt+Shift"
-          className={styles['brand']}
-          height={brandSize.height}
-          src="/brand.svg"
-          width={brandSize.width}
-        />
+        <Link className={styles['brandLink']} to="/">
+          <img
+            alt="Alt+Shift"
+            className={styles['brand']}
+            height={brandSize.height}
+            src="/brand.svg"
+            width={brandSize.width}
+          />
+        </Link>
         <View
           align="center"
           className={styles['controls']}
