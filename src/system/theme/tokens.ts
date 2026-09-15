@@ -63,6 +63,12 @@ export const variantTheme = {
       fontWeightToken: 'regular',
       lineHeight: { px: 20 },
     },
+    body3: {
+      fontFamilyToken: 'body',
+      fontSize: { px: 18 },
+      fontWeightToken: 'regular',
+      lineHeight: { px: 28 },
+    },
     featured1: {
       fontFamilyToken: 'title',
       fontSize: { px: 36 },
@@ -152,6 +158,8 @@ export const variantTheme = {
     textareaHeight: { px: 236 },
     textareaPaddingHorizontal: { px: 14 },
     textareaPaddingVertical: { px: 12 },
+    x12: { px: 48 },
+    x16: { px: 64 },
   },
   viewport: {
     l: { minPx: 900 },

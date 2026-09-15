@@ -4,4 +4,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [tanstackStart(), viteReact()],
+  ssr: {
+    noExternal: ['@reshaped/utilities', 'reshaped'],
+  },
 });

@@ -6,6 +6,8 @@ import { TextField } from '../../ui/field/TextField';
 import { CopyIcon } from '../../ui/icon/Icon';
 import styles from './ApplicationGenerator.module.css';
 
+const DETAILS_LIMIT = 1200;
+
 type ApplicationGeneratorProps = {
   company: string;
   details: string;
@@ -31,11 +33,15 @@ export function ApplicationGenerator({
   onStrengthsChange,
   strengths,
 }: ApplicationGeneratorProps) {
+  const detailsLength = details.length;
+  const detailsError =
+    detailsLength > DETAILS_LIMIT ? `${detailsLength}/${DETAILS_LIMIT}` : undefined;
   const canGenerate =
     jobTitle.trim().length > 0 &&
     company.trim().length > 0 &&
     strengths.trim().length > 0 &&
-    details.trim().length > 0;
+    details.trim().length > 0 &&
+    !detailsError;
 
   return (
     <form
@@ -70,10 +76,10 @@ export function ApplicationGenerator({
       />
       <TextAreaField
         autoFocus
-        hint={`${details.length}/1200`}
+        error={detailsError}
+        hint={`${detailsLength}/${DETAILS_LIMIT}`}
         id="details"
         label="Additional details"
-        maxLength={1200}
         name="details"
         onChange={onDetailsChange}
         placeholder="Describe why you are a great fit or paste your bio"

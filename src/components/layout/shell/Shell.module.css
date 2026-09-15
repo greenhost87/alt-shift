@@ -28,13 +28,13 @@
 .status {
   color: var(--rs-color-foreground-neutral-faded);
   font-family: var(--rs-font-family-body);
-  font-size: var(--rs-font-size-featured-6);
-  line-height: var(--rs-line-height-featured-6);
+  font-size: var(--rs-font-size-body-3);
+  line-height: var(--rs-line-height-body-3);
   white-space: nowrap;
 }
 
 .main {
-  margin: var(--rs-unit-x12) auto 0;
+  margin: var(--rs-unit-x8) auto 0;
   max-width: var(--rs-unit-content-width);
 }
 

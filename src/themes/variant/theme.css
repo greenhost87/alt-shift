@@ -118,6 +118,11 @@
 --rs-font-family-caption-2: var(--rs-font-family-body);
 --rs-font-weight-caption-2: var(--rs-font-weight-regular);
 --rs-letter-spacing-caption-2: normal;
+--rs-font-size-body-3: 1.125rem;
+--rs-line-height-body-3: 1.75rem;
+--rs-font-family-body-3: var(--rs-font-family-body);
+--rs-font-weight-body-3: var(--rs-font-weight-regular);
+--rs-letter-spacing-body-3: normal;
 --rs-unit-base: 4px;
 --rs-unit-border-width: 1px;
 --rs-unit-brand-height: 48px;
@@ -153,6 +158,8 @@
 --rs-unit-textarea-height: 236px;
 --rs-unit-textarea-padding-horizontal: 14px;
 --rs-unit-textarea-padding-vertical: 12px;
+--rs-unit-x12: 48px;
+--rs-unit-x16: 64px;
 --rs-unit-x1: 4px;
 --rs-unit-x2: 8px;
 --rs-unit-x3: 12px;

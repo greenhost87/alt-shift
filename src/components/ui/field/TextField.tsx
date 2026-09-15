@@ -1,4 +1,4 @@
-import { FormControl, TextField as ReshapedTextField } from 'reshaped';
+import { FormControl } from 'reshaped';
 import styles from './Field.module.css';
 
 type TextFieldProps = {
@@ -26,23 +26,27 @@ export function TextField({
   placeholder,
   value,
 }: TextFieldProps) {
+  const descriptionId = error ? `${id}-error` : hint ? `${id}-caption` : undefined;
+
   return (
     <div className={styles['field']}>
       <FormControl disabled={disabled} hasError={Boolean(error)} id={id} size="large">
-        <FormControl.Label>{label}</FormControl.Label>
-        <div className={error ? styles['controlError'] : styles['control']}>
-          <ReshapedTextField
-            inputAttributes={{ autoComplete }}
-            name={name}
-            onChange={({ value: nextValue }: { value: string }) => onChange(nextValue)}
-            placeholder={placeholder}
-            size="large"
-            value={value}
-            variant="headless"
-          />
-        </div>
-        {error && <FormControl.Error>{error}</FormControl.Error>}
-        {!error && hint && <FormControl.Helper>{hint}</FormControl.Helper>}
+        <label htmlFor={id}>{label}</label>
+        <input
+          aria-describedby={descriptionId}
+          aria-invalid={Boolean(error)}
+          autoComplete={autoComplete}
+          className={error ? styles['controlError'] : styles['control']}
+          disabled={disabled}
+          id={id}
+          name={name}
+          onChange={(event) => onChange(event.currentTarget.value)}
+          placeholder={placeholder}
+          type="text"
+          value={value}
+        />
+        {error ? <FormControl.Error>{error}</FormControl.Error> : null}
+        {!error && hint ? <FormControl.Helper>{hint}</FormControl.Helper> : null}
       </FormControl>
     </div>
   );

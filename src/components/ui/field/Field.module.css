@@ -1,29 +1,43 @@
 .field label {
   color: var(--rs-color-foreground-neutral-subtle);
+  display: block;
+  font-size: var(--rs-font-size-body-2);
+  font-weight: var(--rs-font-weight-medium);
+  line-height: var(--rs-line-height-body-2);
+  margin-bottom: var(--rs-unit-x1-5);
 }
 
 .control,
 .controlError,
 .textarea,
 .textareaError {
-  background: var(--rs-color-white);
+  background: var(--rs-color-background-elevation-base);
   border: var(--rs-unit-border-width) solid var(--rs-color-border-neutral);
   border-radius: var(--rs-radius-medium);
   box-shadow: var(--rs-shadow-control);
   box-sizing: border-box;
+  color: var(--rs-color-foreground-neutral);
+  display: block;
+  font-family: var(--rs-font-family-body);
+  font-size: var(--rs-font-size-body-1);
+  font-weight: var(--rs-font-weight-regular);
+  line-height: var(--rs-line-height-body-1);
+  outline: none;
   transition:
     border-color var(--rs-duration-fast) var(--rs-easing-standard),
     box-shadow var(--rs-duration-fast) var(--rs-easing-standard);
+  width: 100%;
 }
 
 .control,
 .controlError {
   min-height: var(--rs-unit-control-height);
-  padding: var(--rs-unit-control-padding-vertical) var(--rs-unit-control-padding-horizontal);
+  padding: calc(var(--rs-unit-control-padding-vertical) - var(--rs-unit-border-width))
+    calc(var(--rs-unit-control-padding-horizontal) - var(--rs-unit-border-width));
 }
 
-.control:focus-within,
-.textarea:focus-within {
+.control:focus,
+.textarea:focus {
   border-color: var(--rs-color-border-primary);
   border-radius: calc(var(--rs-radius-medium) + var(--rs-unit-x0-5));
   box-shadow:
@@ -33,8 +47,8 @@
 
 .controlError,
 .textareaError,
-.controlError:focus-within,
-.textareaError:focus-within {
+.controlError:focus,
+.textareaError:focus {
   border-color: var(--rs-color-border-critical);
   border-radius: calc(var(--rs-radius-medium) + var(--rs-unit-x0-5));
   box-shadow:
@@ -42,26 +56,21 @@
     0 0 0 var(--rs-unit-x1) var(--rs-color-error-ring);
 }
 
-.control > div {
-  min-height: var(--rs-line-height-body-1);
-  padding: 0;
+.control:disabled,
+.controlError:disabled,
+.textarea:disabled,
+.textareaError:disabled {
+  background: var(--rs-color-background-disabled-faded);
+  color: var(--rs-color-foreground-disabled);
+  cursor: not-allowed;
 }
 
 .textarea,
 .textareaError {
   min-height: var(--rs-unit-textarea-height);
-  overflow: hidden;
-}
-
-.textarea > div,
-.textareaError > div {
-  min-height: var(--rs-unit-textarea-content-height);
-}
-
-.textarea textarea,
-.textareaError textarea {
-  min-height: var(--rs-unit-textarea-content-height);
-  padding: var(--rs-unit-textarea-padding-vertical) var(--rs-unit-textarea-padding-horizontal);
+  padding: calc(var(--rs-unit-textarea-padding-vertical) - var(--rs-unit-border-width))
+    calc(var(--rs-unit-textarea-padding-horizontal) - var(--rs-unit-border-width));
+  resize: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

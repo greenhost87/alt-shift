@@ -610,6 +610,16 @@
       },
       "fontFamilyToken": "body",
       "fontWeightToken": "regular"
+    },
+    "body3": {
+      "fontFamilyToken": "body",
+      "fontSize": {
+        "px": 18
+      },
+      "fontWeightToken": "regular",
+      "lineHeight": {
+        "px": 28
+      }
     }
   },
   "unit": {
@@ -717,6 +727,12 @@
     },
     "textareaPaddingVertical": {
       "px": 12
+    },
+    "x12": {
+      "px": 48
+    },
+    "x16": {
+      "px": 64
     },
     "x1": {
       "px": 4

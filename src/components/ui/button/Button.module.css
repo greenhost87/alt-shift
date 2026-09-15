@@ -22,18 +22,29 @@
 .primary {
   background: var(--rs-color-background-primary);
   border-color: var(--rs-color-background-primary);
-  color: var(--rs-color-white);
+  color: var(--rs-color-on-background-primary);
 }
 
-.primary:hover:not([aria-disabled='true']) {
+.primary:hover:not([aria-disabled='true']),
+.primary:active:not([aria-disabled='true']) {
   background: var(--rs-color-background-primary-highlighted);
   border-color: var(--rs-color-background-primary-highlighted);
 }
 
 .secondary {
-  background: var(--rs-color-white);
+  background: var(--rs-color-background-elevation-base);
   border-color: var(--rs-color-border-neutral);
   color: var(--rs-color-foreground-neutral-subtle);
+}
+
+.secondary:hover:not([aria-disabled='true']),
+.ghost:hover:not([aria-disabled='true']) {
+  background: var(--rs-color-background-neutral-faded);
+}
+
+.secondary:active:not([aria-disabled='true']),
+.ghost:active:not([aria-disabled='true']) {
+  background: var(--rs-color-background-neutral-highlighted);
 }
 
 .ghost {
@@ -62,8 +73,8 @@
   gap: var(--rs-unit-x2);
   line-height: var(--rs-line-height-body-1);
   min-height: var(--rs-unit-button-height-medium);
-  padding: var(--rs-unit-button-padding-medium-vertical)
-    var(--rs-unit-button-padding-medium-horizontal);
+  padding: calc(var(--rs-unit-button-padding-medium-vertical) - var(--rs-unit-border-width))
+    calc(var(--rs-unit-button-padding-medium-horizontal) - var(--rs-unit-border-width));
 }
 
 .large {
@@ -71,15 +82,15 @@
   gap: var(--rs-unit-x3);
   line-height: var(--rs-line-height-featured-6);
   min-height: var(--rs-unit-button-height-large);
-  padding: var(--rs-unit-button-padding-large-vertical)
-    var(--rs-unit-button-padding-large-horizontal);
+  padding: calc(var(--rs-unit-button-padding-large-vertical) - var(--rs-unit-border-width))
+    calc(var(--rs-unit-button-padding-large-horizontal) - var(--rs-unit-border-width));
 }
 
 .iconButton {
   height: var(--rs-unit-control-height);
   min-height: var(--rs-unit-control-height);
   min-width: var(--rs-unit-control-height);
-  padding: var(--rs-unit-button-padding-medium-vertical);
+  padding: calc(var(--rs-unit-button-padding-medium-vertical) - var(--rs-unit-border-width));
   width: var(--rs-unit-control-height);
 }
 
@@ -131,6 +142,22 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (--rs-viewport-s) {
+  .compact {
+    min-height: var(--rs-unit-button-height-medium);
+    padding-block: calc(
+      var(--rs-unit-button-padding-medium-vertical) - var(--rs-unit-border-width)
+    );
+  }
+
+  .iconButton {
+    height: var(--rs-unit-button-height-medium);
+    min-height: var(--rs-unit-button-height-medium);
+    min-width: var(--rs-unit-button-height-medium);
+    width: var(--rs-unit-button-height-medium);
   }
 }
 
