@@ -9,6 +9,9 @@
   font-weight: var(--rs-font-weight-semibold);
   justify-content: center;
   position: relative;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
   transition:
     background-color var(--rs-duration-fast) var(--rs-easing-standard),
     border-color var(--rs-duration-fast) var(--rs-easing-standard);
@@ -131,6 +134,7 @@
 .content {
   align-items: center;
   display: inline-flex;
+  min-width: 0;
   gap: inherit;
 }
 

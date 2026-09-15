@@ -4,7 +4,7 @@ import { GoalBanner } from '../../ui/banner/Banner';
 import { Button } from '../../ui/button/Button';
 import { CopyButton } from '../../ui/button/CopyButton';
 import { CreateButton } from '../../ui/button/CreateButton';
-import { Icon, PlusIcon } from '../../ui/icon/Icon';
+import { Icon } from '../../ui/icon/Icon';
 import cardStyles from './ApplicationCard.module.css';
 import { useStoredApplications } from '../../../system/applications/storage';
 import { writeClipboardText } from '../../../system/clipboard/write';
@@ -73,12 +73,17 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
         {shouldShowEmptyState(storageStatus, applicationCount) ? (
           <div className={styles['emptyState']}>
             <div aria-hidden="true" className={styles['emptyStateVisual']}>
-              <PlusIcon />
+              <Icon viewBox="0 0 64 64" strokeWidth={2}>
+                <rect x="16" y="6" width="32" height="44" rx="4" />
+                <path d="M24 17h16M24 25h16M24 33h8" />
+                <path d="M8 30v24a4 4 0 0 0 4 4h40a4 4 0 0 0 4-4V30L32 46Z" />
+              </Icon>
             </div>
             <div className={styles['emptyStateCopy']}>
               <h2 className={styles['emptyStateTitle']}>No applications yet</h2>
               <p className={styles['emptyStateDescription']}>
-                Create an application to start making progress toward your next role.
+                Your next chapter starts with a great letter. Add a role, share your strengths,
+                and create a personalized application in seconds.
               </p>
             </div>
             <div className={styles['emptyStateAction']}>

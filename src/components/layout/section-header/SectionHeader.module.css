@@ -1,3 +1,8 @@
+.header h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .action {
   flex: 0 0 auto;
 }

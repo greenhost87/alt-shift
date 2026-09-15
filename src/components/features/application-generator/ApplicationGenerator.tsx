@@ -159,7 +159,6 @@ function renderApplicationPreview(
       <p className={[styles['placeholder'], typographyStyles['body']].join(' ')}>
         Your personalized job application will appear here...
       </p>
-      <div className={styles['previewAction']}>{copyButton}</div>
     </div>
   );
 }

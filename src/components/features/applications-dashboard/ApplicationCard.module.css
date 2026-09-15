@@ -22,6 +22,7 @@
   min-height: 0;
   overflow: hidden;
   white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .fade {
@@ -43,6 +44,7 @@
   display: flex;
   flex: 0 0 auto;
   justify-content: space-between;
+  gap: var(--rs-unit-x2);
   padding-top: var(--rs-unit-x4);
   position: relative;
   z-index: 1;

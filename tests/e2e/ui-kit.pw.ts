@@ -64,6 +64,45 @@ test('desktop primitives match the design geometry and typography', async ({ pag
   expect(generateBox?.height).toBe(60);
 });
 
+async function expectMobileStatusLayout(page: Page) {
+  const brand = await page.getByAltText('Alt+Shift').boundingBox();
+  const home = await page.getByRole('button', { name: 'Home' }).boundingBox();
+  const status = page.getByText('3/5 applications generated');
+  const label = await status.boundingBox();
+  const progress = await status.locator('..').locator('progress').locator('..').boundingBox();
+  expect(home?.y).toBe(brand?.y);
+  expect(label?.y).toBeGreaterThanOrEqual((home?.y ?? 0) + (home?.height ?? 0));
+  expect(progress?.x).toBeGreaterThanOrEqual((label?.x ?? 0) + (label?.width ?? 0));
+  expect(Math.abs((progress?.y ?? 0) + (progress?.height ?? 0) / 2 -
+    (label?.y ?? 0) - (label?.height ?? 0) / 2)).toBeLessThanOrEqual(1);
+}
+
+async function expectPageWidth(page: Page, width: number) {
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+}
+
+for (const width of [320, 375, 480, 767, 768, 899, 900, 1024, 1440]) {
+  test(`responsive screens fit at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ height: 900, width });
+    await page.goto('/', { waitUntil: 'networkidle' });
+    await expectPageWidth(page, width);
+    if (width < 768) await expectMobileStatusLayout(page);
+    for (let remaining = 3; remaining > 0; remaining -= 1) {
+      await page.getByRole('button', { name: 'Delete' }).first().click();
+    }
+    await expect(page.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
+    await expectPageWidth(page, width);
+    await page.getByRole('button', { name: 'Create your first application' }).click();
+    await page.getByLabel('Job title').fill('Engineering'.repeat(20));
+    await page.getByLabel('Company').fill('Company'.repeat(20));
+    await expectPageWidth(page, width);
+    await expect(page.getByRole('button', { name: 'Copy to clipboard' })).toHaveCount(0);
+    await page.screenshot({ path: `test-results/responsive-generator-${width}.png`, fullPage: true });
+    await page.getByRole('button', { name: 'Home' }).click();
+    await page.screenshot({ path: `test-results/responsive-empty-${width}.png`, fullPage: true });
+  });
+}
+
 test('textarea exposes the over-limit error state without truncating input', async ({ page }) => {
   await page.goto('/applications/new', { waitUntil: 'networkidle' });
 

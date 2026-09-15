@@ -27,6 +27,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: var(--rs-unit-x6);
   min-height: calc(var(--rs-unit-panel-height) - var(--rs-unit-x12));
 }
 
@@ -114,7 +115,9 @@
   .fieldRow {
     grid-template-columns: minmax(0, 1fr);
   }
+}
 
+@media (max-width: 899px) {
   .preview,
   .completedPreview,
   .loadingPreview {
