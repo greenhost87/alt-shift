@@ -27,7 +27,9 @@ export function GoalBanner({
           <p className={[styles['description'], typographyStyles['body']].join(' ')}>
             {description}
           </p>
-          <CreateButton label="Create New" onClick={onCreate} prominent />
+          <div className={styles['action']}>
+            <CreateButton label="Create New" onClick={onCreate} prominent />
+          </div>
         </div>
         <Progress
           accessibleLabel={`${current} of ${total} applications generated`}

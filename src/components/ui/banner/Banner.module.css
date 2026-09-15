@@ -43,3 +43,28 @@
     padding: var(--rs-unit-x10) var(--rs-unit-x4);
   }
 }
+
+@media (max-width: 479px) {
+  .banner {
+    padding-block: var(--rs-unit-x8);
+  }
+
+  .content {
+    gap: var(--rs-unit-x6);
+  }
+
+  .heading {
+    gap: var(--rs-unit-x3);
+    width: 100%;
+  }
+
+  .title {
+    font-size: 2rem;
+    line-height: 2.5rem;
+  }
+
+  .action,
+  .action > * {
+    width: 100%;
+  }
+}

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Text, View } from 'reshaped';
+import styles from './SectionHeader.module.css';
 
 type SectionHeaderProps = {
   action?: ReactNode;
@@ -21,6 +22,7 @@ export function SectionHeader({
       align={{ s: 'start', m: 'center' }}
       borderBottom
       borderColor="neutral-faded"
+      className={styles['header']}
       direction="row"
       gap={4}
       justify="space-between"
@@ -39,7 +41,7 @@ export function SectionHeader({
       >
         {title}
       </Text>
-      {action}
+      {action ? <div className={styles['action']}>{action}</div> : null}
     </View>
   );
 }

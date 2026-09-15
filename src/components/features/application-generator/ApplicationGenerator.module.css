@@ -126,6 +126,17 @@
   }
 }
 
+@media (max-width: 479px) {
+  .content {
+    gap: var(--rs-unit-x8);
+  }
+
+  .editor,
+  .form {
+    gap: var(--rs-unit-x3);
+  }
+}
+
 @keyframes driftMobile {
   from {
     transform: translateX(-25vw);

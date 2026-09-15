@@ -1,4 +1,27 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+async function expectContentFitsViewport(page: Page) {
+  const viewportWidth = await page.evaluate(() => document.documentElement.clientWidth);
+  const contentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(contentWidth).toBe(viewportWidth);
+
+  const actions = page.getByRole('button');
+  const actionCount = await actions.count();
+  for (let index = 0; index < actionCount; index += 1) {
+    const box = await actions.nth(index).boundingBox();
+    expect(box?.x).toBeGreaterThanOrEqual(0);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect((box?.x ?? viewportWidth) + (box?.width ?? 1)).toBeLessThanOrEqual(viewportWidth);
+  }
+}
+
+function getGoalBanner(page: Page) {
+  return page.locator('section').filter({
+    has: page.getByRole('heading', { name: 'Hit your goal' }),
+  });
+}
 
 test('desktop primitives match the design geometry and typography', async ({ page }) => {
   await page.setViewportSize({ height: 1300, width: 1440 });
@@ -11,9 +34,7 @@ test('desktop primitives match the design geometry and typography', async ({ pag
   expect(mainBox?.y).toBe(112);
   expect(mainBox?.width).toBe(1120);
 
-  const banner = page.locator('section').filter({
-    has: page.getByRole('heading', { name: 'Hit your goal' }),
-  });
+  const banner = getGoalBanner(page);
   await expect(banner).toHaveCSS('padding', '54px 64px');
 
   const card = page.locator('article').first();
@@ -86,12 +107,93 @@ test('mobile actions have touch targets of at least 44 pixels', async ({ page })
   await page.setViewportSize({ height: 812, width: 375 });
   await page.goto('/', { waitUntil: 'networkidle' });
 
-  const actions = page.getByRole('button');
-  const actionCount = await actions.count();
+  await expectContentFitsViewport(page);
+});
 
-  for (let index = 0; index < actionCount; index += 1) {
-    const box = await actions.nth(index).boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
-    expect(box?.width).toBeGreaterThanOrEqual(44);
-  }
+test('dashboard uses the compact layout at 320 pixels', async ({ page }) => {
+  await page.setViewportSize({ height: 568, width: 320 });
+  await page.goto('/', { waitUntil: 'networkidle' });
+
+  await expectContentFitsViewport(page);
+
+  const mainBox = await page.locator('main').boundingBox();
+  expect(mainBox?.x).toBe(12);
+  expect(mainBox?.width).toBe(296);
+
+  const brandBox = await page.getByAltText('Alt+Shift').boundingBox();
+  const homeBox = await page.getByRole('button', { name: 'Home' }).boundingBox();
+  const statusBox = await page.getByText('3/5 applications generated').boundingBox();
+  expect(brandBox?.width).toBe(128);
+  expect(homeBox?.y).toBe(brandBox?.y);
+  expect(statusBox?.y).toBeGreaterThanOrEqual((brandBox?.y ?? 0) + (brandBox?.height ?? 0));
+
+  const applicationsHeadingBox = await page
+    .getByRole('heading', { name: 'Applications', exact: true })
+    .boundingBox();
+  const headerCreateBox = await page
+    .getByRole('button', { name: 'Create New' })
+    .first()
+    .boundingBox();
+  expect(headerCreateBox?.y).toBeGreaterThanOrEqual(
+    (applicationsHeadingBox?.y ?? 0) + (applicationsHeadingBox?.height ?? 0),
+  );
+  expect(headerCreateBox?.width).toBe(mainBox?.width);
+
+  const cards = page.locator('article');
+  await expect(cards).toHaveCount(3);
+  await expect(cards.first()).toHaveCSS('height', '220px');
+  expect((await cards.nth(1).boundingBox())?.y).toBeGreaterThan(
+    (await cards.first().boundingBox())?.y ?? 0,
+  );
+
+  const banner = getGoalBanner(page);
+  await expect(banner).toHaveCSS('padding', '32px 16px');
+  await expect(banner.getByRole('heading', { name: 'Hit your goal' })).toHaveCSS(
+    'font-size',
+    '32px',
+  );
+  const bannerActionBox = await banner.getByRole('button', { name: 'Create New' }).boundingBox();
+  const bannerHeadingBox = await banner
+    .getByRole('heading', { name: 'Hit your goal' })
+    .boundingBox();
+  expect(bannerActionBox?.width).toBe(264);
+  expect(bannerActionBox?.y).toBeGreaterThan(
+    (bannerHeadingBox?.y ?? 0) + (bannerHeadingBox?.height ?? 0),
+  );
+
+  await page.evaluate(() => {
+    localStorage.setItem(
+      'variant-cover-letters:v1',
+      JSON.stringify({ applications: [], version: 1 }),
+    );
+  });
+  await page.reload({ waitUntil: 'networkidle' });
+
+  const emptyState = page.getByRole('heading', { name: 'No applications yet' }).locator('../..');
+  await expect(emptyState).toHaveCSS('min-height', '240px');
+  await expectContentFitsViewport(page);
+});
+
+test('generator uses the compact layout at 320 pixels', async ({ page }) => {
+  await page.setViewportSize({ height: 568, width: 320 });
+  await page.goto('/applications/new', { waitUntil: 'networkidle' });
+
+  await expectContentFitsViewport(page);
+
+  const title = page.getByRole('heading', { name: 'Product manager, Apple' });
+  await expect(title).toHaveCSS('font-size', '28px');
+
+  const jobTitleBox = await page.getByLabel('Job title').boundingBox();
+  const companyBox = await page.getByLabel('Company').boundingBox();
+  expect(companyBox?.y).toBeGreaterThanOrEqual((jobTitleBox?.y ?? 0) + (jobTitleBox?.height ?? 0));
+
+  const details = page.getByLabel('Additional details');
+  await expect(details).toHaveCSS('min-height', '200px');
+  expect((await details.boundingBox())?.height).toBe(200);
+
+  const generateBox = await page.getByRole('button', { name: 'Generate Now' }).boundingBox();
+  const previewBox = await page
+    .getByText('Your personalized job application will appear here...')
+    .boundingBox();
+  expect(previewBox?.y).toBeGreaterThan((generateBox?.y ?? 0) + (generateBox?.height ?? 0));
 });

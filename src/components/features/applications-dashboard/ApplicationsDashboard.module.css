@@ -104,3 +104,18 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+@media (max-width: 479px) {
+  .content {
+    gap: var(--rs-unit-x8);
+  }
+
+  .applications {
+    gap: var(--rs-unit-x5);
+  }
+
+  .emptyState {
+    min-height: 240px;
+    padding: var(--rs-unit-x6) var(--rs-unit-x3);
+  }
+}

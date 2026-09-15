@@ -47,3 +47,16 @@
   position: relative;
   z-index: 1;
 }
+
+@media (max-width: 479px) {
+  .card {
+    height: 220px;
+    padding: var(--rs-unit-x5);
+  }
+
+  .fade {
+    bottom: 52px;
+    left: var(--rs-unit-x5);
+    right: var(--rs-unit-x5);
+  }
+}
