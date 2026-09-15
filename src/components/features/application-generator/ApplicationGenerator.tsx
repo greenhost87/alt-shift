@@ -13,6 +13,7 @@ import { Button } from '../../ui/button/Button';
 import { CopyButton } from '../../ui/button/CopyButton';
 import { TextAreaField } from '../../ui/field/TextAreaField';
 import { TextField } from '../../ui/field/TextField';
+import { RepeatIcon } from '../../ui/icon/Icon';
 import typographyStyles from '../../ui/text/Typography.module.css';
 import styles from './ApplicationGenerator.module.css';
 
@@ -159,6 +160,7 @@ function renderApplicationPreview(
       <p className={[styles['placeholder'], typographyStyles['body']].join(' ')}>
         Your personalized job application will appear here...
       </p>
+      <div className={styles['previewAction']}>{copyButton}</div>
     </div>
   );
 }
@@ -227,7 +229,7 @@ function renderFormAction(options: FormActionsOptions) {
   }
   if (options.isCompleted) {
     return (
-      <Button fullWidth size="large" type="submit" variant="secondary">
+      <Button fullWidth icon={<RepeatIcon />} size="large" type="submit" variant="secondary">
         Try Again
       </Button>
     );
@@ -273,7 +275,7 @@ export function ApplicationWorkspace() {
   useRetryAvailability(retryAvailableAt, setRetryAvailableAt);
 
   const copyApplication = async () => {
-    setCopyError(await writeClipboardText(letter));
+    if (letter) setCopyError(await writeClipboardText(letter));
   };
 
   const submit = () => {

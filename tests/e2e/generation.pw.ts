@@ -62,6 +62,9 @@ async function expectCompletedGeneration(page: Page, letter: string) {
   await expect(page.getByText(letter)).toBeVisible();
   const tryAgain = page.getByRole('button', { name: 'Try Again' });
   await expect(tryAgain).toBeVisible();
+  await expect(tryAgain.locator('svg')).toHaveAttribute('viewBox', '0 0 24 24');
+  await expect(tryAgain.locator('svg')).toHaveCSS('width', '24px');
+  await expect(tryAgain.locator('svg')).toHaveCSS('height', '24px');
   await page.mouse.move(0, 0);
   await expect(tryAgain).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await expect(page.getByText('4/5 applications generated')).toBeVisible();
@@ -80,21 +83,92 @@ async function expectCompletedGeneration(page: Page, letter: string) {
   expect(bannerBox?.y).toBe((previewBox?.y ?? 0) + 620 + 48);
 }
 
+test('completed layout matches Figma with the full design letter', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1300 });
+  await page.addInitScript(() => {
+    window.respondToGeneration = () =>
+      window.generationResponse(window.generationFixtures.designStream);
+  });
+  await generateApplication(page);
+  await expectCompletedGeneration(page, generationFixtures.designLetter);
+  const letterBox = await page.getByText(generationFixtures.designLetter).boundingBox();
+  expect(letterBox).toMatchObject({ x: 760, y: 136, width: 496, height: 532 });
+  const copyBox = await page.getByRole('button', { name: 'Copy to clipboard' }).boundingBox();
+  expect(copyBox?.y).toBe(684);
+});
+
 async function openDashboardAndExpectCount(page: Page, applicationCount: number) {
   await page.getByRole('button', { name: 'Home' }).click();
   await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
 }
 
-test('streams, saves, restores, and counts a completed application once', async ({ page }) => {
-  let requestCount = 0;
-  let releaseStream!: () => void;
+async function holdGenerationStream(page: Page) {
+  let releaseStream = () => {};
   const streamReleased = new Promise<void>((resolve) => {
     releaseStream = resolve;
   });
+  await page.exposeFunction('waitToFinishGeneration', async () => streamReleased);
+  return releaseStream;
+}
+
+test('waiting state preserves Figma colors, geometry, and vertical orb motion', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1300 });
+  const releaseStream = await holdGenerationStream(page);
+  await page.addInitScript(() => {
+    window.respondToGeneration = () =>
+      window.delayedGenerationResponse(
+        window.waitToFinishGeneration,
+        window.generationFixtures.copyableStream,
+      );
+  });
+  await generateApplication(page);
+  try {
+    const loading = page.getByRole('button', { name: 'Generate Now, loading' });
+    await expect(loading).toBeDisabled();
+    await expect(loading).toHaveCSS('background-color', 'rgb(8, 116, 67)');
+    await expect(loading).toHaveCSS('color', 'rgb(255, 255, 255)');
+    expect(await loading.boundingBox()).toMatchObject({ x: 160, y: 656, width: 544, height: 56 });
+    for (const label of ['Job title', 'Company', 'I am good at...', 'Additional details']) {
+      const field = page.getByLabel(label, { exact: true });
+      await expect(field).toBeDisabled();
+      await expect(field).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+      await expect(field).toHaveCSS('color', 'rgb(16, 24, 40)');
+    }
+    await expect(page.getByLabel('Additional details')).toHaveCSS('height', '240px');
+    const preview = page.getByLabel('Generating application');
+    await expect(preview).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Copy to clipboard' })).toHaveCount(0);
+    const orb = preview.locator(':scope > span');
+    const frames = await orb.evaluate((element) =>
+      element.getAnimations().flatMap((animation) =>
+        animation.effect instanceof KeyframeEffect
+          ? animation.effect.getKeyframes().map((frame) => ({
+              opacity: frame['opacity'],
+              transform: frame['transform'],
+            }))
+          : [],
+      ),
+    );
+    expect(frames).toEqual([
+      { opacity: '1', transform: 'translateY(0.5px)' },
+      { opacity: '0.48', transform: 'translateY(-15.5px)' },
+    ]);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(orb).toHaveCSS('animation-name', 'none');
+  } finally {
+    releaseStream();
+  }
+  await expectCompletedGeneration(page, 'Copyable application');
+});
+
+test('streams, saves, restores, and counts a completed application once', async ({ page }) => {
+  let requestCount = 0;
+  const releaseStream = await holdGenerationStream(page);
   await page.exposeFunction('recordGenerationRequest', () => {
     requestCount += 1;
   });
-  await page.exposeFunction('waitToFinishGeneration', async () => streamReleased);
   await page.addInitScript(() => {
     window.respondToGeneration = async (init) => {
       if (new Headers(init?.headers).has('authorization')) {

@@ -57,7 +57,7 @@
   color: var(--rs-color-text-subtle);
 }
 
-.button[aria-disabled='true'] {
+.button[aria-disabled='true']:not([aria-busy='true']) {
   background: var(--rs-color-background-disabled);
   border-color: var(--rs-color-border-disabled);
   color: var(--rs-color-foreground-disabled);

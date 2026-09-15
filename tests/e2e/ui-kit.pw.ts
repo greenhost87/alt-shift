@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { rejectClipboardWrites } from '../support/clipboard';
 
 async function expectContentFitsViewport(page: Page) {
   const viewportWidth = await page.evaluate(() => document.documentElement.clientWidth);
@@ -45,6 +46,18 @@ test('desktop primitives match the design geometry and typography', async ({ pag
   expect(letterBox?.height).toBe(152);
   await expect(card.getByRole('heading')).toHaveCount(0);
   await expect(card.locator('time')).toHaveCount(0);
+  const copyIcon = card.getByRole('button', { name: 'Copy to clipboard' }).locator('svg');
+  const iconBox = await copyIcon.boundingBox();
+  const contourBox = await copyIcon.evaluate((svg) => {
+    if (!(svg instanceof SVGSVGElement)) throw new Error('Expected an SVG icon');
+    const box = svg.getBBox();
+    return { x: box.x, y: box.y, width: box.width, height: box.height };
+  });
+  expect(iconBox).toMatchObject({ width: 20, height: 20 });
+  expect(contourBox.width).toBeCloseTo(16.66667, 2);
+  expect(contourBox.height).toBeCloseTo(16.66667, 2);
+  expect(contourBox.x).toBeCloseTo(1.66667, 2);
+  expect(contourBox.y).toBeCloseTo(1.66667, 2);
 
   await page.goto('/applications/new', { waitUntil: 'networkidle' });
 
@@ -62,6 +75,12 @@ test('desktop primitives match the design geometry and typography', async ({ pag
 
   const generateBox = await page.getByRole('button', { name: 'Generate Now' }).boundingBox();
   expect(generateBox?.height).toBe(60);
+  expect(generateBox?.y).toBe(652);
+  const caption = page.locator('#details-caption');
+  await expect(caption).toHaveCSS('font-size', '14px');
+  await expect(caption).toHaveCSS('line-height', '20px');
+  await expect(caption).toHaveCSS('margin-top', '6px');
+  await expect(caption).toHaveCSS('color', 'rgb(71, 84, 103)');
 });
 
 async function expectMobileStatusLayout(page: Page) {
@@ -73,8 +92,11 @@ async function expectMobileStatusLayout(page: Page) {
   expect(home?.y).toBe(brand?.y);
   expect(label?.y).toBeGreaterThanOrEqual((home?.y ?? 0) + (home?.height ?? 0));
   expect(progress?.x).toBeGreaterThanOrEqual((label?.x ?? 0) + (label?.width ?? 0));
-  expect(Math.abs((progress?.y ?? 0) + (progress?.height ?? 0) / 2 -
-    (label?.y ?? 0) - (label?.height ?? 0) / 2)).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(
+      (progress?.y ?? 0) + (progress?.height ?? 0) / 2 - (label?.y ?? 0) - (label?.height ?? 0) / 2,
+    ),
+  ).toBeLessThanOrEqual(1);
 }
 
 async function expectPageWidth(page: Page, width: number) {
@@ -96,12 +118,33 @@ for (const width of [320, 375, 480, 767, 768, 899, 900, 1024, 1440]) {
     await page.getByLabel('Job title').fill('Engineering'.repeat(20));
     await page.getByLabel('Company').fill('Company'.repeat(20));
     await expectPageWidth(page, width);
-    await expect(page.getByRole('button', { name: 'Copy to clipboard' })).toHaveCount(0);
-    await page.screenshot({ path: `test-results/responsive-generator-${width}.png`, fullPage: true });
+    await expect(page.getByRole('button', { name: 'Copy to clipboard' })).toBeVisible();
+    await page.screenshot({
+      path: `test-results/responsive-generator-${width}.png`,
+      fullPage: true,
+    });
     await page.getByRole('button', { name: 'Home' }).click();
     await page.screenshot({ path: `test-results/responsive-empty-${width}.png`, fullPage: true });
   });
 }
+
+test('empty preview retains its copy action without copying placeholder text', async ({ page }) => {
+  await rejectClipboardWrites(page, 1);
+  await page.goto('/applications/new', { waitUntil: 'networkidle' });
+  for (const label of ['Job title', 'Company', 'I am good at...', 'Additional details']) {
+    await page.getByLabel(label, { exact: true }).fill('');
+  }
+  await expect(page.getByRole('heading', { name: 'New application' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Generate Now' })).toBeDisabled();
+  await expect(page.getByText('0/1200')).toBeVisible();
+  const copy = page.getByRole('button', { name: 'Copy to clipboard' });
+  await expect(copy).toBeVisible();
+  await copy.click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(
+    page.getByText('Your personalized job application will appear here...'),
+  ).toBeVisible();
+});
 
 test('textarea exposes the over-limit error state without truncating input', async ({ page }) => {
   await page.goto('/applications/new', { waitUntil: 'networkidle' });
@@ -121,6 +164,7 @@ test('textarea exposes the over-limit error state without truncating input', asy
   if (lengthAlertId === null) throw new Error('The length alert must have an id.');
   await expect(details).toHaveAttribute('aria-describedby', lengthAlertId);
   await expect(generate).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Copy to clipboard' })).toBeVisible();
 
   await details.fill(overLimitValue.slice(0, 1200));
   await expect(details).toHaveValue(overLimitValue.slice(0, 1200));

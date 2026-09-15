@@ -7,6 +7,15 @@
   margin-bottom: var(--rs-unit-x1-5);
 }
 
+.caption {
+  color: var(--rs-color-text-subtle);
+  margin-top: var(--rs-unit-x1-5);
+}
+
+.caption[role='alert'] {
+  color: var(--rs-color-foreground-critical);
+}
+
 .control,
 .textarea,
 .textareaError {
@@ -59,8 +68,6 @@
 .control:disabled,
 .textarea:disabled,
 .textareaError:disabled {
-  background: var(--rs-color-background-disabled-faded);
-  color: var(--rs-color-foreground-disabled);
   cursor: not-allowed;
 }
 
@@ -70,6 +77,12 @@
   padding: calc(var(--rs-unit-textarea-padding-vertical) - var(--rs-unit-border-width))
     calc(var(--rs-unit-textarea-padding-horizontal) - var(--rs-unit-border-width));
   resize: none;
+}
+
+@media (--rs-viewport-l) {
+  .textarea:disabled {
+    min-height: calc(var(--rs-unit-textarea-height) + var(--rs-unit-x1));
+  }
 }
 
 @media (max-width: 479px) {

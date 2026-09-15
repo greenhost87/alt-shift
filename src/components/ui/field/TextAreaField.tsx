@@ -58,8 +58,8 @@ export function TextAreaField({
           <Text
             as="p"
             attributes={{ id: descriptionId, role: error ? 'alert' : undefined }}
-            color={error ? 'critical' : 'neutral-faded'}
-            variant="caption-1"
+            className={styles['caption']}
+            variant="body-2"
           >
             {caption}
           </Text>
