@@ -27,21 +27,23 @@ export function TextField({
   value,
 }: TextFieldProps) {
   return (
-    <FormControl disabled={disabled} hasError={Boolean(error)} id={id} size="large">
-      <FormControl.Label>{label}</FormControl.Label>
-      <div className={error ? styles['controlError'] : styles['control']}>
-        <ReshapedTextField
-          inputAttributes={{ autoComplete }}
-          name={name}
-          onChange={({ value: nextValue }: { value: string }) => onChange(nextValue)}
-          placeholder={placeholder}
-          size="large"
-          value={value}
-          variant="headless"
-        />
-      </div>
-      {error && <FormControl.Error>{error}</FormControl.Error>}
-      {!error && hint && <FormControl.Helper>{hint}</FormControl.Helper>}
-    </FormControl>
+    <div className={styles['field']}>
+      <FormControl disabled={disabled} hasError={Boolean(error)} id={id} size="large">
+        <FormControl.Label>{label}</FormControl.Label>
+        <div className={error ? styles['controlError'] : styles['control']}>
+          <ReshapedTextField
+            inputAttributes={{ autoComplete }}
+            name={name}
+            onChange={({ value: nextValue }: { value: string }) => onChange(nextValue)}
+            placeholder={placeholder}
+            size="large"
+            value={value}
+            variant="headless"
+          />
+        </div>
+        {error && <FormControl.Error>{error}</FormControl.Error>}
+        {!error && hint && <FormControl.Helper>{hint}</FormControl.Helper>}
+      </FormControl>
+    </div>
   );
 }

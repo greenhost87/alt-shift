@@ -14,6 +14,8 @@ export function SectionHeader({
   muted = false,
   title,
 }: SectionHeaderProps) {
+  const isSection = level === 'section';
+
   return (
     <View
       align={{ s: 'start', m: 'center' }}
@@ -22,8 +24,13 @@ export function SectionHeader({
       direction="row"
       gap={4}
       justify="space-between"
-      minHeight={{ s: 'auto', m: 'var(--rs-unit-section-header-height)' }}
-      paddingBottom={{ s: 4, m: 3.75 }}
+      minHeight={{
+        s: 'auto',
+        m: isSection
+          ? 'var(--rs-unit-section-header-height-small)'
+          : 'var(--rs-unit-section-header-height)',
+      }}
+      paddingBottom={{ s: 4, m: isSection ? 3 : 4 }}
     >
       <Text
         as="h1"

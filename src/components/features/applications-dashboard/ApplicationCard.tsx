@@ -2,6 +2,11 @@ import { Button } from '../../ui/button/Button';
 import { CopyIcon, DeleteIcon } from '../../ui/icon/Icon';
 import styles from './ApplicationCard.module.css';
 
+export type Application = {
+  id: string;
+  letter: string;
+};
+
 type ApplicationCardProps = {
   letter: string;
   onCopy: () => void;

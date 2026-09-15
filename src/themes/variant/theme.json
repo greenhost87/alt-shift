@@ -369,6 +369,9 @@
     "errorRing": {
       "hex": "#fee4e2"
     },
+    "foregroundNeutralSubtle": {
+      "hex": "#344054"
+    },
     "onBackgroundPrimary": {
       "hex": "#ffffff"
     },
@@ -629,16 +632,16 @@
       "px": 44
     },
     "buttonPaddingLargeHorizontal": {
-      "px": 27
+      "px": 28
     },
     "buttonPaddingLargeVertical": {
-      "px": 15
+      "px": 16
     },
     "buttonPaddingMediumHorizontal": {
-      "px": 17
+      "px": 18
     },
     "buttonPaddingMediumVertical": {
-      "px": 9
+      "px": 10
     },
     "canvasWidth": {
       "px": 1440
@@ -650,16 +653,19 @@
       "px": 40
     },
     "controlPaddingHorizontal": {
-      "px": 11
+      "px": 12
     },
     "controlPaddingVertical": {
-      "px": 7
+      "px": 8
     },
     "focusOffset": {
       "px": 1
     },
     "iconSize": {
       "px": 20
+    },
+    "iconSizeLarge": {
+      "px": 24
     },
     "progressSize": {
       "px": 8
@@ -694,20 +700,23 @@
     "sectionHeaderHeight": {
       "px": 76
     },
+    "sectionHeaderHeightSmall": {
+      "px": 56
+    },
     "successBadgeSize": {
       "px": 28
     },
     "textareaContentHeight": {
-      "px": 234
+      "px": 212
     },
     "textareaHeight": {
       "px": 236
     },
     "textareaPaddingHorizontal": {
-      "px": 13
+      "px": 14
     },
     "textareaPaddingVertical": {
-      "px": 11
+      "px": 12
     },
     "x1": {
       "px": 4

@@ -62,3 +62,17 @@ export function HomeIcon() {
     </svg>
   );
 }
+
+export function CheckIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 14 12">
+      <path
+        d="m2 6.5 3.5 3.5L12 3"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}

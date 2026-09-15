@@ -5,16 +5,36 @@
   gap: var(--rs-unit-x2);
 }
 
+.dots {
+  display: flex;
+}
+
 .segments {
   display: flex;
+}
+
+.progress .segments {
   gap: var(--rs-unit-x2);
+}
+
+.dots .segments {
+  gap: var(--rs-unit-x1);
 }
 
 .complete,
 .incomplete {
   border-radius: var(--rs-radius-small);
   height: var(--rs-unit-progress-size);
+}
+
+.progress .complete,
+.progress .incomplete {
   width: var(--rs-unit-x8);
+}
+
+.dots .complete,
+.dots .incomplete {
+  width: var(--rs-unit-progress-size);
 }
 
 .complete {

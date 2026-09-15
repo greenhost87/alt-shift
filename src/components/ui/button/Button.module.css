@@ -33,11 +33,12 @@
 .secondary {
   background: var(--rs-color-white);
   border-color: var(--rs-color-border-neutral);
-  color: var(--rs-color-text-subtle);
+  color: var(--rs-color-foreground-neutral-subtle);
 }
 
 .ghost {
   background: transparent;
+  border-width: 0;
   box-shadow: none;
   color: var(--rs-color-text-subtle);
 }
@@ -95,6 +96,16 @@
   display: block;
   height: var(--rs-unit-icon-size);
   width: var(--rs-unit-icon-size);
+}
+
+.large .icon {
+  height: var(--rs-unit-icon-size-large);
+  width: var(--rs-unit-icon-size-large);
+}
+
+.large .icon svg {
+  height: var(--rs-unit-icon-size-large);
+  width: var(--rs-unit-icon-size-large);
 }
 
 .content {

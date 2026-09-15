@@ -1,3 +1,7 @@
+.field label {
+  color: var(--rs-color-foreground-neutral-subtle);
+}
+
 .control,
 .controlError,
 .textarea,

@@ -1,20 +1,10 @@
-import { useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
-import { Shell } from '../../layout/shell/Shell';
-import { Workspace } from '../../layout/workspace/Workspace';
 import { Button } from '../../ui/button/Button';
 import { TextAreaField } from '../../ui/field/TextAreaField';
 import { TextField } from '../../ui/field/TextField';
-import { CopyIcon, HomeIcon } from '../../ui/icon/Icon';
-import { ProgressDots } from '../../ui/progress/Dots';
+import { CopyIcon } from '../../ui/icon/Icon';
 import styles from './ApplicationGenerator.module.css';
-
-const INITIAL_JOB_TITLE = 'Product manager';
-const INITIAL_COMPANY = 'Apple';
-const INITIAL_STRENGTHS = 'HTML, CSS and doing things in time';
-const INITIAL_DETAILS =
-  'I want to help you build awesome solutions to accomplish your goals and vision';
 
 type ApplicationGeneratorProps = {
   company: string;
@@ -29,63 +19,7 @@ type ApplicationGeneratorProps = {
   strengths: string;
 };
 
-export function ApplicationGeneratorScreen() {
-  const navigate = useNavigate();
-  const [jobTitle, setJobTitle] = useState(INITIAL_JOB_TITLE);
-  const [company, setCompany] = useState(INITIAL_COMPANY);
-  const [strengths, setStrengths] = useState(INITIAL_STRENGTHS);
-  const [details, setDetails] = useState(INITIAL_DETAILS);
-  const [isLoading, setIsLoading] = useState(false);
-  const hasApplicationTitle = jobTitle.trim().length > 0 && company.trim().length > 0;
-  const applicationTitle = hasApplicationTitle ? `${jobTitle}, ${company}` : 'New application';
-  const returnHome = () => {
-    void navigate({ to: '/' });
-  };
-
-  return (
-    <Shell
-      action={
-        <Button
-          ariaLabel="Home"
-          icon={<HomeIcon />}
-          onClick={returnHome}
-          size="icon"
-          type="button"
-          variant="secondary"
-        />
-      }
-      status={
-        <>
-          <span>3/5 applications generated</span>
-          <ProgressDots accessibleLabel="3 of 5 applications generated" current={3} total={5} />
-        </>
-      }
-    >
-      <Workspace
-        primary={
-          <div className={styles['editor']}>
-            <SectionHeader level="section" muted={!hasApplicationTitle} title={applicationTitle} />
-            <ApplicationGenerator
-              company={company}
-              details={details}
-              jobTitle={jobTitle}
-              loading={isLoading}
-              onCompanyChange={setCompany}
-              onDetailsChange={setDetails}
-              onGenerate={() => setIsLoading(true)}
-              onJobTitleChange={setJobTitle}
-              onStrengthsChange={setStrengths}
-              strengths={strengths}
-            />
-          </div>
-        }
-        secondary={<ApplicationPreview loading={isLoading} />}
-      />
-    </Shell>
-  );
-}
-
-function ApplicationGenerator({
+export function ApplicationGenerator({
   company,
   details,
   jobTitle,
@@ -152,11 +86,26 @@ function ApplicationGenerator({
   );
 }
 
+type ApplicationEditorProps = {
+  children: ReactNode;
+  muted: boolean;
+  title: string;
+};
+
+export function ApplicationEditor({ children, muted, title }: ApplicationEditorProps) {
+  return (
+    <div className={styles['editor']}>
+      <SectionHeader level="section" muted={muted} title={title} />
+      {children}
+    </div>
+  );
+}
+
 type ApplicationPreviewProps = {
   loading: boolean;
 };
 
-function ApplicationPreview({ loading }: ApplicationPreviewProps) {
+export function ApplicationPreview({ loading }: ApplicationPreviewProps) {
   const copyEmptyApplication = () => {
     void navigator.clipboard.writeText('');
   };

@@ -29,22 +29,24 @@ export function TextAreaField({
   value,
 }: TextAreaFieldProps) {
   return (
-    <FormControl disabled={disabled} hasError={Boolean(error)} id={id} size="large">
-      <FormControl.Label>{label}</FormControl.Label>
-      <div className={error ? styles['textareaError'] : styles['textarea']}>
-        <ReshapedTextArea
-          inputAttributes={{ autoFocus, maxLength }}
-          name={name}
-          onChange={({ value: nextValue }: { value: string }) => onChange(nextValue)}
-          placeholder={placeholder}
-          resize="none"
-          size="large"
-          value={value}
-          variant="headless"
-        />
-      </div>
-      {error && <FormControl.Error>{error}</FormControl.Error>}
-      {!error && hint && <FormControl.Helper>{hint}</FormControl.Helper>}
-    </FormControl>
+    <div className={styles['field']}>
+      <FormControl disabled={disabled} hasError={Boolean(error)} id={id} size="large">
+        <FormControl.Label>{label}</FormControl.Label>
+        <div className={error ? styles['textareaError'] : styles['textarea']}>
+          <ReshapedTextArea
+            inputAttributes={{ autoFocus, maxLength }}
+            name={name}
+            onChange={({ value: nextValue }: { value: string }) => onChange(nextValue)}
+            placeholder={placeholder}
+            resize="none"
+            size="large"
+            value={value}
+            variant="headless"
+          />
+        </div>
+        {error && <FormControl.Error>{error}</FormControl.Error>}
+        {!error && hint && <FormControl.Helper>{hint}</FormControl.Helper>}
+      </FormControl>
+    </div>
   );
 }
