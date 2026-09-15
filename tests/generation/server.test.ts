@@ -2,6 +2,7 @@ import { serve, sleep } from 'bun';
 import { afterAll, describe, expect, test } from 'bun:test';
 import { requestGeneration } from '../../src/server/generation/client';
 import { handleGenerateRequest } from '../../src/server/generation/handler';
+import { createGenerationRateLimiter } from '../../src/server/generation/rate-limit';
 import {
   buildGenerationPrompt,
   GENERATION_SYSTEM_PROMPT,
@@ -85,6 +86,57 @@ describe('generation server contract', () => {
     );
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual(generationFixtures.invalidFieldsError);
+  });
+
+  test('limits generation requests before calling the upstream service', async () => {
+    let currentTime = 0;
+    let upstreamCalls = 0;
+    const rateLimit = createGenerationRateLimiter(() => currentTime);
+    const generate = async () => {
+      upstreamCalls += 1;
+      return Promise.resolve(
+        new Response(generationFixtures.helloServerStream, {
+          headers: { 'content-type': 'text/event-stream' },
+        }),
+      );
+    };
+
+    for (let requestIndex = 0; requestIndex < 6; requestIndex += 1) {
+      const response = await handleGenerateRequest(
+        new Request('http://localhost/api/generate', {
+          method: 'POST',
+          body: JSON.stringify(input),
+        }),
+        generate,
+        rateLimit,
+      );
+      expect(response.status).toBe(200);
+    }
+
+    const limited = await handleGenerateRequest(
+      new Request('http://localhost/api/generate', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+      generate,
+      rateLimit,
+    );
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get('retry-after')).toBe('60');
+    expect(await limited.json()).toEqual(generationFixtures.rateLimitError);
+    expect(upstreamCalls).toBe(6);
+
+    currentTime = 60_000;
+    const available = await handleGenerateRequest(
+      new Request('http://localhost/api/generate', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+      generate,
+      rateLimit,
+    );
+    expect(available.status).toBe(200);
+    expect(upstreamCalls).toBe(7);
   });
 
   test('normalizes an upstream rate limit and preserves Retry-After', async () => {

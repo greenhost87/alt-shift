@@ -1,8 +1,10 @@
 import * as v from 'valibot';
 import { generationRequestSchema } from '../../system/generation/schema';
 import { GenerationRequestError, requestGeneration } from './client';
+import { createGenerationRateLimiter } from './rate-limit';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
+const takeGenerationSlot = createGenerationRateLimiter();
 const upstreamErrorSchema = v.strictObject({
   error: v.strictObject({
     code: v.string(),
@@ -96,6 +98,7 @@ async function createUpstreamErrorResponse(upstream: Response) {
 export async function handleGenerateRequest(
   request: Request,
   generate: typeof requestGeneration = requestGeneration,
+  rateLimit: () => number | undefined = takeGenerationSlot,
 ) {
   const parsed = v.safeParse(
     v.pipe(v.string(), v.parseJson(), generationRequestSchema),
@@ -109,6 +112,16 @@ export async function handleGenerateRequest(
       malformedJson
         ? 'The request body must be valid JSON.'
         : 'Please complete all fields within their limits.',
+    );
+  }
+
+  const retryAfter = rateLimit();
+  if (retryAfter !== undefined) {
+    return errorResponse(
+      429,
+      'rate_limited',
+      'Too many generation requests. Please try again later.',
+      { 'retry-after': String(retryAfter) },
     );
   }
 
