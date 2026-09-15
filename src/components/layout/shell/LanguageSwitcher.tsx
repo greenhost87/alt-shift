@@ -1,6 +1,7 @@
 import * as m from '../../../paraglide/messages.js';
 import { getLocale, setLocale } from '../../../paraglide/runtime.js';
 import { Button } from '../../ui/button/Button';
+import styles from './Shell.module.css';
 
 export function LanguageSwitcher() {
   const currentLocale = getLocale();
@@ -14,11 +15,13 @@ export function LanguageSwitcher() {
     <Button
       ariaLabel={accessibleLabel}
       onClick={() => void switchLanguage()}
-      size="medium"
+      size="icon"
       type="button"
       variant="secondary"
     >
-      {nextLocale.toUpperCase()}
+      <span aria-hidden="true" className={styles['languageFlag']}>
+        {nextLocale === 'ru' ? '🇷🇺' : '🇬🇧'}
+      </span>
     </Button>
   );
 }

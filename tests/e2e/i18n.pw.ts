@@ -13,7 +13,15 @@ test('switches to Russian, persists the locale, and submits it for generation', 
 
   await page.goto('/', { waitUntil: 'networkidle' });
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await page.getByRole('button', { name: 'Switch language to Russian' }).click();
+  const languageButton = page.getByRole('button', { name: 'Switch language to Russian' });
+  const homeButton = page.getByRole('button', { name: 'Home' });
+  await expect(languageButton).toHaveText('🇷🇺');
+  await expect(languageButton.locator('[aria-hidden="true"]')).toHaveCSS('font-size', '24px');
+  const languageButtonBox = await languageButton.boundingBox();
+  const homeButtonBox = await homeButton.boundingBox();
+  expect(languageButtonBox?.width).toBe(homeButtonBox?.width);
+  expect(languageButtonBox?.height).toBe(homeButtonBox?.height);
+  await languageButton.click();
 
   await expect
     .poll(
@@ -35,6 +43,10 @@ test('switches to Russian, persists the locale, and submits it for generation', 
   await page.getByRole('button', { name: 'Создать письмо' }).click();
 
   await expect.poll(() => generationRequestBody).toContain('"locale":"ru"');
-  await page.getByRole('button', { name: 'Переключить язык на английский' }).click();
+  const englishLanguageButton = page.getByRole('button', {
+    name: 'Переключить язык на английский',
+  });
+  await expect(englishLanguageButton).toHaveText('🇬🇧');
+  await englishLanguageButton.click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });

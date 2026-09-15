@@ -36,6 +36,11 @@
   gap: var(--rs-unit-x2);
 }
 
+.languageFlag {
+  font-size: 24px;
+  line-height: 1;
+}
+
 .status {
   color: var(--rs-color-foreground-neutral-faded);
   font-family: var(--rs-font-family-body);
