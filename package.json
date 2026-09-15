@@ -5,31 +5,33 @@
   "description": "Local-first cover letter generator for the Variant Group test assignment",
   "type": "module",
   "scripts": {
+    "build": "bun run theme:build && vite build",
     "dev": "bun run theme:build && vite dev",
-    "theme:build": "reshaped theming --output src/themes",
+    "theme:build": "bun run scripts/build-theme.ts",
     "fmt": "oxfmt .",
     "test": "bun test",
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@tanstack/react-form": "1.33.5",
     "@tanstack/react-router": "1.170.36",
     "@tanstack/react-start": "1.168.54",
-    "eventsource-parser": "4.1.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "reshaped": "4.2.0",
     "valibot": "1.5.0"
   },
   "devDependencies": {
+    "@csstools/postcss-global-data": "4.0.0",
     "@playwright/test": "1.63.0",
     "@types/bun": "1.4.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
+    "cssnano": "8.0.2",
     "nitro": "3.0.260903-beta",
     "oxfmt": "0.68.0",
     "postcss": "8.5.28",
+    "postcss-custom-media": "12.0.1",
     "typescript": "7.0.2",
     "vite": "8.3.0"
   },

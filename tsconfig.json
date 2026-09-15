@@ -12,6 +12,7 @@
     "isolatedModules": true,
     "erasableSyntaxOnly": true,
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

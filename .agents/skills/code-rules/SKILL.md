@@ -16,7 +16,7 @@ Apply these constraints while designing a change. `AGENTS.md` remains authoritat
 - Use separate type-only imports and exports. Export declarations from their owner; do not add barrels, forwarding exports, export proxies, or runtime re-exports.
 - Prefer functions and data. Runtime classes are forbidden except names ending in `Error` or `Element`.
 - Use static imports. Dynamic `import()` is allowed only in configured runtime-boundary files with relative string literals.
-- Extract inline parameter object types above 3 members. Keep files within code-line limits (**/*.{ts,tsx,mts,cts}: 400; **/*.tsx: 500; later matching scopes take precedence), excluding imports, comments, and blank lines.
+- Extract inline parameter object types above 3 members. Keep files within code-line limits (**/_.{ts,tsx,mts,cts}: 400; \**/_.tsx: 500; later matching scopes take precedence), excluding imports, comments, and blank lines.
 - Handle promises explicitly: no floating promises, async executors, thenable misuse, or pointless `async`/`await`.
 - Follow the project formatter (`{"$schema":"./node_modules/oxfmt/configuration_schema.json","singleQuote":true,"sortPackageJson":true}`).
 

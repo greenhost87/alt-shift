@@ -1,0 +1,19 @@
+.dots {
+  display: flex;
+  gap: var(--rs-unit-x1);
+}
+
+.complete,
+.incomplete {
+  border-radius: var(--rs-radius-small);
+  height: var(--rs-unit-progress-size);
+  width: var(--rs-unit-progress-size);
+}
+
+.complete {
+  background: var(--rs-color-foreground-neutral);
+}
+
+.incomplete {
+  background: var(--rs-color-progress-incomplete);
+}

@@ -1,0 +1,70 @@
+.control,
+.controlError,
+.textarea,
+.textareaError {
+  background: var(--rs-color-white);
+  border: var(--rs-unit-border-width) solid var(--rs-color-border-neutral);
+  border-radius: var(--rs-radius-medium);
+  box-shadow: var(--rs-shadow-control);
+  box-sizing: border-box;
+  transition:
+    border-color var(--rs-duration-fast) var(--rs-easing-standard),
+    box-shadow var(--rs-duration-fast) var(--rs-easing-standard);
+}
+
+.control,
+.controlError {
+  min-height: var(--rs-unit-control-height);
+  padding: var(--rs-unit-control-padding-vertical) var(--rs-unit-control-padding-horizontal);
+}
+
+.control:focus-within,
+.textarea:focus-within {
+  border-color: var(--rs-color-border-primary);
+  border-radius: var(--rs-radius-large);
+  box-shadow:
+    var(--rs-shadow-control),
+    0 0 0 var(--rs-unit-x1) var(--rs-color-border-primary-faded);
+}
+
+.controlError,
+.textareaError,
+.controlError:focus-within,
+.textareaError:focus-within {
+  border-color: var(--rs-color-border-critical);
+  border-radius: var(--rs-radius-large);
+  box-shadow:
+    var(--rs-shadow-control),
+    0 0 0 var(--rs-unit-x1) var(--rs-color-error-ring);
+}
+
+.control > div {
+  min-height: var(--rs-line-height-body-1);
+  padding: 0;
+}
+
+.textarea,
+.textareaError {
+  min-height: var(--rs-unit-textarea-height);
+  overflow: hidden;
+}
+
+.textarea > div,
+.textareaError > div {
+  min-height: var(--rs-unit-textarea-content-height);
+}
+
+.textarea textarea,
+.textareaError textarea {
+  min-height: var(--rs-unit-textarea-content-height);
+  padding: var(--rs-unit-textarea-padding-vertical) var(--rs-unit-textarea-padding-horizontal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .control,
+  .controlError,
+  .textarea,
+  .textareaError {
+    transition-duration: var(--rs-duration-reduced-motion);
+  }
+}
