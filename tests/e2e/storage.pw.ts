@@ -73,6 +73,21 @@ test('deleted applications stay deleted after reload and synchronize across tabs
   await expect(page).toHaveURL(/\/applications\/new$/);
 });
 
+test('deletion dialog actions work when reduced motion disables transitions', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await seedApplications(page);
+  await openDashboard(page, 3);
+
+  const cancelledDialog = await openDeletionDialog(page);
+  await cancelledDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(cancelledDialog).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
+
+  const confirmedDialog = await openDeletionDialog(page);
+  await confirmDeletion(confirmedDialog);
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(2);
+});
+
 for (const [entryPoint, index] of [
   ['header', 0],
   ['goal banner', 1],
