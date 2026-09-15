@@ -45,11 +45,21 @@ test('textarea exposes the over-limit error state without truncating input', asy
 
   await expect(details).toHaveValue(overLimitValue);
   await expect(details).toHaveAttribute('aria-invalid', 'true');
-  await expect(page.getByRole('alert')).toHaveText('1201/1200');
+  const lengthAlert = page.getByRole('alert');
+  await expect(lengthAlert).toHaveText('1201/1200');
+  const lengthAlertId = await lengthAlert.getAttribute('id');
+  expect(lengthAlertId).toBeTruthy();
+  await expect(details).toHaveAttribute('aria-describedby', lengthAlertId!);
   await expect(generate).toBeDisabled();
 
   await details.fill(overLimitValue.slice(0, 1200));
+  await expect(details).toHaveValue(overLimitValue.slice(0, 1200));
   await expect(details).toHaveAttribute('aria-invalid', 'false');
+  await expect(lengthAlert).toHaveCount(0);
+  const boundaryDescriptionId = await details.getAttribute('aria-describedby');
+  expect(boundaryDescriptionId).toBeTruthy();
+  expect(boundaryDescriptionId).not.toBe(lengthAlertId);
+  await expect(page.locator(`#${boundaryDescriptionId}`)).toHaveText('1200/1200');
   await expect(generate).toBeEnabled();
 
   await generate.click();

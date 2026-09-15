@@ -11,14 +11,20 @@ const input = {
   details: 'I ship useful products.',
 };
 
+let receivedAccept = '';
 let receivedAuthorization = '';
 let receivedBody = '';
+let receivedContentType = '';
+let receivedMethod = '';
 let releaseStreamingResponse = () => {};
 let upstreamCompleted = false;
 const server = Bun.serve({
   port: 0,
   async fetch(request) {
+    receivedAccept = request.headers.get('accept') ?? '';
     receivedAuthorization = request.headers.get('authorization') ?? '';
+    receivedContentType = request.headers.get('content-type') ?? '';
+    receivedMethod = request.method;
     receivedBody = await request.text();
 
     if (new URL(request.url).pathname === '/stream') {
@@ -49,9 +55,23 @@ const server = Bun.serve({
 afterAll(() => server.stop());
 
 describe('generation server contract', () => {
-  test('rejects incomplete and over-limit structured input', async () => {
+  test('rejects malformed, incomplete, and over-limit structured input', async () => {
     expect(safeParseGenerationRequest({ ...input, company: '' }).success).toBe(false);
     expect(safeParseGenerationRequest({ ...input, details: 'x'.repeat(1_201) }).success).toBe(false);
+
+    const malformedResponse = await handleGenerateRequest(
+      new Request('http://localhost/api/generate', {
+        method: 'POST',
+        body: '{',
+      }),
+    );
+    expect(malformedResponse.status).toBe(400);
+    expect(await malformedResponse.json()).toEqual({
+      error: {
+        code: 'invalid_request',
+        message: 'The request body must be valid JSON.',
+      },
+    });
 
     const response = await handleGenerateRequest(
       new Request('http://localhost/api/generate', {
@@ -90,6 +110,38 @@ describe('generation server contract', () => {
     });
   });
 
+  test('normalizes non-rate-limit upstream failures', async () => {
+    const unavailable = await handleGenerateRequest(
+      new Request('http://localhost/api/generate', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+      () => Promise.reject(new Error('connection failed')),
+    );
+    expect(unavailable.status).toBe(502);
+    expect(await unavailable.json()).toEqual({
+      error: {
+        code: 'generation_unavailable',
+        message: 'The generation service is unavailable.',
+      },
+    });
+
+    const failed = await handleGenerateRequest(
+      new Request('http://localhost/api/generate', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+      () => Promise.resolve(new Response('internal details', { status: 500 })),
+    );
+    expect(failed.status).toBe(502);
+    expect(await failed.json()).toEqual({
+      error: {
+        code: 'generation_failed',
+        message: 'The generation service could not complete the request.',
+      },
+    });
+  });
+
   test('marks applicant values as untrusted prompt text', () => {
     const prompt = buildGenerationPrompt(input);
     expect(prompt).toContain('<untrusted_applicant_input>');
@@ -103,7 +155,10 @@ describe('generation server contract', () => {
       url: `http://127.0.0.1:${server.port}/v1/generate`,
     });
 
+    expect(receivedMethod).toBe('POST');
+    expect(receivedAccept).toBe('text/event-stream');
     expect(receivedAuthorization).toBe('Bearer server-secret');
+    expect(receivedContentType).toBe('application/json');
     expect(JSON.parse(receivedBody)).toEqual({ prompt: buildGenerationPrompt(input) });
     expect(await response.text()).toBe('event: delta\ndata: Hello\n\n');
   });
