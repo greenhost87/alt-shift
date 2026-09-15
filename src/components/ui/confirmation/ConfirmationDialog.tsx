@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Modal, View } from 'reshaped';
 import * as m from '../../../paraglide/messages.js';
 import { Button } from '../button/Button';
@@ -21,6 +21,35 @@ export function ConfirmationDialog({
 }: ConfirmationDialogProps) {
   const [ready, setReady] = useState(false);
   const descriptionId = useId();
+
+  useEffect(() => {
+    if (!active) {
+      setReady(false);
+      return undefined;
+    }
+
+    const transitionsDisabled =
+      document.documentElement.hasAttribute('data-rs-no-transition') ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!transitionsDisabled) return undefined;
+
+    let secondFrame: number | undefined;
+    let thirdFrame: number | undefined;
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        thirdFrame = requestAnimationFrame(() => {
+          setReady(true);
+        });
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      if (secondFrame !== undefined) cancelAnimationFrame(secondFrame);
+      if (thirdFrame !== undefined) cancelAnimationFrame(thirdFrame);
+    };
+  }, [active]);
+
   return (
     <Modal
       ariaLabel={title}
