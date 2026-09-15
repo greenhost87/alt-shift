@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiGenerateRouteImport } from './routes/api.generate'
 import { Route as ApplicationsNewRouteImport } from './routes/applications.new'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGenerateRoute = ApiGenerateRouteImport.update({
+  id: '/api/generate',
+  path: '/api/generate',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApplicationsNewRoute = ApplicationsNewRouteImport.update({
@@ -25,27 +31,31 @@ const ApplicationsNewRoute = ApplicationsNewRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/generate': typeof ApiGenerateRoute
   '/applications/new': typeof ApplicationsNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/generate': typeof ApiGenerateRoute
   '/applications/new': typeof ApplicationsNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/generate': typeof ApiGenerateRoute
   '/applications/new': typeof ApplicationsNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/applications/new'
+  fullPaths: '/' | '/api/generate' | '/applications/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/applications/new'
-  id: '__root__' | '/' | '/applications/new'
+  to: '/' | '/api/generate' | '/applications/new'
+  id: '__root__' | '/' | '/api/generate' | '/applications/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiGenerateRoute: typeof ApiGenerateRoute
   ApplicationsNewRoute: typeof ApplicationsNewRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/generate': {
+      id: '/api/generate'
+      path: '/api/generate'
+      fullPath: '/api/generate'
+      preLoaderRoute: typeof ApiGenerateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/applications/new': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiGenerateRoute: ApiGenerateRoute,
   ApplicationsNewRoute: ApplicationsNewRoute,
 }
 export const routeTree = rootRouteImport

@@ -25,8 +25,24 @@
   min-height: calc(var(--rs-unit-panel-height) - var(--rs-unit-x12));
 }
 
-.placeholder {
+.placeholder,
+.letter,
+.error,
+.status {
   margin: 0;
+}
+
+.letter {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.error {
+  color: var(--rs-color-foreground-critical);
+}
+
+.status:empty {
+  display: none;
 }
 
 .previewAction {

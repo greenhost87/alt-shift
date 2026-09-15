@@ -60,7 +60,7 @@ export function TextAreaField({
         {caption ? (
           <Text
             as="p"
-            attributes={{ id: descriptionId }}
+            attributes={{ id: descriptionId, role: error ? 'alert' : undefined }}
             color={error ? 'critical' : 'neutral-faded'}
             variant="caption-1"
           >
