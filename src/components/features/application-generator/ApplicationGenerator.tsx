@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as v from 'valibot';
 import { useStoredApplications } from '../../../system/applications/storage';
 import { writeClipboardText } from '../../../system/clipboard/write';
+import { useApplicationConfig } from '../../../system/config/application';
 import { GenerationError, generateApplication } from '../../../system/generation/client';
 import { safeParseGenerationRequest } from '../../../system/generation/schema';
 import type { GenerationRequest } from '../../../system/generation/schema';
@@ -13,13 +14,6 @@ import { TextField } from '../../ui/field/TextField';
 import { CopyIcon } from '../../ui/icon/Icon';
 import typographyStyles from '../../ui/text/Typography.module.css';
 import styles from './ApplicationGenerator.module.css';
-
-const DETAILS_LIMIT = 1200;
-const INITIAL_JOB_TITLE = 'Product manager';
-const INITIAL_COMPANY = 'Apple';
-const INITIAL_STRENGTHS = 'HTML, CSS and doing things in time';
-const INITIAL_DETAILS =
-  'I want to help you build awesome solutions to accomplish your goals and vision';
 
 type GenerationPhase =
   | 'idle'
@@ -266,10 +260,11 @@ function renderFormActions(options: FormActionsOptions) {
 }
 
 export function ApplicationWorkspace() {
-  const [jobTitle, setJobTitle] = useState(INITIAL_JOB_TITLE);
-  const [company, setCompany] = useState(INITIAL_COMPANY);
-  const [strengths, setStrengths] = useState(INITIAL_STRENGTHS);
-  const [details, setDetails] = useState(INITIAL_DETAILS);
+  const { fieldLimits, initialForm } = useApplicationConfig();
+  const [jobTitle, setJobTitle] = useState(initialForm.jobTitle);
+  const [company, setCompany] = useState(initialForm.company);
+  const [strengths, setStrengths] = useState(initialForm.strengths);
+  const [details, setDetails] = useState(initialForm.details);
   const [phase, setPhase] = useState<GenerationPhase>('idle');
   const [letter, setLetter] = useState('');
   const [error, setError] = useState('');
@@ -278,7 +273,10 @@ export function ApplicationWorkspace() {
   const abortController = useRef<AbortController | null>(null);
   const { addApplication } = useStoredApplications();
   const detailsLength = details.length;
-  const parsedRequest = safeParseGenerationRequest({ jobTitle, company, strengths, details });
+  const parsedRequest = safeParseGenerationRequest(
+    { jobTitle, company, strengths, details },
+    fieldLimits,
+  );
   const isGenerating = ACTIVE_PHASES.includes(phase);
   const retryBlocked = isRetryBlocked(retryAvailableAt);
   const hasApplicationTitle = [jobTitle, company].every((value) => value.trim().length > 0);
@@ -364,9 +362,9 @@ export function ApplicationWorkspace() {
             />
             <TextAreaField
               autoFocus
-              characterLimit={DETAILS_LIMIT}
+              characterLimit={fieldLimits.details}
               disabled={isGenerating}
-              hint={`${detailsLength}/${DETAILS_LIMIT}`}
+              hint={`${detailsLength}/${fieldLimits.details}`}
               id="details"
               label="Additional details"
               name="details"

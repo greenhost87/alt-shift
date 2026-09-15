@@ -1,5 +1,6 @@
 import * as v from 'valibot';
-import { generationRequestSchema } from '../../system/generation/schema';
+import { getGenerationFieldLimits } from '../config/application';
+import { createGenerationRequestSchema } from '../../system/generation/schema';
 import { GenerationRequestError, requestGeneration } from './client';
 import { getGenerationInactivityTimeoutMs } from './config';
 import { createGenerationRateLimiter } from './rate-limit';
@@ -102,7 +103,7 @@ export async function handleGenerateRequest(
   rateLimit: () => number | undefined = takeGenerationSlot,
 ) {
   const parsed = v.safeParse(
-    v.pipe(v.string(), v.parseJson(), generationRequestSchema),
+    v.pipe(v.string(), v.parseJson(), createGenerationRequestSchema(getGenerationFieldLimits())),
     await request.text(),
   );
   if (!parsed.success) {

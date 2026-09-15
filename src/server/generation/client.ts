@@ -1,4 +1,5 @@
 import type { GenerationRequest } from '../../system/generation/schema';
+import { getGenerationSystemPrompt } from '../config/application';
 import {
   getGenerationApiToken,
   getGenerationApiUrl,
@@ -6,7 +7,7 @@ import {
   getGenerationMaxInputLength,
   getGenerationMaxTokens,
 } from './config';
-import { buildGenerationPrompt, GENERATION_SYSTEM_PROMPT } from './prompt';
+import { buildGenerationPrompt } from './prompt';
 
 export class GenerationRequestError extends Error {
   constructor(message: string) {
@@ -28,7 +29,8 @@ export async function requestGeneration(
 ) {
   const fetchImplementation = options.fetch ?? globalThis.fetch;
   const prompt = buildGenerationPrompt(input);
-  if (prompt.length + GENERATION_SYSTEM_PROMPT.length > getGenerationMaxInputLength()) {
+  const systemPrompt = getGenerationSystemPrompt();
+  if (prompt.length + systemPrompt.length > getGenerationMaxInputLength()) {
     throw new GenerationRequestError('The generation request exceeds the text limit.');
   }
   const timeoutSignal = AbortSignal.timeout(getGenerationInactivityTimeoutMs());
@@ -41,7 +43,7 @@ export async function requestGeneration(
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      system: GENERATION_SYSTEM_PROMPT,
+      system: systemPrompt,
       prompt,
       maxTokens: getGenerationMaxTokens(),
     }),

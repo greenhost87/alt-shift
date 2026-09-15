@@ -32,7 +32,7 @@ Create the local environment file and set the server-only API token:
 cp .env.example .env
 ```
 
-`GENERATION_API_URL`, token count, input length, rate limit, rate window, and stream inactivity timeout are documented with defaults in `.env.example`. `GENERATION_API_TOKEN` is the only value without a default.
+Generation provider settings, field limits, product goals, initial content, and browser storage identifiers are documented in `.env.example`. `GENERATION_API_TOKEN` is the only required value without a default. `APPLICATION_INITIAL_APPLICATIONS_JSON` may contain a JSON array of initial applications; leaving it empty preserves the built-in demonstration data.
 
 Start the development server:
 

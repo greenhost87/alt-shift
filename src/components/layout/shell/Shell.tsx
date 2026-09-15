@@ -2,6 +2,7 @@ import { useNavigate } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { View } from 'reshaped';
 import { useStoredApplications } from '../../../system/applications/storage';
+import { useApplicationConfig } from '../../../system/config/application';
 import { brandSize } from '../../../system/theme/tokens.ts';
 import { Button } from '../../ui/button/Button';
 import { Icon } from '../../ui/icon/Icon';
@@ -14,11 +15,12 @@ type ShellProps = {
 
 export function Shell({ children }: ShellProps) {
   const navigate = useNavigate();
+  const { applicationLimit } = useApplicationConfig();
   const { applications } = useStoredApplications();
   const returnHome = () => {
     void navigate({ to: '/' });
   };
-  const { safeCurrent, safeTotal } = getProgressValues(applications.length, 5);
+  const { safeCurrent, safeTotal } = getProgressValues(applications.length, applicationLimit);
   const accessibleLabel = `${safeCurrent} of ${safeTotal} applications generated`;
   const isComplete = safeCurrent >= safeTotal;
 

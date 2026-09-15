@@ -1,12 +1,13 @@
 import { serve, sleep } from 'bun';
 import { afterAll, describe, expect, test } from 'bun:test';
+import {
+  getGenerationFieldLimits,
+  getGenerationSystemPrompt,
+} from '../../src/server/config/application';
 import { requestGeneration } from '../../src/server/generation/client';
 import { handleGenerateRequest } from '../../src/server/generation/handler';
 import { createGenerationRateLimiter } from '../../src/server/generation/rate-limit';
-import {
-  buildGenerationPrompt,
-  GENERATION_SYSTEM_PROMPT,
-} from '../../src/server/generation/prompt';
+import { buildGenerationPrompt } from '../../src/server/generation/prompt';
 import { safeParseGenerationRequest } from '../../src/system/generation/schema';
 import generationFixtures from '../fixtures/generation.json' with { type: 'json' };
 
@@ -64,10 +65,11 @@ afterAll(async () => server.stop());
 
 describe('generation server contract', () => {
   test('rejects malformed, incomplete, and over-limit structured input', async () => {
-    expect(safeParseGenerationRequest({ ...input, company: '' }).success).toBe(false);
-    expect(safeParseGenerationRequest({ ...input, details: 'x'.repeat(1_201) }).success).toBe(
-      false,
-    );
+    const fieldLimits = getGenerationFieldLimits();
+    expect(safeParseGenerationRequest({ ...input, company: '' }, fieldLimits).success).toBe(false);
+    expect(
+      safeParseGenerationRequest({ ...input, details: 'x'.repeat(1_201) }, fieldLimits).success,
+    ).toBe(false);
 
     const malformedResponse = await handleGenerateRequest(
       new Request('http://localhost/api/generate', {
@@ -194,7 +196,7 @@ describe('generation server contract', () => {
     expect(receivedAuthorization).toBe('Bearer server-secret');
     expect(receivedContentType).toBe('application/json');
     expect(JSON.parse(receivedBody)).toEqual({
-      system: GENERATION_SYSTEM_PROMPT,
+      system: getGenerationSystemPrompt(),
       prompt: buildGenerationPrompt(input),
       maxTokens: 1_500,
     });
@@ -239,7 +241,7 @@ describe('generation server contract', () => {
     expect(upstreamCompleted).toBe(true);
     expect(receivedAuthorization).toBe('Bearer server-secret');
     expect(JSON.parse(receivedBody)).toEqual({
-      system: GENERATION_SYSTEM_PROMPT,
+      system: getGenerationSystemPrompt(),
       prompt: buildGenerationPrompt(input),
       maxTokens: 1_500,
     });

@@ -8,13 +8,12 @@ import typographyStyles from '../../ui/text/Typography.module.css';
 import cardStyles from './ApplicationCard.module.css';
 import { useStoredApplications } from '../../../system/applications/storage';
 import { writeClipboardText } from '../../../system/clipboard/write';
+import { useApplicationConfig } from '../../../system/config/application';
 import styles from './ApplicationsDashboard.module.css';
 
 type ApplicationsDashboardProps = {
   onCreate: () => void;
 };
-
-const APPLICATION_LIMIT = 5;
 
 type StorageStatus = 'loading' | 'ready' | 'invalid' | 'unavailable';
 
@@ -52,6 +51,7 @@ function shouldShowApplications(status: StorageStatus, applicationCount: number)
 }
 
 export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) {
+  const { applicationLimit } = useApplicationConfig();
   const { applications, deleteApplication, status: storageStatus } = useStoredApplications();
   const [copyError, setCopyError] = useState('');
   const applicationCount = applications.length;
@@ -138,7 +138,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
           </div>
         ) : null}
       </section>
-      {applicationCount < APPLICATION_LIMIT ? (
+      {applicationCount < applicationLimit ? (
         <section className={bannerStyles['banner']}>
           <div className={bannerStyles['content']}>
             <div className={bannerStyles['heading']}>
@@ -151,9 +151,9 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
               </Button>
             </div>
             <Progress
-              accessibleLabel={`${applicationCount} of ${APPLICATION_LIMIT} applications generated`}
+              accessibleLabel={`${applicationCount} of ${applicationLimit} applications generated`}
               current={applicationCount}
-              total={APPLICATION_LIMIT}
+              total={applicationLimit}
             />
           </div>
         </section>

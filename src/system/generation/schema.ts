@@ -1,21 +1,25 @@
 import * as v from 'valibot';
+import type { GenerationFieldLimits } from '../config/application.types';
 
-export const generationRequestSchema = v.strictObject({
-  jobTitle: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(200)),
-  company: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(200)),
-  strengths: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(2_000)),
-  details: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(1_200)),
-});
-
-export type GenerationRequest = v.InferOutput<typeof generationRequestSchema>;
-
-type GenerationRequestInput = {
+export type GenerationRequest = {
   jobTitle: string;
   company: string;
   strengths: string;
   details: string;
 };
 
-export function safeParseGenerationRequest(input: GenerationRequestInput) {
-  return v.safeParse(generationRequestSchema, input);
+export function createGenerationRequestSchema(limits: GenerationFieldLimits) {
+  return v.strictObject({
+    jobTitle: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(limits.jobTitle)),
+    company: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(limits.company)),
+    strengths: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(limits.strengths)),
+    details: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(limits.details)),
+  });
+}
+
+export function safeParseGenerationRequest(
+  input: GenerationRequest,
+  limits: GenerationFieldLimits,
+) {
+  return v.safeParse(createGenerationRequestSchema(limits), input);
 }
