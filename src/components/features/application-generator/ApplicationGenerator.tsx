@@ -189,8 +189,9 @@ function isSubmissionBlocked(
   requestIsValid: boolean,
   isGenerating: boolean,
   retryBlocked: boolean,
+  applicationLimitReached: boolean,
 ) {
-  return !requestIsValid || isGenerating || retryBlocked;
+  return !requestIsValid || isGenerating || retryBlocked || applicationLimitReached;
 }
 
 function getApplicationTitle(jobTitle: string, company: string) {
@@ -223,7 +224,14 @@ function renderFormAction(options: FormActionsOptions) {
   }
   if (options.isCompleted) {
     return (
-      <Button fullWidth icon={<RepeatIcon />} size="large" type="submit" variant="secondary">
+      <Button
+        disabled={options.submissionBlocked}
+        fullWidth
+        icon={<RepeatIcon />}
+        size="large"
+        type="submit"
+        variant="secondary"
+      >
         Try Again
       </Button>
     );
@@ -368,7 +376,12 @@ export function ApplicationWorkspace({
     (value) => value.trim().length > 0,
   );
   const applicationTitle = getApplicationTitle(displayedValues.jobTitle, displayedValues.company);
-  const submissionBlocked = isSubmissionBlocked(parsedRequest.success, isGenerating, retryBlocked);
+  const submissionBlocked = isSubmissionBlocked(
+    parsedRequest.success,
+    isGenerating,
+    retryBlocked,
+    applicationCount >= applicationLimit,
+  );
 
   useEffect(
     () => () => {

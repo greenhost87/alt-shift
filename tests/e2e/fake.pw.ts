@@ -5,6 +5,7 @@ import {
   expectApplicationProgress,
   expectBlankGenerator,
   expectGoalBannerHidden,
+  seedApplications,
   submitApplicationForm,
 } from '../support/applications';
 
@@ -61,6 +62,20 @@ test('requires every field, submits with the keyboard, and generates again', asy
   await expect(page.getByText('2/5 applications generated')).toBeVisible();
   await page.getByRole('button', { name: 'Home' }).click();
   await expectApplicationProgress(page, 2);
+});
+
+test('disables generation after creating the fifth application', async ({ page }) => {
+  await seedApplications(page, 4);
+  await generateFakeApplication(page);
+
+  await expect(page.getByText('5/5 applications generated')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try Again' })).toBeDisabled();
+
+  await page.locator('form').evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+  });
+  await page.getByRole('button', { name: 'Home' }).click();
+  await expectApplicationProgress(page, 5);
 });
 
 test('starts a blank application from the completed goal banner', async ({ page }) => {
