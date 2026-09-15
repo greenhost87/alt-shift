@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
 import { GoalBanner } from '../../ui/banner/Banner';
 import { Button } from '../../ui/button/Button';
@@ -7,9 +7,8 @@ import { CopyButton } from '../../ui/button/CopyButton';
 import { CreateButton } from '../../ui/button/CreateButton';
 import { Icon } from '../../ui/icon/Icon';
 import cardStyles from './ApplicationCard.module.css';
-import { useStoredApplications } from '../../../system/applications/storage';
 import { writeClipboardText } from '../../../system/clipboard/write';
-import { useApplicationConfig } from '../../../system/config/application';
+import { useApplicationStore } from '../../../system/state/application';
 import styles from './ApplicationsDashboard.module.css';
 
 type ApplicationsDashboardProps = {
@@ -48,10 +47,16 @@ function shouldShowApplications(status: StorageStatus, applicationCount: number)
 }
 
 export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) {
-  const { applicationLimit } = useApplicationConfig();
-  const { applications, deleteApplication, status: storageStatus } = useStoredApplications();
-  const [copyError, setCopyError] = useState('');
-  const [pendingDeletion, setPendingDeletion] = useState<string | null>(null);
+  const applicationLimit = useApplicationStore((state) => state.config.applicationLimit);
+  const applications = useApplicationStore((state) => state.applications);
+  const storageStatus = useApplicationStore((state) => state.storageStatus);
+  const deleteApplication = useApplicationStore((state) => state.deleteApplication);
+  const copyError = useApplicationStore((state) => state.dashboardCopyError);
+  const setCopyError = useApplicationStore((state) => state.setDashboardCopyError);
+  const pendingDeletion = useApplicationStore((state) => state.pendingDeletion);
+  const setPendingDeletion = useApplicationStore((state) => state.setPendingDeletion);
+  const resetDashboard = useApplicationStore((state) => state.resetDashboard);
+  useEffect(() => resetDashboard, [resetDashboard]);
   const applicationCount = applications.length;
   const copyApplication = async (letter: string) => {
     const error = await writeClipboardText(letter);

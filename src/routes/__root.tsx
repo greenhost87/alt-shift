@@ -4,7 +4,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { Reshaped } from 'reshaped';
 import { NotFound } from '../components/layout/not-found/NotFound';
 import { getApplicationConfig } from '../server/config/application';
-import { ApplicationConfigProvider } from '../system/config/application';
+import { ApplicationStateProvider } from '../system/state/application';
 import '../styles/global.css';
 
 const loadApplicationConfig = createServerFn({ method: 'GET' }).handler(() =>
@@ -31,11 +31,11 @@ function RootComponent() {
   const config = Route.useLoaderData();
   return (
     <RootDocument>
-      <ApplicationConfigProvider value={config}>
+      <ApplicationStateProvider config={config}>
         <Reshaped colorMode="light" theme="variant">
           <Outlet />
         </Reshaped>
-      </ApplicationConfigProvider>
+      </ApplicationStateProvider>
     </RootDocument>
   );
 }

@@ -18,6 +18,7 @@ const errorResponseSchema = v.strictObject({
 });
 
 type GenerateOptions = {
+  endpoint?: string | undefined;
   signal?: AbortSignal;
   onOpen?: () => void;
   onDelta: (delta: string) => void;
@@ -95,8 +96,12 @@ function linkCallerSignal(controller: AbortController, signal: AbortSignal | und
   return () => signal?.removeEventListener('abort', abortFromCaller);
 }
 
-async function requestGenerationStream(request: GenerationRequest, signal: AbortSignal) {
-  const response = await fetch('/api/generate', {
+async function requestGenerationStream(
+  request: GenerationRequest,
+  signal: AbortSignal,
+  endpoint: string,
+) {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
     body: JSON.stringify(request),
@@ -206,7 +211,7 @@ function rethrowGenerationError(error: Error, controller: AbortController): neve
 
 export async function generateApplication(
   request: GenerationRequest,
-  { signal, onOpen, onDelta }: GenerateOptions,
+  { endpoint = '/api/generate', signal, onOpen, onDelta }: GenerateOptions,
 ): Promise<void> {
   const controller = new AbortController();
   const unlinkCallerSignal = linkCallerSignal(controller, signal);
@@ -215,7 +220,7 @@ export async function generateApplication(
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
 
   try {
-    const stream = await requestGenerationStream(request, controller.signal);
+    const stream = await requestGenerationStream(request, controller.signal, endpoint);
     inactivityTimeoutMs = stream.inactivityTimeoutMs;
     const inactivityTimer = createInactivityTimer(controller, inactivityTimeoutMs);
     timer = inactivityTimer;

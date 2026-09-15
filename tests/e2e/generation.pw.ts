@@ -65,11 +65,16 @@ async function generateApplication(page: Page) {
   await page.getByRole('button', { name: 'Generate Now' }).click();
 }
 
-async function useCopyableGeneration(page: Page) {
+async function setupCopyableGeneration(page: Page) {
   await page.addInitScript(() => {
     window.respondToGeneration = () =>
       window.generationResponse(window.generationFixtures.copyableStream);
   });
+}
+
+async function generateCopyableApplication(page: Page) {
+  await setupCopyableGeneration(page);
+  await generateApplication(page);
 }
 
 async function expectCompletedGeneration(page: Page, letter: string) {
@@ -226,35 +231,35 @@ test('supports generation without crypto.randomUUID', async ({ page }) => {
       value: undefined,
     });
   });
-  await useCopyableGeneration(page);
+  await setupCopyableGeneration(page);
 
   await generateApplication(page);
   await expectCompletedGeneration(page, 'Copyable application');
 });
 
-test('reports when the Clipboard API is unavailable', async ({
-  page,
-}) => {
+test('falls back to a ClipboardItem when writing text is rejected', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: undefined,
+      value: {
+        async write() {},
+        async writeText() {
+          await Promise.reject(new DOMException('Clipboard text denied', 'NotAllowedError'));
+        },
+      },
     });
   });
-  await useCopyableGeneration(page);
-  await generateApplication(page);
-
+  await generateCopyableApplication(page);
   await page.getByRole('button', { name: 'Copy to clipboard' }).click();
 
-  await expect(page.getByRole('alert')).toContainText('could not be copied to the clipboard');
-  await expect(page.getByRole('button', { name: 'Copied!' })).toHaveCount(0);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
 });
 
 test('reports clipboard rejection and clears the alert after a successful copy', async ({
   page,
 }) => {
   await rejectClipboardWrites(page, 1);
-  await useCopyableGeneration(page);
+  await setupCopyableGeneration(page);
   await generateApplication(page);
   await expect(page.getByText('Copyable application')).toBeVisible();
 

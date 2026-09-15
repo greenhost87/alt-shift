@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import * as v from 'valibot';
-import { useStoredApplications } from '../../../system/applications/storage';
+import { useShallow } from 'zustand/react/shallow';
 import { writeClipboardText } from '../../../system/clipboard/write';
-import { useApplicationConfig } from '../../../system/config/application';
+import { useApplicationStore } from '../../../system/state/application';
+import type { GenerationPhase } from '../../../system/state/application-store';
 import { GenerationError, generateApplication } from '../../../system/generation/client';
 import { safeParseGenerationRequest } from '../../../system/generation/schema';
 import type { GenerationRequest } from '../../../system/generation/schema';
@@ -17,14 +18,6 @@ import { RepeatIcon } from '../../ui/icon/Icon';
 import typographyStyles from '../../ui/text/Typography.module.css';
 import styles from './ApplicationGenerator.module.css';
 
-type GenerationPhase =
-  | 'idle'
-  | 'submitting'
-  | 'waiting-for-first-token'
-  | 'streaming'
-  | 'completed'
-  | 'failed';
-
 const ACTIVE_PHASES: GenerationPhase[] = ['submitting', 'waiting-for-first-token', 'streaming'];
 
 type FailureOptions = {
@@ -38,6 +31,7 @@ type FailureOptions = {
 type SubmissionOptions = {
   abortController: { current: AbortController | null };
   addApplication: (application: NewApplication) => boolean;
+  generationEndpoint: string | undefined;
   setError: (message: string) => void;
   setLetter: (letter: string) => void;
   setPhase: (phase: GenerationPhase) => void;
@@ -84,6 +78,7 @@ async function submitApplication(request: GenerationRequest, options: Submission
 
   try {
     await generateApplication(request, {
+      endpoint: options.generationEndpoint,
       signal: controller.signal,
       onOpen() {
         if (options.abortController.current === controller) {
@@ -241,19 +236,62 @@ function renderFormAction(options: FormActionsOptions) {
   );
 }
 
-export function ApplicationWorkspace() {
-  const { applicationLimit, fieldLimits, initialForm } = useApplicationConfig();
-  const [jobTitle, setJobTitle] = useState(initialForm.jobTitle);
-  const [company, setCompany] = useState(initialForm.company);
-  const [strengths, setStrengths] = useState(initialForm.strengths);
-  const [details, setDetails] = useState(initialForm.details);
-  const [phase, setPhase] = useState<GenerationPhase>('idle');
-  const [letter, setLetter] = useState('');
-  const [error, setError] = useState('');
-  const [copyError, setCopyError] = useState('');
-  const [retryAvailableAt, setRetryAvailableAt] = useState<number>();
+type ApplicationWorkspaceProps = {
+  generationEndpoint?: string;
+};
+
+export function ApplicationWorkspace({ generationEndpoint }: ApplicationWorkspaceProps) {
+  const {
+    config,
+    jobTitle,
+    setJobTitle,
+    company,
+    setCompany,
+    strengths,
+    setStrengths,
+    details,
+    setDetails,
+    phase,
+    setPhase,
+    letter,
+    setLetter,
+    error,
+    setError,
+    copyError,
+    setCopyError,
+    retryAvailableAt,
+    setRetryAvailableAt,
+    addApplication,
+    applicationCount,
+    resetGenerator,
+  } = useApplicationStore(
+    useShallow((state) => ({
+      config: state.config,
+      jobTitle: state.jobTitle,
+      setJobTitle: state.setJobTitle,
+      company: state.company,
+      setCompany: state.setCompany,
+      strengths: state.strengths,
+      setStrengths: state.setStrengths,
+      details: state.details,
+      setDetails: state.setDetails,
+      phase: state.generationPhase,
+      setPhase: state.setGenerationPhase,
+      letter: state.letter,
+      setLetter: state.setLetter,
+      error: state.generationError,
+      setError: state.setGenerationError,
+      copyError: state.generatorCopyError,
+      setCopyError: state.setGeneratorCopyError,
+      retryAvailableAt: state.retryAvailableAt,
+      setRetryAvailableAt: state.setRetryAvailableAt,
+      addApplication: state.addApplication,
+      applicationCount: state.applications.length,
+      resetGenerator: state.resetGenerator,
+    })),
+  );
   const abortController = useRef<AbortController | null>(null);
-  const { addApplication, applications } = useStoredApplications();
+  const { applicationLimit, fieldLimits } = config;
   const detailsLength = details.length;
   const parsedRequest = safeParseGenerationRequest(
     { jobTitle, company, strengths, details },
@@ -268,8 +306,9 @@ export function ApplicationWorkspace() {
   useEffect(
     () => () => {
       abortController.current?.abort();
+      resetGenerator();
     },
-    [],
+    [resetGenerator],
   );
 
   useRetryAvailability(retryAvailableAt, setRetryAvailableAt);
@@ -288,6 +327,7 @@ export function ApplicationWorkspace() {
       {
         abortController,
         addApplication,
+        generationEndpoint,
         setError,
         setLetter,
         setPhase,
@@ -297,20 +337,11 @@ export function ApplicationWorkspace() {
   };
 
   const startNewApplication = () => {
-    setJobTitle(initialForm.jobTitle);
-    setCompany(initialForm.company);
-    setStrengths(initialForm.strengths);
-    setDetails(initialForm.details);
-    setLetter('');
-    setError('');
-    setCopyError('');
-    setRetryAvailableAt(undefined);
-    setPhase('idle');
+    resetGenerator();
   };
 
   const canRetry = phase === 'failed';
   const isCompleted = phase === 'completed';
-  const applicationCount = applications.length;
 
   return (
     <div className={styles['content']}>

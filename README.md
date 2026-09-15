@@ -40,7 +40,15 @@ Start the development server:
 bun run dev
 ```
 
-Vite prints the local URL after startup, usually `http://localhost:3000`.
+Vite prints the local HTTPS URL after startup, usually `https://localhost:5173`. HTTPS is required for browser APIs such as clipboard access.
+
+To test from a phone on the same network, expose the development server:
+
+```bash
+bun run dev -- --host 0.0.0.0
+```
+
+Open the printed network URL with `https://` and accept the development certificate warning once. Do not use the corresponding `http://` URL because Chrome disables clipboard access on insecure network origins.
 
 Create a production build:
 
@@ -94,7 +102,7 @@ AI tooling was used to inspect the repository, compare recurring UI patterns, sc
 Three decisions were kept deliberately narrow during that process:
 
 1. Reuse Reshaped primitives and a project theme instead of introducing Tailwind or duplicating a second design system.
-2. Keep route and generation state local until shared state is demonstrably required, rather than adding a global state library early.
+2. Keep application, generation, dashboard, and persistence state in an SSR-scoped Zustand store with selector-based subscriptions.
 3. Proxy generation through server code instead of exposing the API token in the browser or replacing the required provider with another model API.
 
 The most project-specific work is the theme and layout system: Fixel typography, reusable design tokens, responsive workspace composition, and the animated generation waiting state are implemented as a coherent product layer rather than page-specific styling.

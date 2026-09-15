@@ -11,16 +11,18 @@ const portSchema = v.pipe(
   v.maxValue(65_535),
 );
 const port = v.parse(portSchema, getOptionalEnv('PLAYWRIGHT_PORT') ?? '3000');
-const baseURL = `http://127.0.0.1:${port}`;
+const baseURL = `https://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: './tests/e2e',
   testMatch: '**/*.pw.ts',
   use: {
     baseURL,
+    ignoreHTTPSErrors: true,
   },
   webServer: {
     command: `bun run dev -- --host 127.0.0.1 --port ${port}`,
+    ignoreHTTPSErrors: true,
     url: baseURL,
   },
 });

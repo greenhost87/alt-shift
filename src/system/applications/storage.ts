@@ -1,6 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
 import * as v from 'valibot';
-import { useApplicationConfig } from '../config/application';
 import type { ApplicationStorageConfig } from '../config/application.types';
 import { applicationSchema } from './schema';
 import type { StoredApplication } from './schema';
@@ -12,25 +10,16 @@ function createStoredApplicationsSchema(version: number) {
   });
 }
 
-type NewStoredApplication = {
+export type NewStoredApplication = {
   company: string;
   role: string;
   letter: string;
 };
 
-type ApplicationsState = {
+export type ApplicationsState = {
   applications: StoredApplication[];
   status: 'loading' | 'ready' | 'invalid' | 'unavailable';
 };
-
-type StoredApplicationsApi = {
-  applications: StoredApplication[];
-  status: 'loading' | 'ready' | 'invalid' | 'unavailable';
-  addApplication: (application: NewStoredApplication) => boolean;
-  deleteApplication: (id: string) => void;
-};
-
-const LOADING_STATE: ApplicationsState = { applications: [], status: 'loading' };
 
 function sortNewestFirst(applications: StoredApplication[]) {
   return [...applications].sort((first, second) => second.createdAt.localeCompare(first.createdAt));
@@ -51,7 +40,7 @@ function serializeApplications(
   );
 }
 
-function readApplications(config: ApplicationStorageConfig): ApplicationsState {
+export function readApplications(config: ApplicationStorageConfig): ApplicationsState {
   try {
     const serialized = window.localStorage.getItem(config.key);
     if (serialized === null) {
@@ -106,7 +95,7 @@ function createApplicationId() {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-function addApplication(
+export function addApplication(
   input: NewStoredApplication,
   config: ApplicationStorageConfig,
 ): ApplicationsState {
@@ -128,7 +117,7 @@ function addApplication(
   return storeApplications(applications, current.applications, config);
 }
 
-function deleteApplication(id: string, config: ApplicationStorageConfig): ApplicationsState {
+export function deleteApplication(id: string, config: ApplicationStorageConfig): ApplicationsState {
   const current = readApplications(config);
   if (current.status !== 'ready') {
     return current;
@@ -136,51 +125,4 @@ function deleteApplication(id: string, config: ApplicationStorageConfig): Applic
 
   const applications = current.applications.filter((application) => application.id !== id);
   return storeApplications(applications, current.applications, config);
-}
-
-export function useStoredApplications(): StoredApplicationsApi {
-  const { storage: config } = useApplicationConfig();
-  const [state, setState] = useState<ApplicationsState>(LOADING_STATE);
-
-  useEffect(() => {
-    const refresh = () => {
-      setState(readApplications(config));
-    };
-    const refreshFromStorage = (event: StorageEvent) => {
-      if (event.key === config.key || event.key === null) {
-        refresh();
-      }
-    };
-
-    refresh();
-    window.addEventListener('storage', refreshFromStorage);
-    window.addEventListener(config.changeEvent, refresh);
-    return () => {
-      window.removeEventListener('storage', refreshFromStorage);
-      window.removeEventListener(config.changeEvent, refresh);
-    };
-  }, [config]);
-
-  const add = useCallback(
-    (application: NewStoredApplication) => {
-      if (
-        ![application.company, application.role, application.letter].every((value) => value.trim())
-      ) {
-        return false;
-      }
-      const nextState = addApplication(application, config);
-      setState(nextState);
-      return nextState.status === 'ready';
-    },
-    [config],
-  );
-
-  const remove = useCallback(
-    (id: string) => {
-      setState(deleteApplication(id, config));
-    },
-    [config],
-  );
-
-  return { ...state, addApplication: add, deleteApplication: remove };
 }
