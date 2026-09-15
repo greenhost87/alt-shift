@@ -66,6 +66,41 @@ test('streams, saves, restores, and counts a completed application once', async 
   await expect(page.getByText('4/5 applications generated')).toBeVisible();
 });
 
+test('reports clipboard rejection and clears the alert after a successful copy', async ({ page }) => {
+  await page.addInitScript(() => {
+    let attempts = 0;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: () => {
+          attempts += 1;
+          return attempts === 1
+            ? Promise.reject(new DOMException('Clipboard denied', 'NotAllowedError'))
+            : Promise.resolve();
+        },
+      },
+    });
+  });
+  await page.route('**/api/generate', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      body: 'event: delta\ndata: Copyable application\n\n',
+    }),
+  );
+  await page.goto('/applications/new', { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Generate Now' }).click();
+  await expect(page.getByText('Copyable application')).toBeVisible();
+
+  const copy = page.getByRole('button', { name: 'Copy to clipboard' });
+  await copy.click();
+  await expect(page.getByRole('alert')).toContainText('could not be copied to the clipboard');
+  await expect(page.getByText('Copyable application')).toBeVisible();
+
+  await copy.click();
+  await expect(page.getByText('could not be copied to the clipboard')).toHaveCount(0);
+});
+
 test('does not save or increment progress when generation fails', async ({ page }) => {
   await page.route('**/api/generate', (route) =>
     route.fulfill({
@@ -170,6 +205,61 @@ test('blocks retry only for a valid server Retry-After period', async ({ page })
   await expect(retry).toBeEnabled({ timeout: 2_000 });
   await retry.click();
   await expect(page.getByText('Generated after waiting')).toBeVisible();
+});
+
+test('reports a transport failure and retries only after an explicit action', async ({ page }) => {
+  let attempts = 0;
+  await page.route('**/api/generate', (route) => {
+    attempts += 1;
+    if (attempts === 1) return route.abort('failed');
+    return route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      body: 'event: delta\ndata: Generated after reconnecting\n\n',
+    });
+  });
+  await page.goto('/applications/new', { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Generate Now' }).click();
+
+  await expect(page.getByRole('alert')).toHaveText(
+    'The application could not be generated. Please try again.',
+  );
+  await expect(page.getByText('3/5 applications generated')).toBeVisible();
+  expect(attempts).toBe(1);
+
+  await page.getByRole('button', { name: 'Retry generation' }).click();
+  await expect(page.getByText('Generated after reconnecting')).toBeVisible();
+  await expect(page.getByText('Application generated and saved.')).toBeVisible();
+  expect(attempts).toBe(2);
+});
+
+test('preserves a generated letter when browser storage rejects the save', async ({ page }) => {
+  await page.addInitScript((storageKey) => {
+    const nativeSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === storageKey && this.getItem(key) !== null) {
+        throw new DOMException('Storage quota exceeded', 'QuotaExceededError');
+      }
+      return nativeSetItem.call(this, key, value);
+    };
+  }, 'variant-cover-letters:v1');
+  await page.route('**/api/generate', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      body: 'event: delta\ndata: Letter that could not be saved\n\n',
+    }),
+  );
+  await page.goto('/applications/new', { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Generate Now' }).click();
+
+  await expect(page.getByText('Letter that could not be saved')).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText('browser storage could not save it');
+  await expect(page.getByText('3/5 applications generated')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Home' }).click();
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
+  await expect(page.getByText('Letter that could not be saved')).toHaveCount(0);
 });
 
 test('keeps interrupted output unsaved and retries only after an explicit action', async ({
