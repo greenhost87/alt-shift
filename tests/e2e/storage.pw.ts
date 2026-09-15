@@ -4,6 +4,7 @@ import {
   APPLICATION_STORAGE_KEY,
   createApplicationFixtures,
   expectApplicationProgress,
+  expectBlankGenerator,
   expectGoalBannerHidden,
   seedApplications,
 } from '../support/applications';
@@ -121,6 +122,16 @@ test('opens a stored application with read-only details, copy, and Home navigati
   await page.getByRole('button', { name: 'Home' }).click();
   await expect(page).toHaveURL('/');
   await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
+});
+
+test('starts a blank application from a stored application', async ({ page }) => {
+  await seedApplications(page);
+  await page.goto('/applications/00000000-0000-4000-8000-000000000003');
+
+  await page.getByRole('button', { name: 'Try Again' }).click();
+
+  await expect(page).toHaveURL(/\/applications\/new$/);
+  await expectBlankGenerator(page);
 });
 
 test('deletion can be cancelled without changing stored applications', async ({ page }) => {
