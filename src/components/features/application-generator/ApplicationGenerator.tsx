@@ -146,12 +146,12 @@ function renderApplicationPreview(
   }
   if (isGenerating) {
     return (
-      <div aria-label="Generating application" className={styles['loadingPreview']} role="status">
-        <div className={styles['orb']}>
+      <output aria-label="Generating application" className={styles['loadingPreview']}>
+        <span className={styles['orb']}>
           <span className={styles['orbGlow']} />
           <span className={styles['orbCore']} />
-        </div>
-      </div>
+        </span>
+      </output>
     );
   }
   return (
@@ -348,7 +348,6 @@ export function ApplicationWorkspace() {
                 value={strengths}
               />
               <TextAreaField
-                autoFocus
                 characterLimit={fieldLimits.details}
                 disabled={isGenerating}
                 hint={`${detailsLength}/${fieldLimits.details}`}

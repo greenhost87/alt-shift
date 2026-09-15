@@ -20,9 +20,7 @@ type StorageStatus = 'loading' | 'ready' | 'invalid' | 'unavailable';
 function renderStorageStatusMessage(status: StorageStatus) {
   if (status === 'loading') {
     return (
-      <p className={styles['storageMessage']} role="status">
-        Loading applications…
-      </p>
+      <output className={styles['storageMessage']}>Loading applications…</output>
     );
   }
   if (status === 'invalid') {

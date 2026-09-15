@@ -2,7 +2,6 @@ import { FormControl, Text } from 'reshaped';
 import styles from './Field.module.css';
 
 type TextAreaFieldProps = {
-  autoFocus?: boolean;
   characterLimit: number;
   disabled?: boolean;
   hint?: string;
@@ -23,7 +22,6 @@ function getLengthError(value: string, characterLimit: number) {
 }
 
 export function TextAreaField({
-  autoFocus = false,
   characterLimit,
   disabled = false,
   hint,
@@ -46,7 +44,6 @@ export function TextAreaField({
         <textarea
           aria-describedby={descriptionId}
           aria-invalid={hasError}
-          autoFocus={autoFocus}
           className={error ? styles['textareaError'] : styles['textarea']}
           disabled={disabled}
           id={id}

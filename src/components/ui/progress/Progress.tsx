@@ -23,14 +23,16 @@ export function Progress({ accessibleLabel, current, total, variant = 'segments'
   const isDots = variant === 'dots';
 
   return (
-    <div
-      aria-label={accessibleLabel}
-      aria-valuemax={safeTotal}
-      aria-valuemin={0}
-      aria-valuenow={safeCurrent}
-      className={isDots ? styles['dots'] : styles['progress']}
-      role="progressbar"
-    >
+    <div className={isDots ? styles['dots'] : styles['progress']}>
+      <progress
+        aria-label={accessibleLabel}
+        aria-valuemax={safeTotal}
+        aria-valuemin={0}
+        aria-valuenow={safeCurrent}
+        className={styles['native']}
+        max={safeTotal}
+        value={safeCurrent}
+      />
       <div aria-hidden="true" className={styles['segments']}>
         {Array.from({ length: safeTotal }, (_, index) => (
           <span
