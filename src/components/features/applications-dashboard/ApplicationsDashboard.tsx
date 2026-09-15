@@ -104,24 +104,26 @@ export function ApplicationsDashboard({ applicationLimit, onCreate }: Applicatio
           </div>
         ) : null}
       </section>
-      <section className={bannerStyles['banner']}>
-        <div className={bannerStyles['content']}>
-          <div className={bannerStyles['heading']}>
-            <h2 className={bannerStyles['title']}>Hit your goal</h2>
-            <p className={[bannerStyles['description'], typographyStyles['body']].join(' ')}>
-              Generate and send out couple more job applications today to get hired faster
-            </p>
-            <Button icon={<PlusIcon />} onClick={onCreate} size="large">
-              Create New
-            </Button>
+      {applicationCount < applicationLimit ? (
+        <section className={bannerStyles['banner']}>
+          <div className={bannerStyles['content']}>
+            <div className={bannerStyles['heading']}>
+              <h2 className={bannerStyles['title']}>Hit your goal</h2>
+              <p className={[bannerStyles['description'], typographyStyles['body']].join(' ')}>
+                Generate and send out couple more job applications today to get hired faster
+              </p>
+              <Button icon={<PlusIcon />} onClick={onCreate} size="large">
+                Create New
+              </Button>
+            </div>
+            <Progress
+              accessibleLabel={`${applicationCount} of ${applicationLimit} applications generated`}
+              current={applicationCount}
+              total={applicationLimit}
+            />
           </div>
-          <Progress
-            accessibleLabel={`${applicationCount} of ${applicationLimit} applications generated`}
-            current={applicationCount}
-            total={applicationLimit}
-          />
-        </div>
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }

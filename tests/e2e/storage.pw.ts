@@ -75,6 +75,31 @@ test('restores valid versioned applications created in the browser', async ({ pa
   await expect(page.getByText('1/5 applications generated')).toBeVisible();
 });
 
+test('hides the goal banner after restoring five applications', async ({ page }) => {
+  const applications = Array.from({ length: 5 }, (_, index) => ({
+    id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+    company: `Company ${index + 1}`,
+    role: `Role ${index + 1}`,
+    letter: `Persisted cover letter ${index + 1}`,
+    createdAt: `2025-01-0${index + 1}T03:04:05.000Z`,
+  }));
+
+  await page.addInitScript(
+    ({ key, storedApplications }) => {
+      localStorage.setItem(
+        key,
+        JSON.stringify({ version: 1, applications: storedApplications }),
+      );
+    },
+    { key: STORAGE_KEY, storedApplications: applications },
+  );
+
+  await page.goto('/');
+
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(5);
+  await expect(page.getByRole('heading', { name: 'Hit your goal' })).toHaveCount(0);
+});
+
 test('rejects invalid stored data without overwriting it', async ({ page }) => {
   const invalidValue = '{"version":2,"applications":[]}';
   await page.addInitScript(
