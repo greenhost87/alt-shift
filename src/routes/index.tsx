@@ -6,8 +6,6 @@ export const Route = createFileRoute('/')({
   component: ApplicationsDashboardPage,
 });
 
-const APPLICATION_LIMIT = 5;
-
 function ApplicationsDashboardPage() {
   const navigate = useNavigate();
   const createApplication = () => {
@@ -15,7 +13,7 @@ function ApplicationsDashboardPage() {
   };
   return (
     <Shell>
-      <ApplicationsDashboard applicationLimit={APPLICATION_LIMIT} onCreate={createApplication} />
+      <ApplicationsDashboard onCreate={createApplication} />
     </Shell>
   );
 }

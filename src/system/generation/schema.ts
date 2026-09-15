@@ -9,10 +9,13 @@ export const generationRequestSchema = v.strictObject({
 
 export type GenerationRequest = v.InferOutput<typeof generationRequestSchema>;
 
-export function parseGenerationRequest(input: unknown): GenerationRequest {
-  return v.parse(generationRequestSchema, input);
-}
+type GenerationRequestInput = {
+  jobTitle: string;
+  company: string;
+  strengths: string;
+  details: string;
+};
 
-export function safeParseGenerationRequest(input: unknown) {
+export function safeParseGenerationRequest(input: GenerationRequestInput) {
   return v.safeParse(generationRequestSchema, input);
 }

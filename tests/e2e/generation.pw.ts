@@ -1,6 +1,71 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import generationFixtures from '../fixtures/generation.json' with { type: 'json' };
+import { rejectClipboardWrites } from '../support/clipboard';
 
-const STREAMED_LETTER = 'Dear Apple team,\n\nI would love to help build useful products.';
+declare global {
+  interface Window {
+    delayedGenerationResponse: (release: () => Promise<void>, content: string) => Response;
+    finishInterruptedGenerationRetry: () => Promise<void>;
+    finishRetriedGeneration: () => Promise<void>;
+    generationResponse: (body: BodyInit) => Response;
+    recordGenerationRequest: () => Promise<void>;
+    recordInterruptedGenerationRequest: () => Promise<void>;
+    recordTransportAttempt: () => Promise<void>;
+    respondToGeneration: (init?: RequestInit) => Promise<Response> | Response;
+    waitToFinishGeneration: () => Promise<void>;
+    waitToInterruptGeneration: () => Promise<void>;
+    generationFixtures: typeof generationFixtures;
+  }
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript((fixtures) => {
+    window.generationFixtures = fixtures;
+    window.generationResponse = (body) =>
+      new Response(body, {
+        headers: { 'content-type': 'text/event-stream' },
+        status: 200,
+      });
+    window.delayedGenerationResponse = (release, content) =>
+      window.generationResponse(
+        new ReadableStream({
+          async start(controller) {
+            await release();
+            controller.enqueue(new TextEncoder().encode(content));
+            controller.close();
+          },
+        }),
+      );
+    const nativeFetch = window.fetch;
+    Object.defineProperty(window, 'fetch', {
+      configurable: true,
+      value: async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(input instanceof Request ? input.url : input.toString(), location.href);
+        if (url.pathname !== '/api/generate') return nativeFetch.call(window, input, init);
+        return window.respondToGeneration(init);
+      },
+    });
+  }, generationFixtures);
+});
+
+const STREAMED_LETTER = generationFixtures.streamedLetter;
+
+async function generateApplication(page: Page) {
+  await page.goto('/applications/new', { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Generate Now' }).click();
+}
+
+async function expectCompletedGeneration(page: Page, letter: string) {
+  await expect(page.getByText(letter)).toBeVisible();
+  await expect(page.getByText('Application generated and saved.')).toBeVisible();
+  await expect(page.getByText('4/5 applications generated')).toBeVisible();
+}
+
+async function openDashboardAndExpectCount(page: Page, applicationCount: number) {
+  await page.getByRole('button', { name: 'Home' }).click();
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
+}
 
 test('streams, saves, restores, and counts a completed application once', async ({ page }) => {
   let requestCount = 0;
@@ -11,42 +76,27 @@ test('streams, saves, restores, and counts a completed application once', async 
   await page.exposeFunction('recordGenerationRequest', () => {
     requestCount += 1;
   });
-  await page.exposeFunction('waitToFinishGeneration', () => streamReleased);
+  await page.exposeFunction('waitToFinishGeneration', async () => streamReleased);
   await page.addInitScript(() => {
-    const nativeFetch = window.fetch;
-    const testWindow = window as typeof window & {
-      recordGenerationRequest: () => Promise<void>;
-      waitToFinishGeneration: () => Promise<void>;
-    };
-    window.fetch = async (input, init) => {
-      const url = new URL(input instanceof Request ? input.url : input.toString(), location.href);
-      if (url.pathname !== '/api/generate') return nativeFetch.call(window, input, init);
-
+    window.respondToGeneration = async (init) => {
       if (new Headers(init?.headers).has('authorization')) {
         throw new Error('The browser request exposed an authorization token.');
       }
-      await testWindow.recordGenerationRequest();
+      await window.recordGenerationRequest();
       const encoder = new TextEncoder();
-      return new Response(
+      return window.generationResponse(
         new ReadableStream({
           async start(controller) {
-            controller.enqueue(encoder.encode('event: delta\ndata: Dear Apple team,\n\n'));
-            await testWindow.waitToFinishGeneration();
-            controller.enqueue(
-              encoder.encode(
-                'event: delta\ndata:\ndata:\ndata: I would love to help build useful products.\n\n',
-              ),
-            );
+            controller.enqueue(encoder.encode(window.generationFixtures.firstAppleChunk));
+            await window.waitToFinishGeneration();
+            controller.enqueue(encoder.encode(window.generationFixtures.secondAppleChunk));
             controller.close();
           },
         }),
-        { headers: { 'content-type': 'text/event-stream' }, status: 200 },
       );
     };
   });
-  await page.goto('/applications/new', { waitUntil: 'networkidle' });
-
-  await page.getByRole('button', { name: 'Generate Now' }).click();
+  await generateApplication(page);
 
   await expect.poll(() => requestCount).toBe(1);
   await expect(page.getByText('Dear Apple team,')).toBeVisible();
@@ -54,9 +104,7 @@ test('streams, saves, restores, and counts a completed application once', async 
   await expect(page.getByText('Application generated and saved.')).toHaveCount(0);
 
   releaseStream();
-  await expect(page.getByText(STREAMED_LETTER)).toBeVisible();
-  await expect(page.getByText('Application generated and saved.')).toBeVisible();
-  await expect(page.getByText('4/5 applications generated')).toBeVisible();
+  await expectCompletedGeneration(page, STREAMED_LETTER);
 
   await page.reload();
   await expect(page.getByText('4/5 applications generated')).toBeVisible();
@@ -67,29 +115,12 @@ test('streams, saves, restores, and counts a completed application once', async 
 });
 
 test('reports clipboard rejection and clears the alert after a successful copy', async ({ page }) => {
+  await rejectClipboardWrites(page, 1);
   await page.addInitScript(() => {
-    let attempts = 0;
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: {
-        writeText: () => {
-          attempts += 1;
-          return attempts === 1
-            ? Promise.reject(new DOMException('Clipboard denied', 'NotAllowedError'))
-            : Promise.resolve();
-        },
-      },
-    });
+    window.respondToGeneration = () =>
+      window.generationResponse(window.generationFixtures.copyableStream);
   });
-  await page.route('**/api/generate', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'text/event-stream',
-      body: 'event: delta\ndata: Copyable application\n\n',
-    }),
-  );
-  await page.goto('/applications/new', { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: 'Generate Now' }).click();
+  await generateApplication(page);
   await expect(page.getByText('Copyable application')).toBeVisible();
 
   const copy = page.getByRole('button', { name: 'Copy to clipboard' });
@@ -102,20 +133,18 @@ test('reports clipboard rejection and clears the alert after a successful copy',
 });
 
 test('does not save or increment progress when generation fails', async ({ page }) => {
-  await page.route('**/api/generate', (route) =>
-    route.fulfill({
-      status: 502,
-      contentType: 'application/json',
-      body: JSON.stringify({ error: { message: 'Generation is temporarily unavailable.' } }),
-    }),
-  );
-  await page.goto('/applications/new', { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: 'Generate Now' }).click();
+  await page.addInitScript(() => {
+    window.respondToGeneration = () =>
+      new Response(
+        JSON.stringify({ error: { message: 'Generation is temporarily unavailable.' } }),
+        { headers: { 'content-type': 'application/json' }, status: 502 },
+      );
+  });
+  await generateApplication(page);
 
   await expect(page.getByRole('alert')).toContainText('temporarily unavailable');
   await expect(page.getByText('3/5 applications generated')).toBeVisible();
-  await page.getByRole('button', { name: 'Home' }).click();
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
+  await openDashboardAndExpectCount(page, 3);
 });
 
 test('cancels a streamed result, keeps it copyable, and explicitly retries', async ({ page }) => {
@@ -123,42 +152,28 @@ test('cancels a streamed result, keeps it copyable, and explicitly retries', asy
   const retryReleased = new Promise<void>((resolve) => {
     finishRetry = resolve;
   });
-  await page.exposeFunction('finishRetriedGeneration', () => retryReleased);
+  await page.exposeFunction('finishRetriedGeneration', async () => retryReleased);
   await page.addInitScript(() => {
-    const nativeFetch = window.fetch;
-    const testWindow = window as typeof window & {
-      finishRetriedGeneration: () => Promise<void>;
-    };
     let attempts = 0;
-    window.fetch = async (input, init) => {
-      const url = new URL(input instanceof Request ? input.url : input.toString(), location.href);
-      if (url.pathname !== '/api/generate') return nativeFetch.call(window, input, init);
+    window.respondToGeneration = () => {
       attempts += 1;
       const encoder = new TextEncoder();
       if (attempts === 1) {
-        return new Response(
+        return window.generationResponse(
           new ReadableStream({
             start(controller) {
-              controller.enqueue(encoder.encode('event: delta\ndata: Cancellable partial\n\n'));
+              controller.enqueue(encoder.encode(window.generationFixtures.cancellableStream));
             },
           }),
-          { headers: { 'content-type': 'text/event-stream' } },
         );
       }
-      return new Response(
-        new ReadableStream({
-          async start(controller) {
-            await testWindow.finishRetriedGeneration();
-            controller.enqueue(encoder.encode('event: delta\ndata: Retried application\n\n'));
-            controller.close();
-          },
-        }),
-        { headers: { 'content-type': 'text/event-stream' } },
+      return window.delayedGenerationResponse(
+        window.finishRetriedGeneration,
+        window.generationFixtures.retriedStream,
       );
     };
   });
-  await page.goto('/applications/new', { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: 'Generate Now' }).click();
+  await generateApplication(page);
   await expect(page.getByText('Cancellable partial')).toBeVisible();
 
   await page.getByRole('button', { name: 'Cancel generation' }).click();
@@ -171,33 +186,29 @@ test('cancels a streamed result, keeps it copyable, and explicitly retries', asy
   await page.getByRole('button', { name: 'Retry generation' }).click();
   await expect(page.getByText('Cancellable partial')).toHaveCount(0);
   finishRetry();
-  await expect(page.getByText('Retried application')).toBeVisible();
-  await expect(page.getByText('Application generated and saved.')).toBeVisible();
-  await expect(page.getByText('4/5 applications generated')).toBeVisible();
+  await expectCompletedGeneration(page, 'Retried application');
 });
 
 test('blocks retry only for a valid server Retry-After period', async ({ page }) => {
-  let attempts = 0;
-  await page.route('**/api/generate', (route) => {
-    attempts += 1;
-    if (attempts === 1) {
-      return route.fulfill({
-        status: 429,
-        headers: { 'retry-after': '1' },
-        contentType: 'application/json',
-        body: JSON.stringify({
-          error: { code: 'rate_limited', message: 'Too many generation requests.' },
-        }),
-      });
-    }
-    return route.fulfill({
-      status: 200,
-      contentType: 'text/event-stream',
-      body: 'event: delta\ndata: Generated after waiting\n\n',
-    });
+  await page.addInitScript(() => {
+    let attempts = 0;
+    window.respondToGeneration = () => {
+      attempts += 1;
+      if (attempts === 1) {
+        return new Response(
+          JSON.stringify({
+            error: { code: 'rate_limited', message: 'Too many generation requests.' },
+          }),
+          {
+            headers: { 'content-type': 'application/json', 'retry-after': '1' },
+            status: 429,
+          },
+        );
+      }
+      return window.generationResponse(window.generationFixtures.waitingStream);
+    };
   });
-  await page.goto('/applications/new', { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: 'Generate Now' }).click();
+  await generateApplication(page);
 
   await expect(page.getByRole('alert')).toContainText('Too many generation requests');
   const retry = page.getByRole('button', { name: 'Retry generation' });
@@ -209,17 +220,19 @@ test('blocks retry only for a valid server Retry-After period', async ({ page })
 
 test('reports a transport failure and retries only after an explicit action', async ({ page }) => {
   let attempts = 0;
-  await page.route('**/api/generate', (route) => {
+  await page.exposeFunction('recordTransportAttempt', () => {
     attempts += 1;
-    if (attempts === 1) return route.abort('failed');
-    return route.fulfill({
-      status: 200,
-      contentType: 'text/event-stream',
-      body: 'event: delta\ndata: Generated after reconnecting\n\n',
-    });
   });
-  await page.goto('/applications/new', { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: 'Generate Now' }).click();
+  await page.addInitScript(() => {
+    let browserAttempts = 0;
+    window.respondToGeneration = async () => {
+      browserAttempts += 1;
+      await window.recordTransportAttempt();
+      if (browserAttempts === 1) throw new TypeError('Failed to fetch');
+      return window.generationResponse(window.generationFixtures.reconnectingStream);
+    };
+  });
+  await generateApplication(page);
 
   await expect(page.getByRole('alert')).toHaveText(
     'The application could not be generated. Please try again.',
@@ -235,30 +248,25 @@ test('reports a transport failure and retries only after an explicit action', as
 
 test('preserves a generated letter when browser storage rejects the save', async ({ page }) => {
   await page.addInitScript((storageKey) => {
-    const nativeSetItem = Storage.prototype.setItem;
+    const nativeSetItem = Storage.prototype.setItem.bind(localStorage);
     Storage.prototype.setItem = function (key, value) {
       if (key === storageKey && this.getItem(key) !== null) {
         throw new DOMException('Storage quota exceeded', 'QuotaExceededError');
       }
-      return nativeSetItem.call(this, key, value);
+      nativeSetItem(key, value);
     };
   }, 'variant-cover-letters:v1');
-  await page.route('**/api/generate', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'text/event-stream',
-      body: 'event: delta\ndata: Letter that could not be saved\n\n',
-    }),
-  );
-  await page.goto('/applications/new', { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: 'Generate Now' }).click();
+  await page.addInitScript(() => {
+    window.respondToGeneration = () =>
+      window.generationResponse(window.generationFixtures.unsavedStream);
+  });
+  await generateApplication(page);
 
   await expect(page.getByText('Letter that could not be saved')).toBeVisible();
   await expect(page.getByRole('alert')).toContainText('browser storage could not save it');
   await expect(page.getByText('3/5 applications generated')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Home' }).click();
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
+  await openDashboardAndExpectCount(page, 3);
   await expect(page.getByText('Letter that could not be saved')).toHaveCount(0);
 });
 
@@ -277,50 +285,33 @@ test('keeps interrupted output unsaved and retries only after an explicit action
   await page.exposeFunction('recordInterruptedGenerationRequest', () => {
     requestCount += 1;
   });
-  await page.exposeFunction('waitToInterruptGeneration', () => streamInterrupted);
-  await page.exposeFunction('finishInterruptedGenerationRetry', () => retryReleased);
+  await page.exposeFunction('waitToInterruptGeneration', async () => streamInterrupted);
+  await page.exposeFunction('finishInterruptedGenerationRetry', async () => retryReleased);
   await page.addInitScript(() => {
-    const nativeFetch = window.fetch;
-    const testWindow = window as typeof window & {
-      recordInterruptedGenerationRequest: () => Promise<void>;
-      waitToInterruptGeneration: () => Promise<void>;
-      finishInterruptedGenerationRetry: () => Promise<void>;
-    };
     let attempts = 0;
-    window.fetch = async (input, init) => {
-      const url = new URL(input instanceof Request ? input.url : input.toString(), location.href);
-      if (url.pathname !== '/api/generate') return nativeFetch.call(window, input, init);
-
+    window.respondToGeneration = async () => {
       attempts += 1;
-      await testWindow.recordInterruptedGenerationRequest();
+      await window.recordInterruptedGenerationRequest();
       const encoder = new TextEncoder();
       if (attempts === 1) {
-        return new Response(
+        return window.generationResponse(
           new ReadableStream({
             async start(controller) {
-              controller.enqueue(encoder.encode('event: delta\ndata: Partial application\n\n'));
-              await testWindow.waitToInterruptGeneration();
+              controller.enqueue(encoder.encode(window.generationFixtures.partialStream));
+              await window.waitToInterruptGeneration();
               controller.error(new Error('The generation stream was interrupted.'));
             },
           }),
-          { headers: { 'content-type': 'text/event-stream' }, status: 200 },
         );
       }
 
-      return new Response(
-        new ReadableStream({
-          async start(controller) {
-            await testWindow.finishInterruptedGenerationRetry();
-            controller.enqueue(encoder.encode('event: delta\ndata: Recovered application\n\n'));
-            controller.close();
-          },
-        }),
-        { headers: { 'content-type': 'text/event-stream' }, status: 200 },
+      return window.delayedGenerationResponse(
+        window.finishInterruptedGenerationRetry,
+        window.generationFixtures.recoveredStream,
       );
     };
   });
-  await page.goto('/applications/new', { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: 'Generate Now' }).click();
+  await generateApplication(page);
 
   await expect(page.getByText('Partial application')).toBeVisible();
   await expect(page.getByText('Writing your application…')).toBeVisible();
@@ -336,12 +327,9 @@ test('keeps interrupted output unsaved and retries only after an explicit action
   await expect.poll(() => requestCount).toBe(2);
   await expect(page.getByText('Partial application')).toHaveCount(0);
   finishRetry();
-  await expect(page.getByText('Recovered application')).toBeVisible();
-  await expect(page.getByText('Application generated and saved.')).toBeVisible();
-  await expect(page.getByText('4/5 applications generated')).toBeVisible();
+  await expectCompletedGeneration(page, 'Recovered application');
 
-  await page.getByRole('button', { name: 'Home' }).click();
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(4);
+  await openDashboardAndExpectCount(page, 4);
   await page.reload();
   await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(4);
   await expect(page.getByText('4/5 applications generated')).toBeVisible();

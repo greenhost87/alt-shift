@@ -20,11 +20,15 @@ const storedApplicationsSchema = v.strictObject({
 
 const serializedApplicationsSchema = v.pipe(v.string(), v.parseJson(), storedApplicationsSchema);
 
-export type StoredApplication = v.InferOutput<typeof applicationSchema>;
+type StoredApplication = v.InferOutput<typeof applicationSchema>;
 
 type StoredApplications = v.InferOutput<typeof storedApplicationsSchema>;
 
-export type NewStoredApplication = Pick<StoredApplication, 'company' | 'role' | 'letter'>;
+type NewStoredApplication = {
+  company: string;
+  role: string;
+  letter: string;
+};
 
 type ApplicationsState = {
   applications: StoredApplication[];
@@ -106,6 +110,19 @@ function notifySameTab() {
   window.dispatchEvent(new Event(STORAGE_CHANGE_EVENT));
 }
 
+function storeApplications(
+  applications: StoredApplication[],
+  fallbackApplications: StoredApplication[],
+): ApplicationsState {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, serializeApplications(applications));
+    notifySameTab();
+    return { applications, status: 'ready' };
+  } catch {
+    return { applications: fallbackApplications, status: 'unavailable' };
+  }
+}
+
 function addApplication(input: NewStoredApplication): ApplicationsState {
   const parsed = v.safeParse(
     applicationSchema,
@@ -125,13 +142,7 @@ function addApplication(input: NewStoredApplication): ApplicationsState {
   }
 
   const applications = sortNewestFirst([parsed.output, ...current.applications]);
-  try {
-    window.localStorage.setItem(STORAGE_KEY, serializeApplications(applications));
-    notifySameTab();
-    return { applications, status: 'ready' };
-  } catch {
-    return { applications: current.applications, status: 'unavailable' };
-  }
+  return storeApplications(applications, current.applications);
 }
 
 function deleteApplication(id: string): ApplicationsState {
@@ -141,13 +152,7 @@ function deleteApplication(id: string): ApplicationsState {
   }
 
   const applications = current.applications.filter((application) => application.id !== id);
-  try {
-    window.localStorage.setItem(STORAGE_KEY, serializeApplications(applications));
-    notifySameTab();
-    return { applications, status: 'ready' };
-  } catch {
-    return { applications: current.applications, status: 'unavailable' };
-  }
+  return storeApplications(applications, current.applications);
 }
 
 export function useStoredApplications(): StoredApplicationsApi {

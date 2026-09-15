@@ -31,14 +31,6 @@ export function CopyIcon() {
   );
 }
 
-export function DeleteIcon() {
-  return (
-    <Icon viewBox="0 0 20 20">
-      <path d="M7.5 2.5h5m-8.33 3.33h11.66m-1.3 0-.58 9.23a1.67 1.67 0 0 1-1.66 1.57H7.7a1.67 1.67 0 0 1-1.66-1.57l-.58-9.23m2.87 3.34v4.16m3.34-4.16v4.16" />
-    </Icon>
-  );
-}
-
 export function PlusIcon() {
   return (
     <Icon viewBox="0 0 20 20">

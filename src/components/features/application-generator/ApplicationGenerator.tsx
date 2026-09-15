@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import * as v from 'valibot';
 import { useStoredApplications } from '../../../system/applications/storage';
+import { writeClipboardText } from '../../../system/clipboard/write';
 import { GenerationError, generateApplication } from '../../../system/generation/client';
 import { safeParseGenerationRequest } from '../../../system/generation/schema';
+import type { GenerationRequest } from '../../../system/generation/schema';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
 import { Workspace } from '../../layout/workspace/Workspace';
 import { Button } from '../../ui/button/Button';
@@ -27,6 +30,12 @@ type GenerationPhase =
   | 'cancelled'
   | 'failed';
 
+const ACTIVE_PHASES: GenerationPhase[] = [
+  'submitting',
+  'waiting-for-first-token',
+  'streaming',
+];
+
 const PHASE_STATUS: Record<GenerationPhase, string> = {
   idle: '',
   submitting: 'Submitting your application…',
@@ -36,6 +45,225 @@ const PHASE_STATUS: Record<GenerationPhase, string> = {
   cancelled: 'Generation cancelled. Your partial application is still available.',
   failed: 'Generation failed. You can retry when ready.',
 };
+
+type FailureOptions = {
+  controller: AbortController;
+  currentController: AbortController | null;
+  setError: (message: string) => void;
+  setPhase: (phase: GenerationPhase) => void;
+  setRetryAvailableAt: (value: number | undefined) => void;
+};
+
+type SubmissionOptions = {
+  abortController: { current: AbortController | null };
+  addApplication: (application: NewApplication) => boolean;
+  setError: (message: string) => void;
+  setLetter: (letter: string) => void;
+  setPhase: (phase: GenerationPhase) => void;
+  setRetryAvailableAt: (value: number | undefined) => void;
+};
+
+type NewApplication = {
+  company: string;
+  role: string;
+  letter: string;
+};
+
+type FormActionsOptions = {
+  cancel: () => void;
+  canRetry: boolean;
+  isGenerating: boolean;
+  submissionBlocked: boolean;
+};
+
+const generationErrorSchema = v.fallback(
+  v.instance(Error),
+  new Error('The application could not be generated. Please try again.'),
+);
+
+function handleGenerationFailure(generationError: Error, options: FailureOptions) {
+  if (options.currentController !== options.controller) return;
+  if (options.controller.signal.aborted) {
+    options.setPhase('cancelled');
+    return;
+  }
+  if (generationError instanceof GenerationError && generationError.code === 'rate_limited') {
+    options.setRetryAvailableAt(generationError.retryAfter);
+  }
+  options.setError(generationError.message);
+  options.setPhase('failed');
+}
+
+async function submitApplication(request: GenerationRequest, options: SubmissionOptions) {
+  const controller = new AbortController();
+  options.abortController.current?.abort();
+  options.abortController.current = controller;
+  options.setLetter('');
+  options.setError('');
+  options.setRetryAvailableAt(undefined);
+  options.setPhase('submitting');
+  let generatedLetter = '';
+
+  try {
+    await generateApplication(request, {
+      signal: controller.signal,
+      onOpen() {
+        if (options.abortController.current === controller) {
+          options.setPhase('waiting-for-first-token');
+        }
+      },
+      onDelta(delta) {
+        if (options.abortController.current !== controller) return;
+        generatedLetter += delta;
+        options.setLetter(generatedLetter);
+        options.setPhase('streaming');
+      },
+    });
+
+    if (options.abortController.current !== controller) return;
+    if (!generatedLetter.trim()) {
+      throw new GenerationError(
+        'The generation stream ended before a letter was created.',
+        'empty_stream',
+      );
+    }
+
+    const saved = options.addApplication({
+      company: request.company,
+      role: request.jobTitle,
+      letter: generatedLetter,
+    });
+    if (!saved) {
+      options.setError('Your letter was generated, but browser storage could not save it.');
+      options.setPhase('failed');
+      return;
+    }
+    options.setPhase('completed');
+  } catch (generationError) {
+    handleGenerationFailure(v.parse(generationErrorSchema, generationError), {
+      controller,
+      currentController: options.abortController.current,
+      setError: options.setError,
+      setPhase: options.setPhase,
+      setRetryAvailableAt: options.setRetryAvailableAt,
+    });
+  } finally {
+    if (options.abortController.current === controller) options.abortController.current = null;
+  }
+}
+
+function renderApplicationPreview(
+  letter: string,
+  isGenerating: boolean,
+  copyApplication: () => Promise<void>,
+) {
+  const copyButton = (
+    <Button
+      icon={<CopyIcon />}
+      iconPosition="end"
+      onClick={() => void copyApplication()}
+      variant="ghost"
+    >
+      Copy to clipboard
+    </Button>
+  );
+  if (letter) {
+    return (
+      <div className={styles['preview']}>
+        <p className={[styles['letter'], typographyStyles['body']].join(' ')}>{letter}</p>
+        <div className={styles['previewAction']}>{copyButton}</div>
+      </div>
+    );
+  }
+  if (isGenerating) {
+    return (
+      <div aria-label="Generating application" className={styles['loadingPreview']} role="status">
+        <div className={styles['orb']}>
+          <span className={styles['orbGlow']} />
+          <span className={styles['orbCore']} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={styles['preview']}>
+      <p className={[styles['placeholder'], typographyStyles['body']].join(' ')}>
+        Your personalized job application will appear here...
+      </p>
+      <div className={styles['previewAction']}>{copyButton}</div>
+    </div>
+  );
+}
+
+function useRetryAvailability(
+  retryAvailableAt: number | undefined,
+  setRetryAvailableAt: (value: number | undefined) => void,
+) {
+  useEffect(() => {
+    if (!retryAvailableAt) return () => {};
+    let timeout: number | undefined;
+    const waitUntilRetryIsAvailable = () => {
+      const remaining = retryAvailableAt - Date.now();
+      if (remaining <= 0) {
+        setRetryAvailableAt(undefined);
+        return;
+      }
+      timeout = window.setTimeout(waitUntilRetryIsAvailable, Math.min(remaining, 2_147_483_647));
+    };
+    waitUntilRetryIsAvailable();
+    return () => {
+      if (timeout !== undefined) window.clearTimeout(timeout);
+    };
+  }, [retryAvailableAt, setRetryAvailableAt]);
+}
+
+function isRetryBlocked(retryAvailableAt: number | undefined) {
+  return retryAvailableAt !== undefined && retryAvailableAt > Date.now();
+}
+
+function isSubmissionBlocked(requestIsValid: boolean, isGenerating: boolean, retryBlocked: boolean) {
+  return !requestIsValid || isGenerating || retryBlocked;
+}
+
+function getApplicationTitle(jobTitle: string, company: string) {
+  return [jobTitle, company].every((value) => value.trim().length > 0)
+    ? `${jobTitle}, ${company}`
+    : 'New application';
+}
+
+function renderAlert(message: string) {
+  return message ? (
+    <p className={styles['error']} role="alert">
+      {message}
+    </p>
+  ) : null;
+}
+
+function renderRetryMessage(retryBlocked: boolean) {
+  return retryBlocked ? (
+    <p className={styles['rateLimit']}>Retry is unavailable until the server limit expires.</p>
+  ) : null;
+}
+
+function renderFormActions(options: FormActionsOptions) {
+  if (options.isGenerating) {
+    return (
+      <>
+        <Button disabled fullWidth loading size="large" type="submit">
+          Generate Now
+        </Button>
+        <Button fullWidth onClick={options.cancel} size="large" variant="secondary">
+          Cancel generation
+        </Button>
+      </>
+    );
+  }
+  return (
+    <Button disabled={options.submissionBlocked} fullWidth size="large" type="submit">
+      {options.canRetry ? 'Retry generation' : 'Generate Now'}
+    </Button>
+  );
+}
 
 export function ApplicationWorkspace() {
   const [jobTitle, setJobTitle] = useState(INITIAL_JOB_TITLE);
@@ -51,11 +279,15 @@ export function ApplicationWorkspace() {
   const { addApplication } = useStoredApplications();
   const detailsLength = details.length;
   const parsedRequest = safeParseGenerationRequest({ jobTitle, company, strengths, details });
-  const isGenerating =
-    phase === 'submitting' || phase === 'waiting-for-first-token' || phase === 'streaming';
-  const retryBlocked = retryAvailableAt !== undefined && retryAvailableAt > Date.now();
-  const hasApplicationTitle = jobTitle.trim().length > 0 && company.trim().length > 0;
-  const applicationTitle = hasApplicationTitle ? `${jobTitle}, ${company}` : 'New application';
+  const isGenerating = ACTIVE_PHASES.includes(phase);
+  const retryBlocked = isRetryBlocked(retryAvailableAt);
+  const hasApplicationTitle = [jobTitle, company].every((value) => value.trim().length > 0);
+  const applicationTitle = getApplicationTitle(jobTitle, company);
+  const submissionBlocked = isSubmissionBlocked(
+    parsedRequest.success,
+    isGenerating,
+    retryBlocked,
+  );
 
   useEffect(
     () => () => {
@@ -64,30 +296,10 @@ export function ApplicationWorkspace() {
     [],
   );
 
-  useEffect(() => {
-    if (!retryAvailableAt) return;
-    let timeout: number | undefined;
-    const waitUntilRetryIsAvailable = () => {
-      const remaining = retryAvailableAt - Date.now();
-      if (remaining <= 0) {
-        setRetryAvailableAt(undefined);
-        return;
-      }
-      timeout = window.setTimeout(waitUntilRetryIsAvailable, Math.min(remaining, 2_147_483_647));
-    };
-    waitUntilRetryIsAvailable();
-    return () => {
-      if (timeout !== undefined) window.clearTimeout(timeout);
-    };
-  }, [retryAvailableAt]);
+  useRetryAvailability(retryAvailableAt, setRetryAvailableAt);
 
   const copyApplication = async () => {
-    try {
-      await navigator.clipboard.writeText(letter);
-      setCopyError('');
-    } catch {
-      setCopyError('The application could not be copied to the clipboard. Please try again.');
-    }
+    setCopyError(await writeClipboardText(letter));
   };
 
   const cancel = () => {
@@ -99,112 +311,22 @@ export function ApplicationWorkspace() {
     setPhase('cancelled');
   };
 
-  const submit = async () => {
-    if (!parsedRequest.success || isGenerating || retryBlocked) return;
-
-    const request = parsedRequest.output;
-    const controller = new AbortController();
-    abortController.current?.abort();
-    abortController.current = controller;
-    setLetter('');
-    setError('');
-    setRetryAvailableAt(undefined);
-    setPhase('submitting');
-    let generatedLetter = '';
-
-    try {
-      await generateApplication(request, {
-        signal: controller.signal,
-        onOpen() {
-          if (abortController.current === controller) setPhase('waiting-for-first-token');
-        },
-        onDelta(delta) {
-          if (abortController.current !== controller) return;
-          generatedLetter += delta;
-          setLetter(generatedLetter);
-          setPhase('streaming');
-        },
-      });
-
-      if (abortController.current !== controller) return;
-      if (!generatedLetter.trim()) {
-        throw new GenerationError(
-          'The generation stream ended before a letter was created.',
-          'empty_stream',
-        );
-      }
-
-      const saved = addApplication({
-        company: request.company,
-        role: request.jobTitle,
-        letter: generatedLetter,
-      });
-      if (!saved) {
-        setError('Your letter was generated, but browser storage could not save it.');
-        setPhase('failed');
-        return;
-      }
-      setPhase('completed');
-    } catch (generationError) {
-      if (abortController.current !== controller) return;
-      if (controller.signal.aborted) {
-        setPhase('cancelled');
-        return;
-      }
-      if (generationError instanceof GenerationError && generationError.code === 'rate_limited') {
-        setRetryAvailableAt(generationError.retryAfter);
-      }
-      setError(
-        generationError instanceof Error
-          ? generationError.message
-          : 'The application could not be generated. Please try again.',
-      );
-      setPhase('failed');
-    } finally {
-      if (abortController.current === controller) abortController.current = null;
-    }
+  const submit = () => {
+    if (submissionBlocked) return;
+    void submitApplication(
+      { jobTitle, company, strengths, details },
+      {
+        abortController,
+        addApplication,
+        setError,
+        setLetter,
+        setPhase,
+        setRetryAvailableAt,
+      },
+    );
   };
 
-  const preview = letter ? (
-    <div className={styles['preview']}>
-      <p className={[styles['letter'], typographyStyles['body']].join(' ')}>{letter}</p>
-      <div className={styles['previewAction']}>
-        <Button
-          icon={<CopyIcon />}
-          iconPosition="end"
-          onClick={() => void copyApplication()}
-          variant="ghost"
-        >
-          Copy to clipboard
-        </Button>
-      </div>
-    </div>
-  ) : isGenerating ? (
-    <div aria-label="Generating application" className={styles['loadingPreview']} role="status">
-      <div className={styles['orb']}>
-        <span className={styles['orbGlow']} />
-        <span className={styles['orbCore']} />
-      </div>
-    </div>
-  ) : (
-    <div className={styles['preview']}>
-      <p className={[styles['placeholder'], typographyStyles['body']].join(' ')}>
-        Your personalized job application will appear here...
-      </p>
-      <div className={styles['previewAction']}>
-        <Button
-          icon={<CopyIcon />}
-          iconPosition="end"
-          onClick={() => void copyApplication()}
-          variant="ghost"
-        >
-          Copy to clipboard
-        </Button>
-      </div>
-    </div>
-  );
-
-  const canRetry = phase === 'cancelled' || phase === 'failed';
+  const canRetry = ['cancelled', 'failed'].includes(phase);
 
   return (
     <Workspace
@@ -215,7 +337,7 @@ export function ApplicationWorkspace() {
             className={styles['form']}
             onSubmit={(event) => {
               event.preventDefault();
-              void submit();
+              submit();
             }}
           >
             <div className={styles['fieldRow']}>
@@ -256,51 +378,19 @@ export function ApplicationWorkspace() {
               placeholder="Describe why you are a great fit or paste your bio"
               value={details}
             />
-            {error ? (
-              <p className={styles['error']} role="alert">
-                {error}
-              </p>
-            ) : null}
-            {copyError ? (
-              <p className={styles['error']} role="alert">
-                {copyError}
-              </p>
-            ) : null}
-            {retryBlocked ? (
-              <p className={styles['rateLimit']}>Retry is unavailable until the server limit expires.</p>
-            ) : null}
+            {renderAlert(error)}
+            {renderAlert(copyError)}
+            {renderRetryMessage(retryBlocked)}
             <span aria-atomic="true" aria-live="polite" className={styles['status']}>
               {PHASE_STATUS[phase]}
             </span>
             <div className={styles['formActions']}>
-              {isGenerating ? (
-                <>
-                  <Button disabled fullWidth loading size="large" type="submit">
-                    Generate Now
-                  </Button>
-                  <Button fullWidth onClick={cancel} size="large" variant="secondary">
-                    Cancel generation
-                  </Button>
-                </>
-              ) : canRetry ? (
-                <Button
-                  disabled={!parsedRequest.success || retryBlocked}
-                  fullWidth
-                  size="large"
-                  type="submit"
-                >
-                  Retry generation
-                </Button>
-              ) : (
-                <Button disabled={!parsedRequest.success} fullWidth size="large" type="submit">
-                  Generate Now
-                </Button>
-              )}
+              {renderFormActions({ cancel, canRetry, isGenerating, submissionBlocked })}
             </div>
           </form>
         </div>
       }
-      secondary={preview}
+      secondary={renderApplicationPreview(letter, isGenerating, copyApplication)}
     />
   );
 }

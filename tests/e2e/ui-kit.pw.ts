@@ -49,7 +49,8 @@ test('textarea exposes the over-limit error state without truncating input', asy
   await expect(lengthAlert).toHaveText('1201/1200');
   const lengthAlertId = await lengthAlert.getAttribute('id');
   expect(lengthAlertId).toBeTruthy();
-  await expect(details).toHaveAttribute('aria-describedby', lengthAlertId!);
+  if (lengthAlertId === null) throw new Error('The length alert must have an id.');
+  await expect(details).toHaveAttribute('aria-describedby', lengthAlertId);
   await expect(generate).toBeDisabled();
 
   await details.fill(overLimitValue.slice(0, 1200));
@@ -59,6 +60,7 @@ test('textarea exposes the over-limit error state without truncating input', asy
   const boundaryDescriptionId = await details.getAttribute('aria-describedby');
   expect(boundaryDescriptionId).toBeTruthy();
   expect(boundaryDescriptionId).not.toBe(lengthAlertId);
+  if (boundaryDescriptionId === null) throw new Error('The field must have a description.');
   await expect(page.locator(`#${boundaryDescriptionId}`)).toHaveText('1200/1200');
   await expect(generate).toBeEnabled();
 

@@ -22,6 +22,6 @@ export async function requestGeneration(
       'content-type': 'application/json',
     },
     body: JSON.stringify({ prompt: buildGenerationPrompt(input) }),
-    signal: options.signal,
+    ...(options.signal ? { signal: options.signal } : {}),
   });
 }

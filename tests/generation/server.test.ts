@@ -1,8 +1,10 @@
+import { serve, sleep } from 'bun';
 import { afterAll, describe, expect, test } from 'bun:test';
 import { requestGeneration } from '../../src/server/generation/client';
+import { handleGenerateRequest } from '../../src/server/generation/handler';
 import { buildGenerationPrompt } from '../../src/server/generation/prompt';
-import { handleGenerateRequest } from '../../src/routes/api.generate';
 import { safeParseGenerationRequest } from '../../src/system/generation/schema';
+import generationFixtures from '../fixtures/generation.json' with { type: 'json' };
 
 const input = {
   jobTitle: 'Product manager',
@@ -18,7 +20,7 @@ let receivedContentType = '';
 let receivedMethod = '';
 let releaseStreamingResponse = () => {};
 let upstreamCompleted = false;
-const server = Bun.serve({
+const server = serve({
   port: 0,
   async fetch(request) {
     receivedAccept = request.headers.get('accept') ?? '';
@@ -35,9 +37,9 @@ const server = Bun.serve({
       return new Response(
         new ReadableStream({
           async start(controller) {
-            controller.enqueue(new TextEncoder().encode('event: delta\ndata: First\n\n'));
+            controller.enqueue(new TextEncoder().encode(generationFixtures.firstServerStream));
             await release;
-            controller.enqueue(new TextEncoder().encode('event: delta\ndata: second\n\n'));
+            controller.enqueue(new TextEncoder().encode(generationFixtures.secondServerStream));
             upstreamCompleted = true;
             controller.close();
           },
@@ -46,13 +48,15 @@ const server = Bun.serve({
       );
     }
 
-    return new Response('event: delta\ndata: Hello\n\n', {
+    return new Response(generationFixtures.helloServerStream, {
       headers: { 'content-type': 'text/event-stream' },
     });
   },
 });
+const serverPort = server.port;
+if (serverPort === undefined) throw new Error('The test server did not bind to a port.');
 
-afterAll(() => server.stop());
+afterAll(async () => server.stop());
 
 describe('generation server contract', () => {
   test('rejects malformed, incomplete, and over-limit structured input', async () => {
@@ -66,12 +70,7 @@ describe('generation server contract', () => {
       }),
     );
     expect(malformedResponse.status).toBe(400);
-    expect(await malformedResponse.json()).toEqual({
-      error: {
-        code: 'invalid_request',
-        message: 'The request body must be valid JSON.',
-      },
-    });
+    expect(await malformedResponse.json()).toEqual(generationFixtures.invalidJsonError);
 
     const response = await handleGenerateRequest(
       new Request('http://localhost/api/generate', {
@@ -80,12 +79,7 @@ describe('generation server contract', () => {
       }),
     );
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({
-      error: {
-        code: 'invalid_request',
-        message: 'Please complete all fields within their limits.',
-      },
-    });
+    expect(await response.json()).toEqual(generationFixtures.invalidFieldsError);
   });
 
   test('normalizes an upstream rate limit and preserves Retry-After', async () => {
@@ -94,7 +88,7 @@ describe('generation server contract', () => {
         method: 'POST',
         body: JSON.stringify(input),
       }),
-      () =>
+      async () =>
         Promise.resolve(
           new Response('limited', { status: 429, headers: { 'retry-after': '17' } }),
         ),
@@ -102,12 +96,7 @@ describe('generation server contract', () => {
 
     expect(response.status).toBe(429);
     expect(response.headers.get('retry-after')).toBe('17');
-    expect(await response.json()).toEqual({
-      error: {
-        code: 'rate_limited',
-        message: 'Too many generation requests. Please try again later.',
-      },
-    });
+    expect(await response.json()).toEqual(generationFixtures.rateLimitError);
   });
 
   test('normalizes non-rate-limit upstream failures', async () => {
@@ -116,30 +105,20 @@ describe('generation server contract', () => {
         method: 'POST',
         body: JSON.stringify(input),
       }),
-      () => Promise.reject(new Error('connection failed')),
+      async () => Promise.reject(new Error('connection failed')),
     );
     expect(unavailable.status).toBe(502);
-    expect(await unavailable.json()).toEqual({
-      error: {
-        code: 'generation_unavailable',
-        message: 'The generation service is unavailable.',
-      },
-    });
+    expect(await unavailable.json()).toEqual(generationFixtures.unavailableError);
 
     const failed = await handleGenerateRequest(
       new Request('http://localhost/api/generate', {
         method: 'POST',
         body: JSON.stringify(input),
       }),
-      () => Promise.resolve(new Response('internal details', { status: 500 })),
+      async () => Promise.resolve(new Response('internal details', { status: 500 })),
     );
     expect(failed.status).toBe(502);
-    expect(await failed.json()).toEqual({
-      error: {
-        code: 'generation_failed',
-        message: 'The generation service could not complete the request.',
-      },
-    });
+    expect(await failed.json()).toEqual(generationFixtures.failedError);
   });
 
   test('marks applicant values as untrusted prompt text', () => {
@@ -152,7 +131,7 @@ describe('generation server contract', () => {
   test('adds server bearer authentication and returns the upstream stream', async () => {
     const response = await requestGeneration(input, {
       token: 'server-secret',
-      url: `http://127.0.0.1:${server.port}/v1/generate`,
+      url: `http://127.0.0.1:${serverPort}/v1/generate`,
     });
 
     expect(receivedMethod).toBe('POST');
@@ -160,7 +139,7 @@ describe('generation server contract', () => {
     expect(receivedAuthorization).toBe('Bearer server-secret');
     expect(receivedContentType).toBe('application/json');
     expect(JSON.parse(receivedBody)).toEqual({ prompt: buildGenerationPrompt(input) });
-    expect(await response.text()).toBe('event: delta\ndata: Hello\n\n');
+    expect(await response.text()).toBe(generationFixtures.helloServerStream);
   });
 
   test('proxies the first event before the upstream stream completes', async () => {
@@ -169,19 +148,21 @@ describe('generation server contract', () => {
         method: 'POST',
         body: JSON.stringify(input),
       }),
-      (generationInput, options) =>
-        requestGeneration(generationInput, {
-          signal: options.signal,
+      async (generationInput, options) => {
+        if (options === undefined) throw new Error('Generation options are required.');
+        return requestGeneration(generationInput, {
+          ...(options.signal ? { signal: options.signal } : {}),
           token: 'server-secret',
-          url: `http://127.0.0.1:${server.port}/stream`,
-        }),
+          url: `http://127.0.0.1:${serverPort}/stream`,
+        });
+      },
     ).then(async (response) => {
       const reader = response.body?.getReader();
       const firstRead = await reader?.read();
       return { response, reader, firstRead, completedBeforeFirstRead: upstreamCompleted };
     });
 
-    const first = await Promise.race([endpointResult, Bun.sleep(1_000).then(() => null)]);
+    const first = await Promise.race([endpointResult, sleep(1_000).then(() => null)]);
     releaseStreamingResponse();
 
     expect(first).not.toBeNull();
@@ -190,10 +171,14 @@ describe('generation server contract', () => {
     expect(first.response.status).toBe(200);
     expect(first.response.headers.get('content-type')).toContain('text/event-stream');
     expect(first.completedBeforeFirstRead).toBe(false);
-    expect(new TextDecoder().decode(first.firstRead?.value)).toBe('event: delta\ndata: First\n\n');
+    expect(new TextDecoder().decode(first.firstRead?.value)).toBe(
+      generationFixtures.firstServerStream,
+    );
 
     const secondRead = await first.reader?.read();
-    expect(new TextDecoder().decode(secondRead?.value)).toBe('event: delta\ndata: second\n\n');
+    expect(new TextDecoder().decode(secondRead?.value)).toBe(
+      generationFixtures.secondServerStream,
+    );
     expect(upstreamCompleted).toBe(true);
     expect(receivedAuthorization).toBe('Bearer server-secret');
     expect(JSON.parse(receivedBody)).toEqual({ prompt: buildGenerationPrompt(input) });

@@ -1,3 +1,4 @@
+import * as v from 'valibot';
 import type { GenerationRequest } from './schema';
 
 const INACTIVITY_TIMEOUT_MS = 30_000;
@@ -9,13 +10,14 @@ type GenerateOptions = {
 };
 
 export class GenerationError extends Error {
-  constructor(
-    message: string,
-    public readonly code = 'generation_failed',
-    public readonly retryAfter?: number,
-  ) {
+  readonly code: string;
+  readonly retryAfter: number | undefined;
+
+  constructor(message: string, code = 'generation_failed', retryAfter?: number) {
     super(message);
     this.name = 'GenerationError';
+    this.code = code;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -60,17 +62,27 @@ function createEventParser(onDelta: (delta: string) => void) {
   };
 }
 
+const ErrorResponseSchema = v.object({
+  error: v.object({
+    code: v.optional(v.string()),
+    message: v.optional(v.string()),
+  }),
+});
+
 async function readError(response: Response) {
-  let message = 'The application could not be generated. Please try again.';
-  let code = response.status === 429 ? 'rate_limited' : 'generation_failed';
-  try {
-    const body = (await response.json()) as { error?: { code?: unknown; message?: unknown } };
-    if (typeof body.error?.message === 'string') message = body.error.message;
-    if (typeof body.error?.code === 'string') code = body.error.code;
-  } catch {
-    // The endpoint may have failed before it could create a normalized response.
-  }
-  return { code, message };
+  const fallback = {
+    message: 'The application could not be generated. Please try again.',
+    code: response.status === 429 ? 'rate_limited' : 'generation_failed',
+  };
+  const parsed = v.safeParse(
+    v.pipe(v.string(), v.parseJson(), ErrorResponseSchema),
+    await response.text(),
+  );
+  if (!parsed.success) return fallback;
+  return {
+    code: parsed.output.error.code ?? fallback.code,
+    message: parsed.output.error.message ?? fallback.message,
+  };
 }
 
 function parseRetryAfter(value: string | null, now = Date.now()) {
@@ -85,108 +97,157 @@ function parseRetryAfter(value: string | null, now = Date.now()) {
   return isHttpDate && date > now ? date : undefined;
 }
 
+type EventParser = {
+  parseLine: (line: string) => void;
+  hasPendingEvent: () => boolean;
+};
+
+type InactivityTimer = {
+  clear: () => void;
+  reset: () => void;
+};
+
+function createInactivityTimer(controller: AbortController): InactivityTimer {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  return {
+    clear() {
+      clearTimeout(timeout);
+    },
+    reset() {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        controller.abort('inactivity-timeout');
+      }, INACTIVITY_TIMEOUT_MS);
+    },
+  };
+}
+
+function linkCallerSignal(controller: AbortController, signal: AbortSignal | undefined) {
+  const abortFromCaller = () => {
+    controller.abort(new DOMException('Aborted', 'AbortError'));
+  };
+  if (signal?.aborted) abortFromCaller();
+  else signal?.addEventListener('abort', abortFromCaller, { once: true });
+  return () => signal?.removeEventListener('abort', abortFromCaller);
+}
+
+async function requestGenerationStream(request: GenerationRequest, signal: AbortSignal) {
+  const response = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+    body: JSON.stringify(request),
+    signal,
+  });
+  if (!response.ok) {
+    const error = await readError(response);
+    throw new GenerationError(
+      error.message,
+      error.code,
+      error.code === 'rate_limited'
+        ? parseRetryAfter(response.headers.get('retry-after'))
+        : undefined,
+    );
+  }
+  if (!response.body) {
+    throw new GenerationError('The generation stream was unavailable.', 'invalid_stream');
+  }
+  return response.body;
+}
+
+async function readWithAbort(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  signal: AbortSignal,
+) {
+  let rejectForAbort = () => {};
+  const aborted = new Promise<never>((_, reject) => {
+    rejectForAbort = () => {
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    signal.throwIfAborted();
+    signal.addEventListener('abort', rejectForAbort, { once: true });
+  });
+  return Promise.race([reader.read(), aborted]).finally(() => {
+    signal.removeEventListener('abort', rejectForAbort);
+  });
+}
+
+function parseBufferedLines(buffer: string, done: boolean, parser: EventParser) {
+  let offset = 0;
+  while (offset < buffer.length) {
+    const lineEnd = buffer.slice(offset).search(/[\r\n]/);
+    if (lineEnd === -1) break;
+
+    const end = offset + lineEnd;
+    if (buffer[end] === '\r' && end + 1 === buffer.length && !done) break;
+
+    parser.parseLine(buffer.slice(offset, end));
+    offset = end + (buffer[end] === '\r' && buffer[end + 1] === '\n' ? 2 : 1);
+  }
+  return buffer.slice(offset);
+}
+
+function finishEventStream(buffer: string, parser: EventParser) {
+  if (buffer.length > 0) parser.parseLine(buffer);
+  if (parser.hasPendingEvent()) {
+    throw new GenerationError(
+      'The generation stream ended before the final event completed.',
+      'incomplete_stream',
+    );
+  }
+}
+
+async function consumeEventStream(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  signal: AbortSignal,
+  parser: EventParser,
+) {
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const { value, done } = await readWithAbort(reader, signal);
+    buffer += decoder.decode(value, { stream: !done });
+    buffer = parseBufferedLines(buffer, done, parser);
+    if (!done) continue;
+    finishEventStream(buffer, parser);
+    return;
+  }
+}
+
+function rethrowGenerationError(error: Error, controller: AbortController): never {
+  if (error instanceof GenerationError || controller.signal.aborted) throw error;
+  throw new GenerationError('The application could not be generated. Please try again.');
+}
+
 export async function generateApplication(
   request: GenerationRequest,
   { signal, onOpen, onDelta }: GenerateOptions,
 ): Promise<void> {
   const controller = new AbortController();
-  let timedOut = false;
-  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const unlinkCallerSignal = linkCallerSignal(controller, signal);
+  const timer = createInactivityTimer(controller);
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-
-  const abortFromCaller = () => controller.abort(signal?.reason);
-  if (signal?.aborted) abortFromCaller();
-  else signal?.addEventListener('abort', abortFromCaller, { once: true });
-
-  const resetTimeout = () => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, INACTIVITY_TIMEOUT_MS);
-  };
-  resetTimeout();
+  timer.reset();
 
   try {
-    const response = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
-      body: JSON.stringify(request),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const error = await readError(response);
-      throw new GenerationError(
-        error.message,
-        error.code,
-        error.code === 'rate_limited'
-          ? parseRetryAfter(response.headers.get('retry-after'))
-          : undefined,
-      );
-    }
-    if (!response.body) {
-      throw new GenerationError('The generation stream was unavailable.', 'invalid_stream');
-    }
-
+    const stream = await requestGenerationStream(request, controller.signal);
     onOpen?.();
-    reader = response.body.getReader();
-    const decoder = new TextDecoder();
+    reader = stream.getReader();
     const parser = createEventParser((delta) => {
-      resetTimeout();
+      timer.reset();
       onDelta(delta);
     });
-    let buffer = '';
-
-    while (true) {
-      let rejectForAbort: (() => void) | undefined;
-      const aborted = new Promise<never>((_, reject) => {
-        rejectForAbort = () =>
-          reject(controller.signal.reason ?? new DOMException('Aborted', 'AbortError'));
-        if (controller.signal.aborted) rejectForAbort();
-        else controller.signal.addEventListener('abort', rejectForAbort, { once: true });
-      });
-      const { value, done } = await Promise.race([reader.read(), aborted]).finally(() => {
-        if (rejectForAbort) controller.signal.removeEventListener('abort', rejectForAbort);
-      });
-      buffer += decoder.decode(value, { stream: !done });
-
-      let offset = 0;
-      while (offset < buffer.length) {
-        const lineEnd = buffer.slice(offset).search(/[\r\n]/);
-        if (lineEnd === -1) break;
-
-        const end = offset + lineEnd;
-        if (buffer[end] === '\r' && end + 1 === buffer.length && !done) break;
-
-        parser.parseLine(buffer.slice(offset, end));
-        offset = end + (buffer[end] === '\r' && buffer[end + 1] === '\n' ? 2 : 1);
-      }
-      buffer = buffer.slice(offset);
-
-      if (done) {
-        if (buffer.length > 0) parser.parseLine(buffer);
-        if (parser.hasPendingEvent()) {
-          throw new GenerationError(
-            'The generation stream ended before the final event completed.',
-            'incomplete_stream',
-          );
-        }
-        break;
-      }
-    }
+    await consumeEventStream(reader, controller.signal, parser);
   } catch (error) {
-    if (timedOut) {
+    if (controller.signal.reason === 'inactivity-timeout') {
       throw new GenerationError(
         'Generation timed out after 30 seconds without a response. Please try again.',
         'timeout',
       );
     }
-    if (error instanceof GenerationError || controller.signal.aborted) throw error;
-    throw new GenerationError('The application could not be generated. Please try again.');
+    rethrowGenerationError(v.parse(v.instance(Error), error), controller);
   } finally {
-    clearTimeout(timeout);
-    signal?.removeEventListener('abort', abortFromCaller);
+    timer.clear();
+    unlinkCallerSignal();
     if (controller.signal.aborted) await reader?.cancel().catch(() => undefined);
     reader?.releaseLock();
   }

@@ -1,26 +1,33 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { rejectClipboardWrites } from '../support/clipboard';
 
 const STORAGE_KEY = 'variant-cover-letters:v1';
+
+async function openDashboard(page: Page, applicationCount: number) {
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
+}
+
+async function expectApplicationProgress(page: Page, applicationCount: number) {
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
+  await expect(page.getByText(`${applicationCount}/5 applications generated`)).toBeVisible();
+}
 
 test('deleted applications stay deleted after reload and synchronize across tabs', async ({
   context,
   page,
 }) => {
-  await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
+  await openDashboard(page, 3);
 
   const secondPage = await context.newPage();
-  await secondPage.goto('/');
-  await expect(secondPage.getByRole('button', { name: 'Delete' })).toHaveCount(3);
+  await openDashboard(secondPage, 3);
 
-  await page.getByRole('button', { name: 'Delete' }).first().click();
-
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(2);
-  await expect(secondPage.getByRole('button', { name: 'Delete' })).toHaveCount(2);
-
-  await page.getByRole('button', { name: 'Delete' }).first().click();
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(1);
-  await expect(secondPage.getByRole('button', { name: 'Delete' })).toHaveCount(1);
+  for (const applicationCount of [2, 1]) {
+    await page.getByRole('button', { name: 'Delete' }).first().click();
+    await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
+    await expect(secondPage.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
+  }
 
   await page.getByRole('button', { name: 'Delete' }).click();
 
@@ -48,38 +55,28 @@ test('deleted applications stay deleted after reload and synchronize across tabs
 });
 
 test('reports clipboard rejection without changing dashboard applications', async ({ page }) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: {
-        writeText: () => Promise.reject(new DOMException('Clipboard denied', 'NotAllowedError')),
-      },
-    });
-  });
-  await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
+  await rejectClipboardWrites(page);
+  await openDashboard(page, 3);
 
   await page.getByRole('button', { name: 'Copy to clipboard' }).first().click();
 
   await expect(page.getByRole('alert')).toContainText('could not be copied to the clipboard');
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
-  await expect(page.getByText('3/5 applications generated')).toBeVisible();
+  await expectApplicationProgress(page, 3);
 });
 
 test('contains localStorage initialization failures and displays a warning', async ({ page }) => {
   await page.addInitScript((storageKey) => {
-    const nativeGetItem = Storage.prototype.getItem;
+    const nativeGetItem = Storage.prototype.getItem.bind(localStorage);
     Storage.prototype.getItem = function (key) {
       if (key === storageKey) throw new DOMException('Storage unavailable', 'SecurityError');
-      return nativeGetItem.call(this, key);
+      return nativeGetItem(key);
     };
   }, STORAGE_KEY);
 
-  await page.goto('/');
+  await openDashboard(page, 3);
 
   await expect(page.getByRole('alert')).toContainText('Browser storage is unavailable');
   await expect(page.getByRole('heading', { name: 'Applications', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
   await expect(page.getByText('3/5 applications generated')).toBeVisible();
 });
 
@@ -130,9 +127,9 @@ test('hides the goal banner after restoring five applications', async ({ page })
     { key: STORAGE_KEY, storedApplications: applications },
   );
 
-  await page.goto('/');
+  await openDashboard(page, 5);
 
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(5);
+
   await expect(page.getByRole('heading', { name: 'Hit your goal' })).toHaveCount(0);
 });
 
