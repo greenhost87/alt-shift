@@ -2,8 +2,14 @@ import { createParser } from 'eventsource-parser';
 import * as v from 'valibot';
 import type { GenerationRequest } from './schema';
 
-const INACTIVITY_TIMEOUT_MS = 30_000;
 const generationDeltaSchema = v.strictObject({ text: v.string() });
+const inactivityTimeoutSchema = v.pipe(
+  v.string(),
+  v.regex(/^\d+$/),
+  v.transform(Number),
+  v.safeInteger(),
+  v.minValue(1),
+);
 const errorResponseSchema = v.strictObject({
   error: v.strictObject({
     code: v.optional(v.string()),
@@ -62,7 +68,10 @@ function parseRetryAfter(value: string | null, now = Date.now()) {
   return isHttpDate && date > now ? date : undefined;
 }
 
-function createInactivityTimer(controller: AbortController): InactivityTimer {
+function createInactivityTimer(
+  controller: AbortController,
+  inactivityTimeoutMs: number,
+): InactivityTimer {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   return {
     clear() {
@@ -72,7 +81,7 @@ function createInactivityTimer(controller: AbortController): InactivityTimer {
       clearTimeout(timeout);
       timeout = setTimeout(() => {
         controller.abort('inactivity-timeout');
-      }, INACTIVITY_TIMEOUT_MS);
+      }, inactivityTimeoutMs);
     },
   };
 }
@@ -109,7 +118,14 @@ async function requestGenerationStream(request: GenerationRequest, signal: Abort
   ) {
     throw new GenerationError('The generation stream was unavailable.', 'invalid_stream');
   }
-  return response.body;
+  const parsedTimeout = v.safeParse(
+    inactivityTimeoutSchema,
+    response.headers.get('x-generation-inactivity-timeout-ms'),
+  );
+  if (!parsedTimeout.success) {
+    throw new GenerationError('The generation stream configuration was invalid.', 'invalid_stream');
+  }
+  return { body: response.body, inactivityTimeoutMs: parsedTimeout.output };
 }
 
 async function readWithAbort(reader: ReadableStreamDefaultReader<Uint8Array>, signal: AbortSignal) {
@@ -194,28 +210,32 @@ export async function generateApplication(
 ): Promise<void> {
   const controller = new AbortController();
   const unlinkCallerSignal = linkCallerSignal(controller, signal);
-  const timer = createInactivityTimer(controller);
+  let inactivityTimeoutMs: number | undefined;
+  let timer: InactivityTimer | undefined;
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-  timer.reset();
 
   try {
     const stream = await requestGenerationStream(request, controller.signal);
+    inactivityTimeoutMs = stream.inactivityTimeoutMs;
+    const inactivityTimer = createInactivityTimer(controller, inactivityTimeoutMs);
+    timer = inactivityTimer;
+    inactivityTimer.reset();
     onOpen?.();
-    reader = stream.getReader();
+    reader = stream.body.getReader();
     await consumeEventStream(reader, controller.signal, (delta) => {
-      timer.reset();
+      inactivityTimer.reset();
       onDelta(delta);
     });
   } catch (error) {
     if (controller.signal.reason === 'inactivity-timeout') {
       throw new GenerationError(
-        'Generation timed out after 30 seconds without a response. Please try again.',
+        `Generation timed out after ${Math.ceil((inactivityTimeoutMs ?? 0) / 1_000)} seconds without a response. Please try again.`,
         'timeout',
       );
     }
     rethrowGenerationError(v.parse(v.instance(Error), error), controller);
   } finally {
-    timer.clear();
+    timer?.clear();
     unlinkCallerSignal();
     if (controller.signal.aborted) await reader?.cancel().catch(() => undefined);
     reader?.releaseLock();

@@ -1,6 +1,7 @@
 import * as v from 'valibot';
 import { generationRequestSchema } from '../../system/generation/schema';
 import { GenerationRequestError, requestGeneration } from './client';
+import { getGenerationInactivityTimeoutMs } from './config';
 import { createGenerationRateLimiter } from './rate-limit';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
@@ -156,6 +157,7 @@ export async function handleGenerateRequest(
       connection: 'keep-alive',
       'content-type': 'text/event-stream; charset=utf-8',
       'x-accel-buffering': 'no',
+      'x-generation-inactivity-timeout-ms': String(getGenerationInactivityTimeoutMs()),
     },
   });
 }

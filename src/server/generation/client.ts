@@ -1,9 +1,12 @@
 import type { GenerationRequest } from '../../system/generation/schema';
-import { GENERATION_API_URL, getGenerationApiToken } from './config';
+import {
+  getGenerationApiToken,
+  getGenerationApiUrl,
+  getGenerationInactivityTimeoutMs,
+  getGenerationMaxInputLength,
+  getGenerationMaxTokens,
+} from './config';
 import { buildGenerationPrompt, GENERATION_SYSTEM_PROMPT } from './prompt';
-
-const MAX_GENERATION_TOKENS = 1_500;
-const MAX_UPSTREAM_TEXT_LENGTH = 23_000;
 
 export class GenerationRequestError extends Error {
   constructor(message: string) {
@@ -25,10 +28,12 @@ export async function requestGeneration(
 ) {
   const fetchImplementation = options.fetch ?? globalThis.fetch;
   const prompt = buildGenerationPrompt(input);
-  if (prompt.length + GENERATION_SYSTEM_PROMPT.length > MAX_UPSTREAM_TEXT_LENGTH) {
+  if (prompt.length + GENERATION_SYSTEM_PROMPT.length > getGenerationMaxInputLength()) {
     throw new GenerationRequestError('The generation request exceeds the text limit.');
   }
-  return fetchImplementation(options.url ?? GENERATION_API_URL, {
+  const timeoutSignal = AbortSignal.timeout(getGenerationInactivityTimeoutMs());
+  const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
+  return fetchImplementation(options.url ?? getGenerationApiUrl(), {
     method: 'POST',
     headers: {
       accept: 'text/event-stream',
@@ -38,8 +43,8 @@ export async function requestGeneration(
     body: JSON.stringify({
       system: GENERATION_SYSTEM_PROMPT,
       prompt,
-      maxTokens: MAX_GENERATION_TOKENS,
+      maxTokens: getGenerationMaxTokens(),
     }),
-    ...(options.signal ? { signal: options.signal } : {}),
+    signal,
   });
 }

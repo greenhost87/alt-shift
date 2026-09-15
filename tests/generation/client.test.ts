@@ -27,7 +27,12 @@ function respondWithChunks(chunks: Uint8Array[]) {
               controller.close();
             },
           }),
-          { headers: { 'content-type': 'text/event-stream' } },
+          {
+            headers: {
+              'content-type': 'text/event-stream',
+              'x-generation-inactivity-timeout-ms': '30000',
+            },
+          },
         ),
       ),
   });
@@ -199,7 +204,12 @@ test('aborts a hung stream when the caller cancels', () => {
               // Remain pending until generateApplication cancels the reader.
             },
           }),
-          { headers: { 'content-type': 'text/event-stream' } },
+          {
+            headers: {
+              'content-type': 'text/event-stream',
+              'x-generation-inactivity-timeout-ms': '30000',
+            },
+          },
         ),
       ),
   });
@@ -214,27 +224,28 @@ test('aborts a hung stream when the caller cancels', () => {
   expect(generation).rejects.toHaveProperty('name', 'AbortError');
 });
 
-test('times out after 30 seconds without another result', async () => {
-  jest.useFakeTimers();
+test('uses the configured inactivity timeout', () => {
   Object.defineProperty(globalThis, 'fetch', {
     configurable: true,
-    value: async () =>
-      Promise.resolve(
-        new Response(
-          new ReadableStream({
-            start() {
-              // The inactivity timer is responsible for ending this stream.
-            },
-          }),
-          { headers: { 'content-type': 'text/event-stream' } },
-        ),
-      ),
+    value: async () => {
+      await Promise.resolve();
+      return new Response(
+        new ReadableStream({
+          start() {
+            // The inactivity timer is responsible for ending this stream.
+          },
+        }),
+        {
+          headers: {
+            'content-type': 'text/event-stream',
+            'x-generation-inactivity-timeout-ms': '1',
+          },
+        },
+      );
+    },
   });
-  const generation = generateApplication(request, { onDelta() {} }).then(() => 'completed');
-  await Promise.resolve();
 
-  jest.advanceTimersByTime(30_000);
-  await Promise.resolve();
-
-  expect(generation).rejects.toMatchObject({ code: 'timeout' });
+  expect(generateApplication(request, { onDelta() {} })).rejects.toMatchObject({
+    code: 'timeout',
+  });
 });

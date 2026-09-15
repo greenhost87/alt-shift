@@ -26,6 +26,14 @@ Install dependencies:
 bun install
 ```
 
+Create the local environment file and set the server-only API token:
+
+```bash
+cp .env.example .env
+```
+
+`GENERATION_API_URL`, token count, input length, rate limit, rate window, and stream inactivity timeout are documented with defaults in `.env.example`. `GENERATION_API_TOKEN` is the only value without a default.
+
 Start the development server:
 
 ```bash

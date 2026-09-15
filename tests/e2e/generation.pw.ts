@@ -24,7 +24,10 @@ test.beforeEach(async ({ page }) => {
     window.generationFixtures = fixtures;
     window.generationResponse = (body) =>
       new Response(body, {
-        headers: { 'content-type': 'text/event-stream' },
+        headers: {
+          'content-type': 'text/event-stream',
+          'x-generation-inactivity-timeout-ms': '30000',
+        },
         status: 200,
       });
     window.delayedGenerationResponse = (release, content) =>
