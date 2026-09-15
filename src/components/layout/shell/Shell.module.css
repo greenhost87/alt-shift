@@ -30,8 +30,10 @@
 }
 
 .homeControl {
+  align-items: center;
   display: flex;
   flex: 0 0 auto;
+  gap: var(--rs-unit-x2);
 }
 
 .status {

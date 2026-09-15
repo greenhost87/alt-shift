@@ -1,3 +1,4 @@
+import * as m from '../../../paraglide/messages.js';
 import styles from './Progress.module.css';
 
 const PROGRESS_VARIANTS = ['dots', 'segments'] as const;
@@ -43,7 +44,7 @@ export function Progress({ accessibleLabel, current, total, variant = 'segments'
       </div>
       {isDots ? null : (
         <span className={styles['label']}>
-          {safeCurrent} out of {safeTotal}
+          {m.progress_count({ current: safeCurrent, total: safeTotal })}
         </span>
       )}
     </div>

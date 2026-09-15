@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect } from 'react';
+import * as m from '../../../paraglide/messages.js';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
 import { GoalBanner } from '../../ui/banner/Banner';
 import { Button } from '../../ui/button/Button';
@@ -20,19 +21,19 @@ type StorageStatus = 'loading' | 'ready' | 'invalid' | 'unavailable';
 
 function renderStorageStatusMessage(status: StorageStatus) {
   if (status === 'loading') {
-    return <output className={styles['storageMessage']}>Loading applications…</output>;
+    return <output className={styles['storageMessage']}>{m.applications_loading()}</output>;
   }
   if (status === 'invalid') {
     return (
       <p className={styles['storageMessage']} role="alert">
-        Saved applications could not be read. The stored data was left unchanged.
+        {m.applications_storage_invalid()}
       </p>
     );
   }
   if (status === 'unavailable') {
     return (
       <p className={styles['storageMessage']} role="alert">
-        Browser storage is unavailable. Changes cannot be saved.
+        {m.applications_storage_unavailable()}
       </p>
     );
   }
@@ -69,8 +70,8 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
     <div className={styles['content']}>
       <ConfirmationDialog
         active={pendingDeletion !== null}
-        title="Delete application?"
-        description="This application will be permanently deleted. This action cannot be undone."
+        title={m.delete_application_title()}
+        description={m.delete_application_description()}
         onCancel={() => {
           setPendingDeletion(null);
         }}
@@ -81,8 +82,8 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
       />
       <section className={styles['applications']}>
         <SectionHeader
-          action={<CreateButton label="Create New" onClick={onCreate} />}
-          title="Applications"
+          action={<CreateButton label={m.create_new()} onClick={onCreate} />}
+          title={m.applications()}
         />
         {renderStorageStatusMessage(storageStatus)}
         {copyError ? (
@@ -100,14 +101,13 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
               </Icon>
             </div>
             <div className={styles['emptyStateCopy']}>
-              <h2 className={styles['emptyStateTitle']}>No applications yet</h2>
+              <h2 className={styles['emptyStateTitle']}>{m.no_applications_yet()}</h2>
               <p className={styles['emptyStateDescription']}>
-                Your next chapter starts with a great letter. Add a role, share your strengths, and
-                create a personalized application in seconds.
+                {m.empty_applications_description()}
               </p>
             </div>
             <div className={styles['emptyStateAction']}>
-              <CreateButton label="Create your first application" onClick={onCreate} prominent />
+              <CreateButton label={m.create_first_application()} onClick={onCreate} prominent />
             </div>
           </div>
         ) : null}
@@ -116,7 +116,10 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
             {applications.map((application) => (
               <article className={cardStyles['card']} key={application.id}>
                 <Link
-                  aria-label={`Open application for ${application.role} at ${application.company}`}
+                  aria-label={m.open_application({
+                    role: application.role,
+                    company: application.company,
+                  })}
                   className={cardStyles['detailsLink']}
                   params={{ applicationId: application.id }}
                   to="/applications/$applicationId"
@@ -136,7 +139,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
                     }}
                     variant="ghost"
                   >
-                    Delete
+                    {m.delete()}
                   </Button>
                   <CopyButton onClick={async () => copyApplication(application.letter)} />
                 </div>
@@ -148,7 +151,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
       {applicationCount < applicationLimit ? (
         <GoalBanner
           current={applicationCount}
-          description="Generate and send out couple more job applications today to get hired faster"
+          description={m.goal_description()}
           onCreate={onCreate}
           total={applicationLimit}
         />

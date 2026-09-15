@@ -13,7 +13,9 @@ type MessageProps = {
 export function Message({ title, description, descriptionId, level, children }: MessageProps) {
   return (
     <View gap={4}>
-      <Heading kind="message" level={level}>{title}</Heading>
+      <Heading kind="message" level={level}>
+        {title}
+      </Heading>
       <Text attributes={{ id: descriptionId }}>{description}</Text>
       {children}
     </View>

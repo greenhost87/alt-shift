@@ -1,11 +1,13 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { View } from 'reshaped';
+import * as m from '../../../paraglide/messages.js';
 import { useApplicationStore } from '../../../system/state/application';
 import { brandSize } from '../../../system/theme/tokens.ts';
 import { Button } from '../../ui/button/Button';
 import { Icon } from '../../ui/icon/Icon';
 import { getProgressValues, Progress } from '../../ui/progress/Progress';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import styles from './Shell.module.css';
 
 type ShellProps = {
@@ -20,7 +22,10 @@ export function Shell({ children }: ShellProps) {
     void navigate({ to: '/' });
   };
   const { safeCurrent, safeTotal } = getProgressValues(applicationCount, applicationLimit);
-  const accessibleLabel = `${safeCurrent} of ${safeTotal} applications generated`;
+  const accessibleLabel = m.applications_generated_accessible({
+    current: safeCurrent,
+    total: safeTotal,
+  });
   const isComplete = safeCurrent >= safeTotal;
 
   return (
@@ -50,9 +55,7 @@ export function Shell({ children }: ShellProps) {
           justify="end"
         >
           <View align="center" className={styles['status']} direction="row" gap={{ s: 2, m: 4 }}>
-            <span>
-              {safeCurrent}/{safeTotal} applications generated
-            </span>
+            <span>{m.applications_generated({ current: safeCurrent, total: safeTotal })}</span>
             {isComplete ? (
               <span aria-hidden="true" className={styles['doneBadge']}>
                 <Icon strokeWidth={2} viewBox="0 0 14 12">
@@ -69,8 +72,9 @@ export function Shell({ children }: ShellProps) {
             )}
           </View>
           <div className={styles['homeControl']}>
+            <LanguageSwitcher />
             <Button
-              ariaLabel="Home"
+              ariaLabel={m.home()}
               icon={
                 <Icon viewBox="0 0 20 20">
                   <path d="m2.5 8.33 6.43-5.14a1.67 1.67 0 0 1 2.14 0l6.43 5.14M4.17 7.08v8.09c0 .92.74 1.66 1.66 1.66h2.5v-5h3.34v5h2.5c.92 0 1.66-.74 1.66-1.66V7.08" />

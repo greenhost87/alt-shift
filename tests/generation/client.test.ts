@@ -13,6 +13,7 @@ const request = {
   company: 'Variant',
   strengths: 'TypeScript',
   details: 'Relevant details',
+  locale: 'en' as const,
 };
 
 function respondWithChunks(chunks: Uint8Array[]) {
@@ -93,7 +94,7 @@ test('keeps structured rate-limit metadata from the response', async () => {
     expect(error).toBeInstanceOf(GenerationError);
     expect(error).toMatchObject({
       code: 'rate_limited',
-      message: 'Please wait before trying again.',
+      message: 'Too many generation requests. Please try again later.',
       retryAfter: Date.parse('2026-01-01T00:00:12Z'),
     });
   }
@@ -154,7 +155,7 @@ test('does not set retry metadata for absent or invalid Retry-After values', () 
   }
 });
 
-test('normalizes transport failures while preserving API errors', () => {
+test('normalizes transport failures and localizes API errors', () => {
   Object.defineProperty(globalThis, 'fetch', {
     configurable: true,
     value: async () => Promise.reject(new TypeError('Failed to fetch')),
@@ -189,7 +190,7 @@ test('normalizes transport failures while preserving API errors', () => {
   expect(serviceGeneration).rejects.toMatchObject({
     name: 'GenerationError',
     code: 'service_unavailable',
-    message: 'Generation is temporarily unavailable.',
+    message: 'The application could not be generated. Please try again.',
   });
 });
 

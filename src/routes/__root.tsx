@@ -3,6 +3,7 @@ import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-r
 import { createServerFn } from '@tanstack/react-start';
 import { Reshaped } from 'reshaped';
 import { NotFound } from '../components/layout/not-found/NotFound';
+import { getLocale } from '../paraglide/runtime.js';
 import { getApplicationConfig } from '../server/config/application';
 import { ApplicationStateProvider } from '../system/state/application';
 import '../styles/global.css';
@@ -46,7 +47,7 @@ type RootDocumentProps = {
 
 function RootDocument({ children }: RootDocumentProps) {
   return (
-    <html data-rs-color-mode="light" data-rs-theme="variant" dir="ltr" lang="en">
+    <html data-rs-color-mode="light" data-rs-theme="variant" dir="ltr" lang={getLocale()}>
       <head>
         <HeadContent />
       </head>

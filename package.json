@@ -7,12 +7,14 @@
   "scripts": {
     "build": "bun run theme:build && vite build",
     "dev": "bun run theme:build && vite dev",
-    "theme:build": "bun run scripts/build-theme.ts",
     "fmt": "oxfmt .",
-    "test": "bun test",
+    "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy cookie preferredLanguage baseLocale --emit-ts-declarations --output-structure message-modules --silent",
+    "test": "bun run i18n:compile && bun test",
+    "theme:build": "bun run scripts/build-theme.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@inlang/paraglide-js": "^2.25.2",
     "@tanstack/react-router": "1.170.36",
     "@tanstack/react-start": "1.168.54",
     "eventsource-parser": "3.0.6",

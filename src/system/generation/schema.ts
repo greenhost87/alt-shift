@@ -1,4 +1,6 @@
 import * as v from 'valibot';
+import { locales } from '../../paraglide/runtime.js';
+import type { Locale } from '../../paraglide/runtime.js';
 import type { GenerationFieldLimits } from '../config/application.types';
 
 export type GenerationRequest = {
@@ -6,6 +8,7 @@ export type GenerationRequest = {
   company: string;
   strengths: string;
   details: string;
+  locale: Locale;
 };
 
 export function createGenerationRequestSchema(limits: GenerationFieldLimits) {
@@ -14,6 +17,7 @@ export function createGenerationRequestSchema(limits: GenerationFieldLimits) {
     company: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(limits.company)),
     strengths: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(limits.strengths)),
     details: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(limits.details)),
+    locale: v.picklist(locales),
   });
 }
 

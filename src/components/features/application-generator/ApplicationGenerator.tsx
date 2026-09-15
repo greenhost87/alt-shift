@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import * as v from 'valibot';
 import { useShallow } from 'zustand/react/shallow';
+import * as m from '../../../paraglide/messages.js';
+import { getLocale } from '../../../paraglide/runtime.js';
 import type { StoredApplication } from '../../../system/applications/schema';
 import type { NewStoredApplication } from '../../../system/applications/storage';
 import { writeClipboardText } from '../../../system/clipboard/write';
@@ -48,10 +50,7 @@ type FormActionsOptions = {
   submissionBlocked: boolean;
 };
 
-const generationErrorSchema = v.fallback(
-  v.instance(Error),
-  new Error('The application could not be generated. Please try again.'),
-);
+const generationErrorSchema = v.instance(Error);
 
 function handleGenerationFailure(generationError: Error, options: FailureOptions) {
   if (options.currentController !== options.controller) return;
@@ -92,10 +91,7 @@ async function submitApplication(request: GenerationRequest, options: Submission
 
     if (options.abortController.current !== controller) return;
     if (!generatedLetter.trim()) {
-      throw new GenerationError(
-        'The generation stream ended before a letter was created.',
-        'empty_stream',
-      );
+      throw new GenerationError(m.generation_empty_stream(), 'empty_stream');
     }
 
     const saved = options.addApplication({
@@ -106,19 +102,23 @@ async function submitApplication(request: GenerationRequest, options: Submission
       letter: generatedLetter,
     });
     if (!saved) {
-      options.setError('Your letter was generated, but browser storage could not save it.');
+      options.setError(m.generation_storage_failed());
       options.setPhase('failed');
       return;
     }
     options.setPhase('completed');
   } catch (generationError) {
-    handleGenerationFailure(v.parse(generationErrorSchema, generationError), {
-      controller,
-      currentController: options.abortController.current,
-      setError: options.setError,
-      setPhase: options.setPhase,
-      setRetryAvailableAt: options.setRetryAvailableAt,
-    });
+    const parsedError = v.safeParse(generationErrorSchema, generationError);
+    handleGenerationFailure(
+      parsedError.success ? parsedError.output : new Error(m.application_generation_failed()),
+      {
+        controller,
+        currentController: options.abortController.current,
+        setError: options.setError,
+        setPhase: options.setPhase,
+        setRetryAvailableAt: options.setRetryAvailableAt,
+      },
+    );
   } finally {
     if (options.abortController.current === controller) options.abortController.current = null;
   }
@@ -141,7 +141,7 @@ function renderApplicationPreview(
   }
   if (isGenerating) {
     return (
-      <output aria-label="Generating application" className={styles['loadingPreview']}>
+      <output aria-label={m.generating_application()} className={styles['loadingPreview']}>
         <span className={styles['orb']}>
           <span className={styles['orbGlow']} />
           <span className={styles['orbCore']} />
@@ -152,7 +152,7 @@ function renderApplicationPreview(
   return (
     <div className={styles['preview']}>
       <p className={[styles['placeholder'], typographyStyles['body']].join(' ')}>
-        Your personalized job application will appear here...
+        {m.application_preview_placeholder()}
       </p>
       <div className={styles['previewAction']}>{copyButton}</div>
     </div>
@@ -197,7 +197,7 @@ function isSubmissionBlocked(
 function getApplicationTitle(jobTitle: string, company: string) {
   return [jobTitle, company].every((value) => value.trim().length > 0)
     ? `${jobTitle}, ${company}`
-    : 'New application';
+    : m.new_application();
 }
 
 function renderAlert(message: string) {
@@ -210,7 +210,7 @@ function renderAlert(message: string) {
 
 function renderRetryMessage(retryBlocked: boolean) {
   return retryBlocked ? (
-    <p className={styles['rateLimit']}>Retry is unavailable until the server limit expires.</p>
+    <p className={styles['rateLimit']}>{m.generation_retry_unavailable()}</p>
   ) : null;
 }
 
@@ -218,7 +218,7 @@ function renderFormAction(options: FormActionsOptions) {
   if (options.isGenerating) {
     return (
       <Button disabled fullWidth loading size="large" type="submit">
-        Generate Now
+        {m.generate_now()}
       </Button>
     );
   }
@@ -232,13 +232,13 @@ function renderFormAction(options: FormActionsOptions) {
         type="submit"
         variant="secondary"
       >
-        Try Again
+        {m.try_again()}
       </Button>
     );
   }
   return (
     <Button disabled={options.submissionBlocked} fullWidth size="large" type="submit">
-      {options.canRetry ? 'Retry generation' : 'Generate Now'}
+      {options.canRetry ? m.retry_generation() : m.generate_now()}
     </Button>
   );
 }
@@ -366,6 +366,7 @@ export function ApplicationWorkspace({
       company: displayedValues.company,
       strengths: displayedValues.strengths,
       details: displayedValues.details,
+      locale: getLocale(),
     },
     fieldLimits,
   );
@@ -403,7 +404,7 @@ export function ApplicationWorkspace({
   const submit = () => {
     if (submissionBlocked) return;
     void submitApplication(
-      { jobTitle, company, strengths, details },
+      { jobTitle, company, strengths, details, locale: getLocale() },
       {
         abortController,
         addApplication,
@@ -446,7 +447,7 @@ export function ApplicationWorkspace({
                     characterLimit={fieldLimits.jobTitle}
                     disabled={fieldsDisabled}
                     id="job-title"
-                    label="Job title"
+                    label={m.job_title()}
                     name="jobTitle"
                     onChange={setJobTitle}
                     value={displayedValues.jobTitle}
@@ -455,7 +456,7 @@ export function ApplicationWorkspace({
                     characterLimit={fieldLimits.company}
                     disabled={fieldsDisabled}
                     id="company"
-                    label="Company"
+                    label={m.company()}
                     name="company"
                     onChange={setCompany}
                     value={displayedValues.company}
@@ -465,7 +466,7 @@ export function ApplicationWorkspace({
                   characterLimit={fieldLimits.strengths}
                   disabled={fieldsDisabled}
                   id="strengths"
-                  label="I am good at..."
+                  label={m.strengths()}
                   name="strengths"
                   onChange={setStrengths}
                   value={displayedValues.strengths}
@@ -474,10 +475,10 @@ export function ApplicationWorkspace({
                   characterLimit={fieldLimits.details}
                   disabled={fieldsDisabled}
                   id="details"
-                  label="Additional details"
+                  label={m.additional_details()}
                   name="details"
                   onChange={setDetails}
-                  placeholder="Describe why you are a great fit or paste your bio"
+                  placeholder={m.additional_details_placeholder()}
                   value={displayedValues.details}
                 />
                 {renderAlert(error)}
@@ -501,7 +502,7 @@ export function ApplicationWorkspace({
         />
         <GoalBanner
           current={applicationCount}
-          description="Generate and send out couple more job applications to get hired faster"
+          description={m.goal_description()}
           onCreate={startNewApplication}
           total={applicationLimit}
           visible={shouldShowGoalBanner(isViewing, isCompleted, applicationCount, applicationLimit)}

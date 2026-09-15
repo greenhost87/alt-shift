@@ -16,6 +16,7 @@ const input = {
   company: 'Variant',
   strengths: 'Clear communication',
   details: 'I ship useful products.',
+  locale: 'en' as const,
 };
 
 let receivedAccept = '';
@@ -88,6 +89,15 @@ describe('generation server contract', () => {
     );
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual(generationFixtures.invalidFieldsError);
+
+    const unsupportedLocaleResponse = await handleGenerateRequest(
+      new Request('http://localhost/api/generate', {
+        method: 'POST',
+        body: JSON.stringify({ ...input, locale: 'de' }),
+      }),
+    );
+    expect(unsupportedLocaleResponse.status).toBe(400);
+    expect(await unsupportedLocaleResponse.json()).toEqual(generationFixtures.invalidFieldsError);
   });
 
   test('limits generation requests before calling the upstream service', async () => {
@@ -180,8 +190,12 @@ describe('generation server contract', () => {
 
   test('marks applicant values as untrusted prompt text', () => {
     const prompt = buildGenerationPrompt(input);
+    expect(prompt).toStartWith('Write the response in English.');
     expect(prompt).toContain('<untrusted_applicant_input>');
     expect(prompt).toContain('Job title: Product manager');
+    expect(buildGenerationPrompt({ ...input, locale: 'ru' })).toStartWith(
+      'Write the response in Russian.',
+    );
     expect(prompt).toContain('Company: Variant');
   });
 

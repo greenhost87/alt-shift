@@ -1,5 +1,6 @@
 import { createParser } from 'eventsource-parser';
 import * as v from 'valibot';
+import * as m from '../../paraglide/messages.js';
 import type { GenerationRequest } from './schema';
 
 const generationDeltaSchema = v.strictObject({ text: v.string() });
@@ -41,20 +42,23 @@ export class GenerationError extends Error {
   }
 }
 
+function getGenerationErrorMessage(code: string) {
+  if (code === 'rate_limited') return m.generation_rate_limited();
+  if (code === 'invalid_request') return m.generation_invalid_request();
+  if (code === 'generation_unavailable' || code === 'upstream_error') {
+    return m.generation_unavailable();
+  }
+  return m.application_generation_failed();
+}
+
 async function readError(response: Response) {
-  const fallback = {
-    message: 'The application could not be generated. Please try again.',
-    code: response.status === 429 ? 'rate_limited' : 'generation_failed',
-  };
+  const fallbackCode = response.status === 429 ? 'rate_limited' : 'generation_failed';
   const parsed = v.safeParse(
     v.pipe(v.string(), v.parseJson(), errorResponseSchema),
     await response.text(),
   );
-  if (!parsed.success) return fallback;
-  return {
-    code: parsed.output.error.code ?? fallback.code,
-    message: parsed.output.error.message ?? fallback.message,
-  };
+  const code = parsed.success ? (parsed.output.error.code ?? fallbackCode) : fallbackCode;
+  return { code, message: getGenerationErrorMessage(code) };
 }
 
 function parseRetryAfter(value: string | null, now = Date.now()) {
@@ -121,14 +125,14 @@ async function requestGenerationStream(
     !response.body ||
     !response.headers.get('content-type')?.toLowerCase().includes('text/event-stream')
   ) {
-    throw new GenerationError('The generation stream was unavailable.', 'invalid_stream');
+    throw new GenerationError(m.generation_stream_unavailable(), 'invalid_stream');
   }
   const parsedTimeout = v.safeParse(
     inactivityTimeoutSchema,
     response.headers.get('x-generation-inactivity-timeout-ms'),
   );
   if (!parsedTimeout.success) {
-    throw new GenerationError('The generation stream configuration was invalid.', 'invalid_stream');
+    throw new GenerationError(m.generation_stream_invalid_config(), 'invalid_stream');
   }
   return { body: response.body, inactivityTimeoutMs: parsedTimeout.output };
 }
@@ -167,10 +171,7 @@ function createCompletionTracker() {
 function parseDelta(data: string) {
   const parsed = v.safeParse(v.pipe(v.string(), v.parseJson(), generationDeltaSchema), data);
   if (!parsed.success) {
-    throw new GenerationError(
-      'The generation service returned an invalid event.',
-      'invalid_stream',
-    );
+    throw new GenerationError(m.generation_event_invalid(), 'invalid_stream');
   }
   return parsed.output.text;
 }
@@ -195,10 +196,7 @@ async function consumeEventStream(
     parser.feed(chunk);
     if (!done) continue;
     if (completion.hasIncompleteEvent()) {
-      throw new GenerationError(
-        'The generation stream ended before the final event completed.',
-        'incomplete_stream',
-      );
+      throw new GenerationError(m.generation_stream_incomplete(), 'incomplete_stream');
     }
     return;
   }
@@ -206,7 +204,7 @@ async function consumeEventStream(
 
 function rethrowGenerationError(error: Error, controller: AbortController): never {
   if (error instanceof GenerationError || controller.signal.aborted) throw error;
-  throw new GenerationError('The application could not be generated. Please try again.');
+  throw new GenerationError(m.application_generation_failed());
 }
 
 export async function generateApplication(
@@ -234,7 +232,9 @@ export async function generateApplication(
   } catch (error) {
     if (controller.signal.reason === 'inactivity-timeout') {
       throw new GenerationError(
-        `Generation timed out after ${Math.ceil((inactivityTimeoutMs ?? 0) / 1_000)} seconds without a response. Please try again.`,
+        m.generation_timeout({
+          seconds: Math.ceil((inactivityTimeoutMs ?? 0) / 1_000),
+        }),
         'timeout',
       );
     }

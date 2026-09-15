@@ -66,6 +66,13 @@ async function generateApplication(page: Page) {
   await page.getByRole('button', { name: 'Generate Now' }).click();
 }
 
+async function expectGenericGenerationFailure(page: Page) {
+  await expect(page.getByRole('alert')).toHaveText(
+    'The application could not be generated. Please try again.',
+  );
+  await expect(page.getByText('0/5 applications generated')).toBeVisible();
+}
+
 async function setupCopyableGeneration(page: Page) {
   await page.addInitScript(() => {
     window.respondToGeneration = () =>
@@ -283,8 +290,7 @@ test('does not save or increment progress when generation fails', async ({ page 
   });
   await generateApplication(page);
 
-  await expect(page.getByRole('alert')).toContainText('temporarily unavailable');
-  await expect(page.getByText('0/5 applications generated')).toBeVisible();
+  await expectGenericGenerationFailure(page);
   await openDashboardAndExpectCount(page, 0);
 });
 
@@ -333,10 +339,7 @@ test('reports a transport failure and retries only after an explicit action', as
   });
   await generateApplication(page);
 
-  await expect(page.getByRole('alert')).toHaveText(
-    'The application could not be generated. Please try again.',
-  );
-  await expect(page.getByText('0/5 applications generated')).toBeVisible();
+  await expectGenericGenerationFailure(page);
   expect(attempts).toBe(1);
 
   await page.getByRole('button', { name: 'Retry generation' }).click();

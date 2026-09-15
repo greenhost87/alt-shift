@@ -1,12 +1,13 @@
 import { Link } from '@tanstack/react-router';
 import { View } from 'reshaped';
+import * as m from '../../../paraglide/messages.js';
 import { Message } from '../../ui/message/Message';
 
 export function NotFound() {
   return (
     <View as="main" padding={8} gap={4} align="center">
-      <Message title="Page not found" description="The page you are looking for does not exist." level="h1">
-        <Link to="/">Back to applications</Link>
+      <Message title={m.page_not_found()} description={m.page_not_found_description()} level="h1">
+        <Link to="/">{m.back_to_applications()}</Link>
       </Message>
     </View>
   );

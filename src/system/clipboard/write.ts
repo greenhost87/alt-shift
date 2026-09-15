@@ -1,4 +1,4 @@
-const CLIPBOARD_ERROR = 'The application could not be copied to the clipboard. Please try again.';
+import * as m from '../../paraglide/messages.js';
 
 async function writeClipboardItem(text: string) {
   try {
@@ -15,6 +15,6 @@ export async function writeClipboardText(text: string) {
     await navigator.clipboard.writeText(text);
     return '';
   } catch {
-    return (await writeClipboardItem(text)) ? '' : CLIPBOARD_ERROR;
+    return (await writeClipboardItem(text)) ? '' : m.clipboard_copy_failed();
   }
 }

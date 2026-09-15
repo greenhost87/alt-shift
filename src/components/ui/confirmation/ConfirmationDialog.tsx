@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { Modal, View } from 'reshaped';
+import * as m from '../../../paraglide/messages.js';
 import { Button } from '../button/Button';
 import { Message } from '../message/Message';
 
@@ -45,7 +46,7 @@ export function ConfirmationDialog({
               if (ready) onCancel();
             }}
           >
-            Cancel
+            {m.cancel()}
           </Button>
           <Button
             ariaDisabled={!ready}
@@ -53,7 +54,7 @@ export function ConfirmationDialog({
               if (ready) onConfirm();
             }}
           >
-            Confirm deletion
+            {m.confirm_deletion()}
           </Button>
         </View>
       </Message>

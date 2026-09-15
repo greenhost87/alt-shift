@@ -1,3 +1,4 @@
+import * as m from '../../../paraglide/messages.js';
 import { CreateButton } from '../button/CreateButton';
 import { Progress } from '../progress/Progress';
 import typographyStyles from '../text/Typography.module.css';
@@ -23,16 +24,16 @@ export function GoalBanner({
     <section className={styles['banner']}>
       <div className={styles['content']}>
         <div className={styles['heading']}>
-          <h2 className={styles['title']}>Hit your goal</h2>
+          <h2 className={styles['title']}>{m.hit_your_goal()}</h2>
           <p className={[styles['description'], typographyStyles['body']].join(' ')}>
             {description}
           </p>
           <div className={styles['action']}>
-            <CreateButton label="Create New" onClick={onCreate} prominent />
+            <CreateButton label={m.create_new()} onClick={onCreate} prominent />
           </div>
         </div>
         <Progress
-          accessibleLabel={`${current} of ${total} applications generated`}
+          accessibleLabel={m.applications_generated_accessible({ current, total })}
           current={current}
           total={total}
         />

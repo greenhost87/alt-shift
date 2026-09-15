@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as m from '../../../paraglide/messages.js';
 import { CopyIcon } from '../icon/Icon';
 import { Button } from './Button';
 
@@ -23,17 +24,16 @@ export function CopyButton({ onClick }: CopyButtonProps) {
     setCopied(await onClick());
   };
 
+  const label = copied ? m.copied() : m.copy_to_clipboard();
   return (
     <Button
-      ariaLabel={copied ? 'Copied!' : 'Copy to clipboard'}
+      ariaLabel={label}
       onClick={() => void copy()}
       variant="ghost"
       icon={<CopyIcon />}
       iconPosition="end"
     >
-      <output aria-live="polite">
-        {copied ? 'Copied!' : 'Copy to clipboard'}
-      </output>
+      <output aria-live="polite">{label}</output>
     </Button>
   );
 }
