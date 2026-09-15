@@ -8,6 +8,7 @@ import {
   seedApplications,
 } from '../support/applications';
 import { expectSuccessfulCopy, rejectClipboardWrites } from '../support/clipboard';
+import { confirmDeletion, openDeletionDialog } from '../support/dialog';
 
 async function openDashboard(page: Page, applicationCount: number) {
   await page.goto('/');
@@ -41,14 +42,14 @@ test('deleted applications stay deleted after reload and synchronize across tabs
   await openDashboard(secondPage, 3);
 
   for (const applicationCount of [2, 1]) {
-    await page.getByRole('button', { name: 'Delete' }).first().click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Confirm deletion' }).click();
+    const dialog = await openDeletionDialog(page);
+    await confirmDeletion(dialog);
     await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
     await expect(secondPage.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
   }
 
-  await page.getByRole('button', { name: 'Delete' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Confirm deletion' }).click();
+  const finalDialog = await openDeletionDialog(page);
+  await confirmDeletion(finalDialog);
 
   for (const dashboardPage of [page, secondPage]) {
     await expect(dashboardPage.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
@@ -126,8 +127,7 @@ test('deletion can be cancelled without changing stored applications', async ({ 
   await seedApplications(page);
   await openDashboard(page, 3);
   for (const dismissal of ['button', 'escape']) {
-    await page.getByRole('button', { name: 'Delete' }).first().click();
-    const dialog = page.getByRole('dialog', { name: 'Delete application?' });
+    const dialog = await openDeletionDialog(page);
     await expect(dialog).toContainText(
       'This application will be permanently deleted. This action cannot be undone.',
     );

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import {
   expectApplicationFields,
   expectBlankGenerator,
@@ -115,10 +115,36 @@ async function expectPageWidth(page: Page, width: number) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
 }
 
-for (const width of [320, 375, 480, 767, 768, 899, 900, 1024, 1440]) {
+async function openResponsivePage(page: Page, width: number, path: string) {
+  await page.setViewportSize({ height: 900, width });
+  await page.goto(path, { waitUntil: 'networkidle' });
+}
+
+type LengthErrorOptions = {
+  field: Locator;
+  generate: Locator;
+  lengthAlert: Locator;
+  message: string;
+  value: string;
+};
+
+const RESPONSIVE_WIDTHS = [320, 375, 480, 767, 768, 899, 900, 1024, 1440] as const;
+
+async function expectLengthError(options: LengthErrorOptions) {
+  await expect(options.field).toHaveValue(options.value);
+  await expect(options.field).toHaveAttribute('aria-invalid', 'true');
+  await expect(options.lengthAlert).toHaveText(options.message);
+  const errorId = await options.lengthAlert.getAttribute('id');
+  expect(errorId).toBeTruthy();
+  if (errorId === null) throw new Error('The length alert must have an id.');
+  await expect(options.field).toHaveAttribute('aria-describedby', errorId);
+  await expect(options.generate).toBeDisabled();
+  return errorId;
+}
+
+for (const width of RESPONSIVE_WIDTHS) {
   test(`responsive screens fit at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ height: 900, width });
-    await page.goto('/', { waitUntil: 'networkidle' });
+    await openResponsivePage(page, width, '/');
     await expectPageWidth(page, width);
     if (width < 768) await expectMobileStatusLayout(page);
     await expect(page.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
@@ -163,15 +189,14 @@ test('textarea exposes the over-limit error state without truncating input', asy
   await page.getByLabel('I am good at...').fill('TypeScript');
   await details.fill(overLimitValue);
 
-  await expect(details).toHaveValue(overLimitValue);
-  await expect(details).toHaveAttribute('aria-invalid', 'true');
   const lengthAlert = page.getByRole('alert');
-  await expect(lengthAlert).toHaveText('1201/1200');
-  const lengthAlertId = await lengthAlert.getAttribute('id');
-  expect(lengthAlertId).toBeTruthy();
-  if (lengthAlertId === null) throw new Error('The length alert must have an id.');
-  await expect(details).toHaveAttribute('aria-describedby', lengthAlertId);
-  await expect(generate).toBeDisabled();
+  const lengthAlertId = await expectLengthError({
+    field: details,
+    generate,
+    lengthAlert,
+    message: '1201/1200',
+    value: overLimitValue,
+  });
   await expect(page.getByRole('button', { name: 'Copy to clipboard' })).toBeVisible();
 
   await details.fill(overLimitValue.slice(0, 1200));
@@ -193,6 +218,35 @@ test('textarea exposes the over-limit error state without truncating input', asy
   expect(loadingBox?.height).toBe(56);
   await expect(page.getByRole('button', { name: 'Cancel generation' })).toHaveCount(0);
 });
+
+for (const { label, limit } of [
+  { label: 'Job title', limit: 200 },
+  { label: 'Company', limit: 200 },
+  { label: 'I am good at...', limit: 2_000 },
+]) {
+  test(`${label} exposes an error when its character limit is exceeded`, async ({ page }) => {
+    await page.goto('/applications/new', { waitUntil: 'networkidle' });
+    const field = page.getByLabel(label, { exact: true });
+    const generate = page.getByRole('button', { name: 'Generate Now' });
+    const overLimitValue = 'a'.repeat(limit + 1);
+
+    await field.fill(overLimitValue);
+
+    const lengthAlert = page.getByRole('alert');
+    await expectLengthError({
+      field,
+      generate,
+      lengthAlert,
+      message: `${limit + 1}/${limit}`,
+      value: overLimitValue,
+    });
+
+    await field.fill(overLimitValue.slice(0, limit));
+    await expect(field).toHaveAttribute('aria-invalid', 'false');
+    await expect(field).not.toHaveAttribute('aria-describedby', /.+/);
+    await expect(lengthAlert).toHaveCount(0);
+  });
+}
 
 test('mobile actions have touch targets of at least 44 pixels', async ({ page }) => {
   await page.setViewportSize({ height: 812, width: 375 });
@@ -264,16 +318,26 @@ test('dashboard uses the compact layout at 320 pixels', async ({ page }) => {
   await expectContentFitsViewport(page);
 });
 
-test('stored application view fits and stays read-only on mobile', async ({ page }) => {
-  await openSeededMobilePage(page, '/applications/00000000-0000-4000-8000-000000000003');
+for (const width of RESPONSIVE_WIDTHS) {
+  test(`stored application fits and stays read-only at ${width}px`, async ({ page }) => {
+    await seedApplications(page);
+    await openResponsivePage(page, width, '/applications/00000000-0000-4000-8000-000000000003');
 
-  await expectContentFitsViewport(page);
-  await expect(page.getByRole('heading', { name: 'Role 3, Company 3' })).toBeVisible();
-  await expectApplicationFields(page, 'disabled');
-  const details = page.getByLabel('Additional details');
-  const preview = page.getByText('Cover letter 3');
-  expect((await preview.boundingBox())?.y).toBeGreaterThan((await details.boundingBox())?.y ?? 0);
-});
+    await expectPageWidth(page, width);
+    await expect(page.getByRole('heading', { name: 'Role 3, Company 3' })).toBeVisible();
+    await expectApplicationFields(page, 'disabled');
+    const details = page.getByLabel('Additional details');
+    const preview = page.getByText('Cover letter 3');
+    const detailsBox = await details.boundingBox();
+    const previewBox = await preview.boundingBox();
+    if (width < 900) expect(previewBox?.y).toBeGreaterThan(detailsBox?.y ?? 0);
+    else expect(previewBox?.x).toBeGreaterThan(detailsBox?.x ?? 0);
+    await page.screenshot({
+      path: `test-results/responsive-stored-application-${width}.png`,
+      fullPage: true,
+    });
+  });
+}
 
 test('generator uses the compact layout at 320 pixels', async ({ page }) => {
   await page.setViewportSize({ height: 568, width: 320 });

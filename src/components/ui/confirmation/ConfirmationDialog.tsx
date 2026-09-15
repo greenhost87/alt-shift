@@ -35,12 +35,24 @@ export function ConfirmationDialog({
       size="440px"
       padding={6}
     >
+      <span data-dialog-ready={ready} hidden />
       <Message title={title} description={description} descriptionId={descriptionId} level="h2">
         <View direction="row" gap={3} justify="end">
-          <Button disabled={!ready} variant="secondary" onClick={onCancel}>
+          <Button
+            ariaDisabled={!ready}
+            variant="secondary"
+            onClick={() => {
+              if (ready) onCancel();
+            }}
+          >
             Cancel
           </Button>
-          <Button disabled={!ready} onClick={onConfirm}>
+          <Button
+            ariaDisabled={!ready}
+            onClick={() => {
+              if (ready) onConfirm();
+            }}
+          >
             Confirm deletion
           </Button>
         </View>

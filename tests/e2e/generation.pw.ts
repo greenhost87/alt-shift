@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import generationFixtures from '../fixtures/generation.json' with { type: 'json' };
 import { expectApplicationProgress } from '../support/applications';
 import { rejectClipboardWrites } from '../support/clipboard';
+import { rejectApplicationStorageWrites } from '../support/storage';
 
 declare global {
   interface Window {
@@ -345,15 +346,7 @@ test('reports a transport failure and retries only after an explicit action', as
 });
 
 test('preserves a generated letter when browser storage rejects the save', async ({ page }) => {
-  await page.addInitScript((storageKey) => {
-    const nativeSetItem = Storage.prototype.setItem.bind(localStorage);
-    Storage.prototype.setItem = function (key, value) {
-      if (key === storageKey && this.getItem(key) !== null) {
-        throw new DOMException('Storage quota exceeded', 'QuotaExceededError');
-      }
-      nativeSetItem(key, value);
-    };
-  }, 'variant-cover-letters:v1');
+  await rejectApplicationStorageWrites(page);
   await page.addInitScript(() => {
     window.respondToGeneration = () =>
       window.generationResponse(window.generationFixtures.unsavedStream);

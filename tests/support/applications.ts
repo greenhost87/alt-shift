@@ -46,6 +46,26 @@ export async function seedApplications(page: Page, count = 3) {
   );
 }
 
+export async function fillApplicationFields(page: Page) {
+  await page.getByLabel('Job title').fill('Test Engineer');
+  await page.getByLabel('Company').fill('Local Company');
+  await page.getByLabel('I am good at...').fill('Testing');
+  await page.getByLabel('Additional details').fill('This request must stay local.');
+}
+
+export async function submitApplicationForm(page: Page, path: string) {
+  await page.goto(path, { waitUntil: 'networkidle' });
+  await fillApplicationFields(page);
+  await page.getByRole('button', { name: 'Generate Now' }).click();
+}
+
+export async function navigateHome(page: Page) {
+  const brand = page.getByRole('link', { name: 'Alt+Shift' });
+  await brand.focus();
+  await brand.press('Enter');
+  await expect(page).toHaveURL('/');
+}
+
 export async function expectApplicationProgress(page: Page, applicationCount: number) {
   await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
   await expect(page.getByText(`${applicationCount}/5 applications generated`)).toBeVisible();

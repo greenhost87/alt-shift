@@ -352,7 +352,6 @@ export function ApplicationWorkspace({
     letter,
   });
   const isViewing = Boolean(application);
-  const detailsLength = displayedValues.details.length;
   const parsedRequest = safeParseGenerationRequest(
     {
       jobTitle: displayedValues.jobTitle,
@@ -431,6 +430,7 @@ export function ApplicationWorkspace({
               >
                 <div className={styles['fieldRow']}>
                   <TextField
+                    characterLimit={fieldLimits.jobTitle}
                     disabled={fieldsDisabled}
                     id="job-title"
                     label="Job title"
@@ -439,6 +439,7 @@ export function ApplicationWorkspace({
                     value={displayedValues.jobTitle}
                   />
                   <TextField
+                    characterLimit={fieldLimits.company}
                     disabled={fieldsDisabled}
                     id="company"
                     label="Company"
@@ -448,6 +449,7 @@ export function ApplicationWorkspace({
                   />
                 </div>
                 <TextField
+                  characterLimit={fieldLimits.strengths}
                   disabled={fieldsDisabled}
                   id="strengths"
                   label="I am good at..."
@@ -458,7 +460,6 @@ export function ApplicationWorkspace({
                 <TextAreaField
                   characterLimit={fieldLimits.details}
                   disabled={fieldsDisabled}
-                  hint={`${detailsLength}/${fieldLimits.details}`}
                   id="details"
                   label="Additional details"
                   name="details"

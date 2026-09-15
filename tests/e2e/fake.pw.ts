@@ -5,23 +5,15 @@ import {
   expectApplicationProgress,
   expectBlankGenerator,
   expectGoalBannerHidden,
+  submitApplicationForm,
 } from '../support/applications';
-
-async function fillApplication(page: Page) {
-  await page.getByLabel('Job title').fill('Test Engineer');
-  await page.getByLabel('Company').fill('Local Company');
-  await page.getByLabel('I am good at...').fill('Testing');
-  await page.getByLabel('Additional details').fill('This request must stay local.');
-}
 
 async function expectFakeLetter(page: Page) {
   await expect(page.getByText('no LLM request was made', { exact: false })).toBeVisible();
 }
 
 async function generateFakeApplication(page: Page) {
-  await page.goto('/fake', { waitUntil: 'networkidle' });
-  await fillApplication(page);
-  await page.getByRole('button', { name: 'Generate Now' }).click();
+  await submitApplicationForm(page, '/fake');
   await expectFakeLetter(page);
 }
 

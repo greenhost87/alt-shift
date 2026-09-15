@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
+import { navigateHome } from '../support/applications';
 
 test('logo links to the home page', async ({ page }) => {
   await page.goto('/applications/new');
 
-  await page.getByRole('link', { name: 'Alt+Shift' }).click();
-  await expect(page).toHaveURL('/');
+  await navigateHome(page);
 });

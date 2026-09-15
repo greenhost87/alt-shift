@@ -1,45 +1,40 @@
-import { FormControl } from 'reshaped';
+import { FormControl, Text } from 'reshaped';
+import type { FieldProps } from './Field.types';
 import styles from './Field.module.css';
+import { getLengthError } from './length';
 
-type TextFieldProps = {
-  autoComplete?: string;
-  disabled?: boolean;
-  id: string;
-  label: string;
-  name: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  value: string;
-};
+export function TextField(props: FieldProps) {
+  const error = getLengthError(props.value, props.characterLimit);
+  const descriptionId = error ? `${props.id}-error` : undefined;
 
-export function TextField({
-  autoComplete,
-  disabled = false,
-  id,
-  label,
-  name,
-  onChange,
-  placeholder,
-  value,
-}: TextFieldProps) {
   return (
     <div className={styles['field']}>
-      <FormControl disabled={disabled} id={id} size="large">
-        <label htmlFor={id}>{label}</label>
+      <FormControl disabled={props.disabled} hasError={Boolean(error)} id={props.id} size="large">
+        <label htmlFor={props.id}>{props.label}</label>
         <input
-          aria-invalid={false}
-          autoComplete={autoComplete}
+          aria-describedby={descriptionId}
+          aria-invalid={Boolean(error)}
           className={styles['control']}
-          disabled={disabled}
-          id={id}
-          name={name}
+          disabled={props.disabled}
+          id={props.id}
+          name={props.name}
           onChange={(event) => {
-            onChange(event.currentTarget.value);
+            props.onChange(event.currentTarget.value);
           }}
-          placeholder={placeholder}
+          placeholder={props.placeholder}
           type="text"
-          value={value}
+          value={props.value}
         />
+        {error ? (
+          <Text
+            as="p"
+            attributes={{ id: descriptionId, role: 'alert' }}
+            className={styles['caption']}
+            variant="body-2"
+          >
+            {error}
+          </Text>
+        ) : null}
       </FormControl>
     </div>
   );

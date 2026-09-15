@@ -1,39 +1,24 @@
 import { FormControl, Text } from 'reshaped';
+import type { FieldProps } from './Field.types';
 import styles from './Field.module.css';
-
-type TextAreaFieldProps = {
-  characterLimit: number;
-  disabled?: boolean;
-  hint?: string;
-  id: string;
-  label: string;
-  name: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  value: string;
-};
+import { getLengthError } from './length';
 
 function getDescriptionId(id: string, hasError: boolean, hasCaption: boolean) {
   return hasCaption ? `${id}-${hasError ? 'error' : 'caption'}` : undefined;
 }
 
-function getLengthError(value: string, characterLimit: number) {
-  return value.length > characterLimit ? `${value.length}/${characterLimit}` : undefined;
-}
-
 export function TextAreaField({
   characterLimit,
   disabled = false,
-  hint,
   id,
   label,
   name,
   onChange,
   placeholder,
   value,
-}: TextAreaFieldProps) {
+}: FieldProps) {
   const error = getLengthError(value, characterLimit);
-  const caption = error ?? hint;
+  const caption = error ?? `${value.length}/${characterLimit}`;
   const hasError = Boolean(error);
   const descriptionId = getDescriptionId(id, hasError, Boolean(caption));
 

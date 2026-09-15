@@ -15,6 +15,7 @@ type ButtonIconPosition = (typeof BUTTON_ICON_POSITIONS)[number];
 type ButtonInteractionEvent = KeyboardEvent<HTMLElement> | MouseEvent<HTMLElement>;
 
 type ButtonProps = {
+  ariaDisabled?: boolean;
   ariaLabel?: string;
   children?: ReactNode;
   disabled?: boolean;
@@ -68,6 +69,10 @@ function getDisabled(disabled: boolean, loading: boolean) {
   return disabled || loading;
 }
 
+function getAriaDisabled(ariaDisabled: boolean, disabled: boolean) {
+  return ariaDisabled || disabled;
+}
+
 function getButtonSize(size: ButtonSize | undefined, variant: ButtonVariant) {
   return size ?? (variant === 'ghost' ? 'compact' : 'medium');
 }
@@ -89,6 +94,7 @@ function renderButtonContent(
 
 export const Button = forwardRef<ActionableRef, ButtonProps>(function Button(
   {
+    ariaDisabled = false,
     ariaLabel,
     children,
     disabled = false,
@@ -107,12 +113,17 @@ export const Button = forwardRef<ActionableRef, ButtonProps>(function Button(
   validateAccessibleLabel(accessibleLabel, children, loading);
   const statefulAccessibleLabel = getStatefulAccessibleLabel(accessibleLabel, loading);
   const resolvedSize = getButtonSize(size, variant);
+  const resolvedDisabled = getDisabled(disabled, loading);
 
   return (
     <Actionable
-      attributes={{ 'aria-label': statefulAccessibleLabel, 'aria-busy': loading }}
+      attributes={{
+        'aria-busy': loading,
+        'aria-disabled': getAriaDisabled(ariaDisabled, resolvedDisabled),
+        'aria-label': statefulAccessibleLabel,
+      }}
       className={[styles['button'], styles[variant], BUTTON_SIZE_CLASS_NAMES[resolvedSize]]}
-      disabled={getDisabled(disabled, loading)}
+      disabled={resolvedDisabled}
       fullWidth={fullWidth}
       onClick={onClick}
       ref={ref}
