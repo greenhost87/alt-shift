@@ -46,7 +46,25 @@ export function ApplicationsDashboard({ applicationLimit, onCreate }: Applicatio
             Browser storage is unavailable. Changes cannot be saved.
           </p>
         ) : null}
-        {storageStatus !== 'loading' ? (
+        {storageStatus === 'ready' && applicationCount === 0 ? (
+          <div className={styles['emptyState']}>
+            <div aria-hidden="true" className={styles['emptyStateVisual']}>
+              <PlusIcon />
+            </div>
+            <div className={styles['emptyStateCopy']}>
+              <h2 className={styles['emptyStateTitle']}>No applications yet</h2>
+              <p className={styles['emptyStateDescription']}>
+                Create an application to start making progress toward your next role.
+              </p>
+            </div>
+            <div className={styles['emptyStateAction']}>
+              <Button icon={<PlusIcon />} onClick={onCreate} size="large">
+                Create your first application
+              </Button>
+            </div>
+          </div>
+        ) : null}
+        {storageStatus !== 'loading' && applicationCount > 0 ? (
           <div className={styles['cardGrid']}>
             {applications.map((application) => (
               <article className={cardStyles['card']} key={application.id}>
