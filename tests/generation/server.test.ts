@@ -68,6 +68,28 @@ describe('generation server contract', () => {
     });
   });
 
+  test('normalizes an upstream rate limit and preserves Retry-After', async () => {
+    const response = await handleGenerateRequest(
+      new Request('http://localhost/api/generate', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+      () =>
+        Promise.resolve(
+          new Response('limited', { status: 429, headers: { 'retry-after': '17' } }),
+        ),
+    );
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('retry-after')).toBe('17');
+    expect(await response.json()).toEqual({
+      error: {
+        code: 'rate_limited',
+        message: 'Too many generation requests. Please try again later.',
+      },
+    });
+  });
+
   test('marks applicant values as untrusted prompt text', () => {
     const prompt = buildGenerationPrompt(input);
     expect(prompt).toContain('<untrusted_applicant_input>');

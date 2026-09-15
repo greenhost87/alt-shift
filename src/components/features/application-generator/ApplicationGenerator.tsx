@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStoredApplications } from '../../../system/applications/storage';
-import { generateApplication } from '../../../system/generation/client';
+import { GenerationError, generateApplication } from '../../../system/generation/client';
 import { safeParseGenerationRequest } from '../../../system/generation/schema';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
 import { Workspace } from '../../layout/workspace/Workspace';
@@ -18,7 +18,24 @@ const INITIAL_STRENGTHS = 'HTML, CSS and doing things in time';
 const INITIAL_DETAILS =
   'I want to help you build awesome solutions to accomplish your goals and vision';
 
-type GenerationPhase = 'idle' | 'waiting' | 'streaming' | 'completed' | 'failed';
+type GenerationPhase =
+  | 'idle'
+  | 'submitting'
+  | 'waiting-for-first-token'
+  | 'streaming'
+  | 'completed'
+  | 'cancelled'
+  | 'failed';
+
+const PHASE_STATUS: Record<GenerationPhase, string> = {
+  idle: '',
+  submitting: 'Submitting your application…',
+  'waiting-for-first-token': 'Waiting for the first response…',
+  streaming: 'Writing your application…',
+  completed: 'Application generated and saved.',
+  cancelled: 'Generation cancelled. Your partial application is still available.',
+  failed: 'Generation failed. You can retry when ready.',
+};
 
 export function ApplicationWorkspace() {
   const [jobTitle, setJobTitle] = useState(INITIAL_JOB_TITLE);
@@ -28,11 +45,14 @@ export function ApplicationWorkspace() {
   const [phase, setPhase] = useState<GenerationPhase>('idle');
   const [letter, setLetter] = useState('');
   const [error, setError] = useState('');
+  const [retryAvailableAt, setRetryAvailableAt] = useState<number>();
   const abortController = useRef<AbortController | null>(null);
   const { addApplication } = useStoredApplications();
   const detailsLength = details.length;
   const parsedRequest = safeParseGenerationRequest({ jobTitle, company, strengths, details });
-  const isGenerating = phase === 'waiting' || phase === 'streaming';
+  const isGenerating =
+    phase === 'submitting' || phase === 'waiting-for-first-token' || phase === 'streaming';
+  const retryBlocked = retryAvailableAt !== undefined && retryAvailableAt > Date.now();
   const hasApplicationTitle = jobTitle.trim().length > 0 && company.trim().length > 0;
   const applicationTitle = hasApplicationTitle ? `${jobTitle}, ${company}` : 'New application';
 
@@ -43,12 +63,38 @@ export function ApplicationWorkspace() {
     [],
   );
 
+  useEffect(() => {
+    if (!retryAvailableAt) return;
+    let timeout: number | undefined;
+    const waitUntilRetryIsAvailable = () => {
+      const remaining = retryAvailableAt - Date.now();
+      if (remaining <= 0) {
+        setRetryAvailableAt(undefined);
+        return;
+      }
+      timeout = window.setTimeout(waitUntilRetryIsAvailable, Math.min(remaining, 2_147_483_647));
+    };
+    waitUntilRetryIsAvailable();
+    return () => {
+      if (timeout !== undefined) window.clearTimeout(timeout);
+    };
+  }, [retryAvailableAt]);
+
   const copyApplication = () => {
     void navigator.clipboard.writeText(letter);
   };
 
+  const cancel = () => {
+    if (!isGenerating) return;
+    const controller = abortController.current;
+    abortController.current = null;
+    controller?.abort();
+    setError('');
+    setPhase('cancelled');
+  };
+
   const submit = async () => {
-    if (!parsedRequest.success || isGenerating) return;
+    if (!parsedRequest.success || isGenerating || retryBlocked) return;
 
     const request = parsedRequest.output;
     const controller = new AbortController();
@@ -56,21 +102,30 @@ export function ApplicationWorkspace() {
     abortController.current = controller;
     setLetter('');
     setError('');
-    setPhase('waiting');
+    setRetryAvailableAt(undefined);
+    setPhase('submitting');
     let generatedLetter = '';
 
     try {
       await generateApplication(request, {
         signal: controller.signal,
+        onOpen() {
+          if (abortController.current === controller) setPhase('waiting-for-first-token');
+        },
         onDelta(delta) {
+          if (abortController.current !== controller) return;
           generatedLetter += delta;
           setLetter(generatedLetter);
           setPhase('streaming');
         },
       });
 
+      if (abortController.current !== controller) return;
       if (!generatedLetter.trim()) {
-        throw new Error('The generation stream ended before a letter was created.');
+        throw new GenerationError(
+          'The generation stream ended before a letter was created.',
+          'empty_stream',
+        );
       }
 
       const saved = addApplication({
@@ -85,7 +140,14 @@ export function ApplicationWorkspace() {
       }
       setPhase('completed');
     } catch (generationError) {
-      if (controller.signal.aborted) return;
+      if (abortController.current !== controller) return;
+      if (controller.signal.aborted) {
+        setPhase('cancelled');
+        return;
+      }
+      if (generationError instanceof GenerationError && generationError.code === 'rate_limited') {
+        setRetryAvailableAt(generationError.retryAfter);
+      }
       setError(
         generationError instanceof Error
           ? generationError.message
@@ -106,7 +168,7 @@ export function ApplicationWorkspace() {
         </Button>
       </div>
     </div>
-  ) : phase === 'waiting' ? (
+  ) : isGenerating ? (
     <div aria-label="Generating application" className={styles['loadingPreview']} role="status">
       <div className={styles['orb']}>
         <span className={styles['orbGlow']} />
@@ -125,6 +187,8 @@ export function ApplicationWorkspace() {
       </div>
     </div>
   );
+
+  const canRetry = phase === 'cancelled' || phase === 'failed';
 
   return (
     <Workspace
@@ -181,19 +245,37 @@ export function ApplicationWorkspace() {
                 {error}
               </p>
             ) : null}
-            <span aria-live="polite" className={styles['status']}>
-              {phase === 'streaming' ? 'Writing your application…' : null}
-              {phase === 'completed' ? 'Application generated and saved.' : null}
+            {retryBlocked ? (
+              <p className={styles['rateLimit']}>Retry is unavailable until the server limit expires.</p>
+            ) : null}
+            <span aria-atomic="true" aria-live="polite" className={styles['status']}>
+              {PHASE_STATUS[phase]}
             </span>
-            <Button
-              disabled={!parsedRequest.success}
-              fullWidth
-              loading={isGenerating || undefined}
-              size="large"
-              type="submit"
-            >
-              Generate Now
-            </Button>
+            <div className={styles['formActions']}>
+              {isGenerating ? (
+                <>
+                  <Button disabled fullWidth loading size="large" type="submit">
+                    Generate Now
+                  </Button>
+                  <Button fullWidth onClick={cancel} size="large" variant="secondary">
+                    Cancel generation
+                  </Button>
+                </>
+              ) : canRetry ? (
+                <Button
+                  disabled={!parsedRequest.success || retryBlocked}
+                  fullWidth
+                  size="large"
+                  type="submit"
+                >
+                  Retry generation
+                </Button>
+              ) : (
+                <Button disabled={!parsedRequest.success} fullWidth size="large" type="submit">
+                  Generate Now
+                </Button>
+              )}
+            </div>
           </form>
         </div>
       }

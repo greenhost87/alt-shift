@@ -28,6 +28,7 @@
 .placeholder,
 .letter,
 .error,
+.rateLimit,
 .status {
   margin: 0;
 }
@@ -41,6 +42,10 @@
   color: var(--rs-color-foreground-critical);
 }
 
+.rateLimit {
+  color: var(--rs-color-foreground-neutral-faded);
+}
+
 .status:empty {
   display: none;
 }
@@ -49,6 +54,16 @@
   align-items: center;
   display: flex;
   justify-content: flex-end;
+}
+
+.formActions {
+  display: grid;
+  gap: var(--rs-unit-x2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.formActions > :only-child {
+  grid-column: 1 / -1;
 }
 
 .loadingPreview {
@@ -102,8 +117,13 @@
 }
 
 @media (--rs-viewport-s) {
-  .fieldRow {
+  .fieldRow,
+  .formActions {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .formActions > :only-child {
+    grid-column: auto;
   }
 
   .preview,
