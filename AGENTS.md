@@ -2,6 +2,7 @@
 
 A task is done only when all of the following conditions are met:
 
+- code is formatted
 - The task has an end-to-end (E2E) test that covers the implemented behavior.
 - All tests pass.
 - All E2E tests pass.
