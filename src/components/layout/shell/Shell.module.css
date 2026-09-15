@@ -36,9 +36,12 @@
   gap: var(--rs-unit-x2);
 }
 
-.languageFlag {
-  font-size: 24px;
-  line-height: 1;
+.languageSelect {
+  width: 136px;
+}
+
+.languageSelect select {
+  height: var(--rs-unit-control-height);
 }
 
 .status {
@@ -133,6 +136,14 @@
 
   .brand {
     width: 128px;
+  }
+
+  .languageSelect {
+    width: 64px;
+  }
+
+  .languageSelect select {
+    height: var(--rs-unit-button-height-medium);
   }
 
   .main {

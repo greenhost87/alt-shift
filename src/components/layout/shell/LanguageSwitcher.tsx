@@ -1,27 +1,32 @@
+import { Select } from 'reshaped';
 import * as m from '../../../paraglide/messages.js';
 import { getLocale, setLocale } from '../../../paraglide/runtime.js';
-import { Button } from '../../ui/button/Button';
 import styles from './Shell.module.css';
+
+type LanguageChange = {
+  name: string;
+  value: string;
+};
 
 export function LanguageSwitcher() {
   const currentLocale = getLocale();
-  const nextLocale = currentLocale === 'en' ? 'ru' : 'en';
-  const accessibleLabel = nextLocale === 'ru' ? m.switch_to_russian() : m.switch_to_english();
-  const switchLanguage = async () => {
-    await setLocale(nextLocale);
+  const changeLanguage = ({ value }: LanguageChange) => {
+    if (value === 'en' || value === 'ru') {
+      void setLocale(value);
+    }
   };
 
   return (
-    <Button
-      ariaLabel={accessibleLabel}
-      onClick={() => void switchLanguage()}
-      size="icon"
-      type="button"
-      variant="secondary"
+    <Select
+      className={styles['languageSelect']}
+      inputAttributes={{ 'aria-label': m.language() }}
+      name="language"
+      onChange={changeLanguage}
+      size="medium"
+      value={currentLocale}
     >
-      <span aria-hidden="true" className={styles['languageFlag']}>
-        {nextLocale === 'ru' ? '🇷🇺' : '🇬🇧'}
-      </span>
-    </Button>
+      <option value="en">🇬🇧 English</option>
+      <option value="ru">🇷🇺 Русский</option>
+    </Select>
   );
 }

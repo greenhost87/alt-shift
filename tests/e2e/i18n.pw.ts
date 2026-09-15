@@ -13,15 +13,15 @@ test('switches to Russian, persists the locale, and submits it for generation', 
 
   await page.goto('/', { waitUntil: 'networkidle' });
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  const languageButton = page.getByRole('button', { name: 'Switch language to Russian' });
+  const languageSelect = page.getByRole('combobox', { name: 'Language' });
   const homeButton = page.getByRole('button', { name: 'Home' });
-  await expect(languageButton).toHaveText('🇷🇺');
-  await expect(languageButton.locator('[aria-hidden="true"]')).toHaveCSS('font-size', '24px');
-  const languageButtonBox = await languageButton.boundingBox();
+  await expect(languageSelect).toHaveValue('en');
+  await expect(languageSelect.getByRole('option', { name: '🇬🇧 English' })).toHaveCount(1);
+  await expect(languageSelect.getByRole('option', { name: '🇷🇺 Русский' })).toHaveCount(1);
+  const languageSelectBox = await languageSelect.boundingBox();
   const homeButtonBox = await homeButton.boundingBox();
-  expect(languageButtonBox?.width).toBe(homeButtonBox?.width);
-  expect(languageButtonBox?.height).toBe(homeButtonBox?.height);
-  await languageButton.click();
+  expect(languageSelectBox?.height).toBe(homeButtonBox?.height);
+  await languageSelect.selectOption('ru');
 
   await expect
     .poll(
@@ -43,10 +43,8 @@ test('switches to Russian, persists the locale, and submits it for generation', 
   await page.getByRole('button', { name: 'Создать письмо' }).click();
 
   await expect.poll(() => generationRequestBody).toContain('"locale":"ru"');
-  const englishLanguageButton = page.getByRole('button', {
-    name: 'Переключить язык на английский',
-  });
-  await expect(englishLanguageButton).toHaveText('🇬🇧');
-  await englishLanguageButton.click();
+  const russianLanguageSelect = page.getByRole('combobox', { name: 'Язык' });
+  await expect(russianLanguageSelect).toHaveValue('ru');
+  await russianLanguageSelect.selectOption('en');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });
