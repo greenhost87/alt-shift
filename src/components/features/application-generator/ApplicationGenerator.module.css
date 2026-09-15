@@ -1,7 +1,12 @@
+.content,
 .editor,
 .form {
   display: flex;
   flex-direction: column;
+}
+
+.content {
+  gap: var(--rs-unit-x12);
 }
 
 .editor {
@@ -28,8 +33,7 @@
 .placeholder,
 .letter,
 .error,
-.rateLimit,
-.status {
+.rateLimit {
   margin: 0;
 }
 
@@ -46,24 +50,14 @@
   color: var(--rs-color-foreground-neutral-faded);
 }
 
-.status:empty {
-  display: none;
+.completedPreview {
+  min-height: calc(var(--rs-unit-completed-panel-height) - var(--rs-unit-x12));
 }
 
 .previewAction {
   align-items: center;
   display: flex;
   justify-content: flex-end;
-}
-
-.formActions {
-  display: grid;
-  gap: var(--rs-unit-x2);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.formActions > :only-child {
-  grid-column: 1 / -1;
 }
 
 .loadingPreview {
@@ -117,16 +111,12 @@
 }
 
 @media (--rs-viewport-s) {
-  .fieldRow,
-  .formActions {
+  .fieldRow {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .formActions > :only-child {
-    grid-column: auto;
-  }
-
   .preview,
+  .completedPreview,
   .loadingPreview {
     min-height: calc(var(--rs-unit-panel-height-mobile) - var(--rs-unit-x8));
   }

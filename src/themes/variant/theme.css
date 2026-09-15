@@ -134,6 +134,7 @@
 --rs-unit-button-padding-medium-horizontal: 18px;
 --rs-unit-button-padding-medium-vertical: 10px;
 --rs-unit-canvas-width: 1440px;
+--rs-unit-completed-panel-height: 620px;
 --rs-unit-content-width: 1120px;
 --rs-unit-control-height: 40px;
 --rs-unit-control-padding-horizontal: 12px;
@@ -146,6 +147,7 @@
 --rs-unit-mobile-page-bottom: 64px;
 --rs-unit-mobile-page-gutter: 16px;
 --rs-unit-mobile-page-top: 20px;
+--rs-unit-loading-button-height: 56px;
 --rs-unit-page-bottom: 120px;
 --rs-unit-page-gutter: 160px;
 --rs-unit-page-top: 32px;

@@ -13,27 +13,6 @@
   width: 100%;
 }
 
-.metadata {
-  align-items: baseline;
-  display: flex;
-  gap: var(--rs-unit-x2);
-  justify-content: space-between;
-  margin-bottom: var(--rs-unit-x3);
-}
-
-.title {
-  font: var(--rs-font-weight-body-2) var(--rs-font-size-body-2) / var(--rs-line-height-body-2)
-    var(--rs-font-family-body);
-  margin: 0;
-}
-
-.date {
-  color: var(--rs-color-foreground-neutral-faded);
-  flex: 0 0 auto;
-  font: var(--rs-font-weight-caption-1) var(--rs-font-size-caption-1) /
-    var(--rs-line-height-caption-1) var(--rs-font-family-body);
-}
-
 .letter {
   color: var(--rs-color-foreground-neutral-faded);
   flex: 1 1 auto;

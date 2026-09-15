@@ -656,6 +656,9 @@
     "canvasWidth": {
       "px": 1440
     },
+    "completedPanelHeight": {
+      "px": 620
+    },
     "contentWidth": {
       "px": 1120
     },
@@ -691,6 +694,9 @@
     },
     "mobilePageTop": {
       "px": 20
+    },
+    "loadingButtonHeight": {
+      "px": 56
     },
     "pageBottom": {
       "px": 120

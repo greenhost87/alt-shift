@@ -86,6 +86,15 @@
     calc(var(--rs-unit-button-padding-large-horizontal) - var(--rs-unit-border-width));
 }
 
+.large[aria-busy='true'] {
+  height: var(--rs-unit-loading-button-height);
+  min-height: var(--rs-unit-loading-button-height);
+  padding-block: calc(
+    (var(--rs-unit-loading-button-height) - var(--rs-unit-icon-size-large)) / 2 -
+      var(--rs-unit-border-width)
+  );
+}
+
 .iconButton {
   height: var(--rs-unit-control-height);
   min-height: var(--rs-unit-control-height);
@@ -137,6 +146,11 @@
   height: var(--rs-unit-icon-size);
   position: absolute;
   width: var(--rs-unit-icon-size);
+}
+
+.large .spinner {
+  height: var(--rs-unit-icon-size-large);
+  width: var(--rs-unit-icon-size-large);
 }
 
 @keyframes spin {

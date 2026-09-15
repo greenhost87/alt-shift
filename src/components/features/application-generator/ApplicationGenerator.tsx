@@ -8,10 +8,11 @@ import { safeParseGenerationRequest } from '../../../system/generation/schema';
 import type { GenerationRequest } from '../../../system/generation/schema';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
 import { Workspace } from '../../layout/workspace/Workspace';
+import { GoalBanner } from '../../ui/banner/Banner';
 import { Button } from '../../ui/button/Button';
+import { CopyButton } from '../../ui/button/CopyButton';
 import { TextAreaField } from '../../ui/field/TextAreaField';
 import { TextField } from '../../ui/field/TextField';
-import { CopyIcon } from '../../ui/icon/Icon';
 import typographyStyles from '../../ui/text/Typography.module.css';
 import styles from './ApplicationGenerator.module.css';
 
@@ -21,20 +22,9 @@ type GenerationPhase =
   | 'waiting-for-first-token'
   | 'streaming'
   | 'completed'
-  | 'cancelled'
   | 'failed';
 
 const ACTIVE_PHASES: GenerationPhase[] = ['submitting', 'waiting-for-first-token', 'streaming'];
-
-const PHASE_STATUS: Record<GenerationPhase, string> = {
-  idle: '',
-  submitting: 'Submitting your application…',
-  'waiting-for-first-token': 'Waiting for the first response…',
-  streaming: 'Writing your application…',
-  completed: 'Application generated and saved.',
-  cancelled: 'Generation cancelled. Your partial application is still available.',
-  failed: 'Generation failed. You can retry when ready.',
-};
 
 type FailureOptions = {
   controller: AbortController;
@@ -60,8 +50,8 @@ type NewApplication = {
 };
 
 type FormActionsOptions = {
-  cancel: () => void;
   canRetry: boolean;
+  isCompleted: boolean;
   isGenerating: boolean;
   submissionBlocked: boolean;
 };
@@ -73,10 +63,7 @@ const generationErrorSchema = v.fallback(
 
 function handleGenerationFailure(generationError: Error, options: FailureOptions) {
   if (options.currentController !== options.controller) return;
-  if (options.controller.signal.aborted) {
-    options.setPhase('cancelled');
-    return;
-  }
+  if (options.controller.signal.aborted) return;
   if (generationError instanceof GenerationError && generationError.code === 'rate_limited') {
     options.setRetryAvailableAt(generationError.retryAfter);
   }
@@ -144,22 +131,14 @@ async function submitApplication(request: GenerationRequest, options: Submission
 
 function renderApplicationPreview(
   letter: string,
+  isCompleted: boolean,
   isGenerating: boolean,
-  copyApplication: () => Promise<void>,
+  onCopy: () => Promise<void>,
 ) {
-  const copyButton = (
-    <Button
-      icon={<CopyIcon />}
-      iconPosition="end"
-      onClick={() => void copyApplication()}
-      variant="ghost"
-    >
-      Copy to clipboard
-    </Button>
-  );
+  const copyButton = <CopyButton onClick={() => void onCopy()} />;
   if (letter) {
     return (
-      <div className={styles['preview']}>
+      <div className={[styles['preview'], isCompleted ? styles['completedPreview'] : ''].join(' ')}>
         <p className={[styles['letter'], typographyStyles['body']].join(' ')}>{letter}</p>
         <div className={styles['previewAction']}>{copyButton}</div>
       </div>
@@ -239,17 +218,19 @@ function renderRetryMessage(retryBlocked: boolean) {
   ) : null;
 }
 
-function renderFormActions(options: FormActionsOptions) {
+function renderFormAction(options: FormActionsOptions) {
   if (options.isGenerating) {
     return (
-      <>
-        <Button disabled fullWidth loading size="large" type="submit">
-          Generate Now
-        </Button>
-        <Button fullWidth onClick={options.cancel} size="large" variant="secondary">
-          Cancel generation
-        </Button>
-      </>
+      <Button disabled fullWidth loading size="large" type="submit">
+        Generate Now
+      </Button>
+    );
+  }
+  if (options.isCompleted) {
+    return (
+      <Button fullWidth size="large" type="submit" variant="secondary">
+        Try Again
+      </Button>
     );
   }
   return (
@@ -260,7 +241,7 @@ function renderFormActions(options: FormActionsOptions) {
 }
 
 export function ApplicationWorkspace() {
-  const { fieldLimits, initialForm } = useApplicationConfig();
+  const { applicationLimit, fieldLimits, initialForm } = useApplicationConfig();
   const [jobTitle, setJobTitle] = useState(initialForm.jobTitle);
   const [company, setCompany] = useState(initialForm.company);
   const [strengths, setStrengths] = useState(initialForm.strengths);
@@ -271,7 +252,7 @@ export function ApplicationWorkspace() {
   const [copyError, setCopyError] = useState('');
   const [retryAvailableAt, setRetryAvailableAt] = useState<number>();
   const abortController = useRef<AbortController | null>(null);
-  const { addApplication } = useStoredApplications();
+  const { addApplication, applications } = useStoredApplications();
   const detailsLength = details.length;
   const parsedRequest = safeParseGenerationRequest(
     { jobTitle, company, strengths, details },
@@ -296,15 +277,6 @@ export function ApplicationWorkspace() {
     setCopyError(await writeClipboardText(letter));
   };
 
-  const cancel = () => {
-    if (!isGenerating) return;
-    const controller = abortController.current;
-    abortController.current = null;
-    controller?.abort();
-    setError('');
-    setPhase('cancelled');
-  };
-
   const submit = () => {
     if (submissionBlocked) return;
     void submitApplication(
@@ -320,71 +292,89 @@ export function ApplicationWorkspace() {
     );
   };
 
-  const canRetry = ['cancelled', 'failed'].includes(phase);
+  const startNewApplication = () => {
+    setJobTitle(initialForm.jobTitle);
+    setCompany(initialForm.company);
+    setStrengths(initialForm.strengths);
+    setDetails(initialForm.details);
+    setLetter('');
+    setError('');
+    setCopyError('');
+    setRetryAvailableAt(undefined);
+    setPhase('idle');
+  };
+
+  const canRetry = phase === 'failed';
+  const isCompleted = phase === 'completed';
+  const applicationCount = applications.length;
 
   return (
-    <Workspace
-      primary={
-        <div className={styles['editor']}>
-          <SectionHeader level="section" muted={!hasApplicationTitle} title={applicationTitle} />
-          <form
-            className={styles['form']}
-            onSubmit={(event) => {
-              event.preventDefault();
-              submit();
-            }}
-          >
-            <div className={styles['fieldRow']}>
+    <div className={styles['content']}>
+      <Workspace
+        primary={
+          <div className={styles['editor']}>
+            <SectionHeader level="section" muted={!hasApplicationTitle} title={applicationTitle} />
+            <form
+              className={styles['form']}
+              onSubmit={(event) => {
+                event.preventDefault();
+                submit();
+              }}
+            >
+              <div className={styles['fieldRow']}>
+                <TextField
+                  disabled={isGenerating}
+                  id="job-title"
+                  label="Job title"
+                  name="jobTitle"
+                  onChange={setJobTitle}
+                  value={jobTitle}
+                />
+                <TextField
+                  disabled={isGenerating}
+                  id="company"
+                  label="Company"
+                  name="company"
+                  onChange={setCompany}
+                  value={company}
+                />
+              </div>
               <TextField
                 disabled={isGenerating}
-                id="job-title"
-                label="Job title"
-                name="jobTitle"
-                onChange={setJobTitle}
-                value={jobTitle}
+                id="strengths"
+                label="I am good at..."
+                name="strengths"
+                onChange={setStrengths}
+                value={strengths}
               />
-              <TextField
+              <TextAreaField
+                autoFocus
+                characterLimit={fieldLimits.details}
                 disabled={isGenerating}
-                id="company"
-                label="Company"
-                name="company"
-                onChange={setCompany}
-                value={company}
+                hint={`${detailsLength}/${fieldLimits.details}`}
+                id="details"
+                label="Additional details"
+                name="details"
+                onChange={setDetails}
+                placeholder="Describe why you are a great fit or paste your bio"
+                value={details}
               />
-            </div>
-            <TextField
-              disabled={isGenerating}
-              id="strengths"
-              label="I am good at..."
-              name="strengths"
-              onChange={setStrengths}
-              value={strengths}
-            />
-            <TextAreaField
-              autoFocus
-              characterLimit={fieldLimits.details}
-              disabled={isGenerating}
-              hint={`${detailsLength}/${fieldLimits.details}`}
-              id="details"
-              label="Additional details"
-              name="details"
-              onChange={setDetails}
-              placeholder="Describe why you are a great fit or paste your bio"
-              value={details}
-            />
-            {renderAlert(error)}
-            {renderAlert(copyError)}
-            {renderRetryMessage(retryBlocked)}
-            <span aria-atomic="true" aria-live="polite" className={styles['status']}>
-              {PHASE_STATUS[phase]}
-            </span>
-            <div className={styles['formActions']}>
-              {renderFormActions({ cancel, canRetry, isGenerating, submissionBlocked })}
-            </div>
-          </form>
-        </div>
-      }
-      secondary={renderApplicationPreview(letter, isGenerating, copyApplication)}
-    />
+              {renderAlert(error)}
+              {renderAlert(copyError)}
+              {renderRetryMessage(retryBlocked)}
+              {renderFormAction({ canRetry, isCompleted, isGenerating, submissionBlocked })}
+            </form>
+          </div>
+        }
+        secondary={renderApplicationPreview(letter, isCompleted, isGenerating, copyApplication)}
+      />
+      <GoalBanner
+        current={applicationCount}
+        description="Generate and send out couple more job applications to get hired faster"
+        onCreate={startNewApplication}
+        total={applicationLimit}
+        visible={isCompleted && applicationCount < applicationLimit}
+      />
+    </div>
   );
 }

@@ -16,6 +16,15 @@ test('desktop primitives match the design geometry and typography', async ({ pag
   });
   await expect(banner).toHaveCSS('padding', '54px 64px');
 
+  const card = page.locator('article').first();
+  const cardBox = await card.boundingBox();
+  const letterBox = await card.locator('p').boundingBox();
+  expect(cardBox?.height).toBe(240);
+  expect(letterBox?.y).toBe((cardBox?.y ?? 0) + 24);
+  expect(letterBox?.height).toBe(152);
+  await expect(card.getByRole('heading')).toHaveCount(0);
+  await expect(card.locator('time')).toHaveCount(0);
+
   await page.goto('/applications/new', { waitUntil: 'networkidle' });
 
   const jobTitle = page.getByLabel('Job title');
@@ -68,6 +77,9 @@ test('textarea exposes the over-limit error state without truncating input', asy
   await expect(generate).toHaveAttribute('aria-busy', 'true');
   await expect(generate).toHaveAccessibleName('Generate Now, loading');
   await expect(generate).toBeDisabled();
+  const loadingBox = await generate.boundingBox();
+  expect(loadingBox?.height).toBe(56);
+  await expect(page.getByRole('button', { name: 'Cancel generation' })).toHaveCount(0);
 });
 
 test('mobile actions have touch targets of at least 44 pixels', async ({ page }) => {

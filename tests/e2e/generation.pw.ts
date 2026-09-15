@@ -7,7 +7,6 @@ declare global {
   interface Window {
     delayedGenerationResponse: (release: () => Promise<void>, content: string) => Response;
     finishInterruptedGenerationRetry: () => Promise<void>;
-    finishRetriedGeneration: () => Promise<void>;
     generationResponse: (body: BodyInit) => Response;
     recordGenerationRequest: () => Promise<void>;
     recordInterruptedGenerationRequest: () => Promise<void>;
@@ -61,8 +60,24 @@ async function generateApplication(page: Page) {
 
 async function expectCompletedGeneration(page: Page, letter: string) {
   await expect(page.getByText(letter)).toBeVisible();
-  await expect(page.getByText('Application generated and saved.')).toBeVisible();
+  const tryAgain = page.getByRole('button', { name: 'Try Again' });
+  await expect(tryAgain).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(tryAgain).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await expect(page.getByText('4/5 applications generated')).toBeVisible();
+  const goalHeading = page.getByRole('heading', { name: 'Hit your goal' });
+  await expect(goalHeading).toBeVisible();
+  await expect(
+    page.getByRole('main').getByRole('progressbar', { name: '4 of 5 applications generated' }),
+  ).toHaveAttribute('aria-valuenow', '4');
+  const previewBox = await page
+    .locator('section')
+    .filter({ hasText: letter })
+    .first()
+    .boundingBox();
+  const bannerBox = await page.locator('section').filter({ has: goalHeading }).boundingBox();
+  expect(previewBox?.height).toBe(620);
+  expect(bannerBox?.y).toBe((previewBox?.y ?? 0) + 620 + 48);
 }
 
 async function openDashboardAndExpectCount(page: Page, applicationCount: number) {
@@ -103,8 +118,8 @@ test('streams, saves, restores, and counts a completed application once', async 
 
   await expect.poll(() => requestCount).toBe(1);
   await expect(page.getByText('Dear Apple team,')).toBeVisible();
-  await expect(page.getByText('Writing your application…')).toBeVisible();
-  await expect(page.getByText('Application generated and saved.')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Generate Now, loading' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cancel generation' })).toHaveCount(0);
 
   releaseStream();
   await expectCompletedGeneration(page, STREAMED_LETTER);
@@ -112,7 +127,6 @@ test('streams, saves, restores, and counts a completed application once', async 
   await page.reload();
   await expect(page.getByText('4/5 applications generated')).toBeVisible();
   await page.getByRole('button', { name: 'Home' }).click();
-  await expect(page.getByRole('heading', { name: 'Product manager, Apple' })).toBeVisible();
   await expect(page.getByText(STREAMED_LETTER)).toBeVisible();
   await expect(page.getByText('4/5 applications generated')).toBeVisible();
 });
@@ -150,48 +164,6 @@ test('does not save or increment progress when generation fails', async ({ page 
   await expect(page.getByRole('alert')).toContainText('temporarily unavailable');
   await expect(page.getByText('3/5 applications generated')).toBeVisible();
   await openDashboardAndExpectCount(page, 3);
-});
-
-test('cancels a streamed result, keeps it copyable, and explicitly retries', async ({ page }) => {
-  let finishRetry!: () => void;
-  const retryReleased = new Promise<void>((resolve) => {
-    finishRetry = resolve;
-  });
-  await page.exposeFunction('finishRetriedGeneration', async () => retryReleased);
-  await page.addInitScript(() => {
-    let attempts = 0;
-    window.respondToGeneration = () => {
-      attempts += 1;
-      const encoder = new TextEncoder();
-      if (attempts === 1) {
-        return window.generationResponse(
-          new ReadableStream({
-            start(controller) {
-              controller.enqueue(encoder.encode(window.generationFixtures.cancellableStream));
-            },
-          }),
-        );
-      }
-      return window.delayedGenerationResponse(
-        window.finishRetriedGeneration,
-        window.generationFixtures.retriedStream,
-      );
-    };
-  });
-  await generateApplication(page);
-  await expect(page.getByText('Cancellable partial')).toBeVisible();
-
-  await page.getByRole('button', { name: 'Cancel generation' }).click();
-
-  await expect(page.getByText('Generation cancelled.')).toBeVisible();
-  await expect(page.getByText('Cancellable partial')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Copy to clipboard' })).toBeVisible();
-  await expect(page.getByText('3/5 applications generated')).toBeVisible();
-
-  await page.getByRole('button', { name: 'Retry generation' }).click();
-  await expect(page.getByText('Cancellable partial')).toHaveCount(0);
-  finishRetry();
-  await expectCompletedGeneration(page, 'Retried application');
 });
 
 test('blocks retry only for a valid server Retry-After period', async ({ page }) => {
@@ -247,7 +219,7 @@ test('reports a transport failure and retries only after an explicit action', as
 
   await page.getByRole('button', { name: 'Retry generation' }).click();
   await expect(page.getByText('Generated after reconnecting')).toBeVisible();
-  await expect(page.getByText('Application generated and saved.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
   expect(attempts).toBe(2);
 });
 
@@ -319,7 +291,7 @@ test('keeps interrupted output unsaved and retries only after an explicit action
   await generateApplication(page);
 
   await expect(page.getByText('Partial application')).toBeVisible();
-  await expect(page.getByText('Writing your application…')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Generate Now, loading' })).toBeVisible();
   interruptStream();
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByText('Partial application')).toBeVisible();

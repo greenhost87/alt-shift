@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
-import bannerStyles from '../../ui/banner/Banner.module.css';
+import { GoalBanner } from '../../ui/banner/Banner';
 import { Button } from '../../ui/button/Button';
-import { CopyIcon, Icon, PlusIcon } from '../../ui/icon/Icon';
-import { Progress } from '../../ui/progress/Progress';
-import typographyStyles from '../../ui/text/Typography.module.css';
+import { CopyButton } from '../../ui/button/CopyButton';
+import { CreateButton } from '../../ui/button/CreateButton';
+import { Icon, PlusIcon } from '../../ui/icon/Icon';
 import cardStyles from './ApplicationCard.module.css';
 import { useStoredApplications } from '../../../system/applications/storage';
 import { writeClipboardText } from '../../../system/clipboard/write';
@@ -63,11 +63,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
     <div className={styles['content']}>
       <section className={styles['applications']}>
         <SectionHeader
-          action={
-            <Button icon={<PlusIcon />} onClick={onCreate}>
-              Create New
-            </Button>
-          }
+          action={<CreateButton label="Create New" onClick={onCreate} />}
           title="Applications"
         />
         {renderStorageStatusMessage(storageStatus)}
@@ -88,9 +84,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
               </p>
             </div>
             <div className={styles['emptyStateAction']}>
-              <Button icon={<PlusIcon />} onClick={onCreate} size="large">
-                Create your first application
-              </Button>
+              <CreateButton label="Create your first application" onClick={onCreate} prominent />
             </div>
           </div>
         ) : null}
@@ -98,14 +92,6 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
           <div className={styles['cardGrid']}>
             {applications.map((application) => (
               <article className={cardStyles['card']} key={application.id}>
-                <div className={cardStyles['metadata']}>
-                  <h3 className={cardStyles['title']}>
-                    {application.role}, {application.company}
-                  </h3>
-                  <time className={cardStyles['date']} dateTime={application.createdAt}>
-                    {new Date(application.createdAt).toLocaleDateString()}
-                  </time>
-                </div>
                 <p className={cardStyles['letter']}>{application.letter}</p>
                 <div aria-hidden="true" className={cardStyles['fade']} />
                 <div className={cardStyles['actions']}>
@@ -122,16 +108,11 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
                   >
                     Delete
                   </Button>
-                  <Button
-                    icon={<CopyIcon />}
-                    iconPosition="end"
+                  <CopyButton
                     onClick={() => {
                       void copyApplication(application.letter);
                     }}
-                    variant="ghost"
-                  >
-                    Copy to clipboard
-                  </Button>
+                  />
                 </div>
               </article>
             ))}
@@ -139,24 +120,12 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
         ) : null}
       </section>
       {applicationCount < applicationLimit ? (
-        <section className={bannerStyles['banner']}>
-          <div className={bannerStyles['content']}>
-            <div className={bannerStyles['heading']}>
-              <h2 className={bannerStyles['title']}>Hit your goal</h2>
-              <p className={[bannerStyles['description'], typographyStyles['body']].join(' ')}>
-                Generate and send out couple more job applications today to get hired faster
-              </p>
-              <Button icon={<PlusIcon />} onClick={onCreate} size="large">
-                Create New
-              </Button>
-            </div>
-            <Progress
-              accessibleLabel={`${applicationCount} of ${applicationLimit} applications generated`}
-              current={applicationCount}
-              total={applicationLimit}
-            />
-          </div>
-        </section>
+        <GoalBanner
+          current={applicationCount}
+          description="Generate and send out couple more job applications today to get hired faster"
+          onCreate={onCreate}
+          total={applicationLimit}
+        />
       ) : null}
     </div>
   );
