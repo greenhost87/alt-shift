@@ -21,7 +21,7 @@
 .control:focus-within,
 .textarea:focus-within {
   border-color: var(--rs-color-border-primary);
-  border-radius: var(--rs-radius-large);
+  border-radius: calc(var(--rs-radius-medium) + var(--rs-unit-x0-5));
   box-shadow:
     var(--rs-shadow-control),
     0 0 0 var(--rs-unit-x1) var(--rs-color-border-primary-faded);
@@ -32,7 +32,7 @@
 .controlError:focus-within,
 .textareaError:focus-within {
   border-color: var(--rs-color-border-critical);
-  border-radius: var(--rs-radius-large);
+  border-radius: calc(var(--rs-radius-medium) + var(--rs-unit-x0-5));
   box-shadow:
     var(--rs-shadow-control),
     0 0 0 var(--rs-unit-x1) var(--rs-color-error-ring);

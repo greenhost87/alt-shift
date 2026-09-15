@@ -1,0 +1,13 @@
+.content,
+.applications {
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  gap: var(--rs-unit-x12);
+}
+
+.applications {
+  gap: var(--rs-unit-x6);
+}

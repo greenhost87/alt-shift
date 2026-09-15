@@ -1,9 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { ApplicationsDashboardScreen } from '../components/features/applications-dashboard/ApplicationsDashboard';
 
 export const Route = createFileRoute('/')({
-  component: IndexPage,
+  component: ApplicationsDashboardScreen,
 });
-
-function IndexPage() {
-  return null;
-}

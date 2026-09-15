@@ -2,6 +2,7 @@ import { FormControl, TextArea as ReshapedTextArea } from 'reshaped';
 import styles from './Field.module.css';
 
 type TextAreaFieldProps = {
+  autoFocus?: boolean;
   disabled?: boolean;
   error?: string;
   hint?: string;
@@ -15,6 +16,7 @@ type TextAreaFieldProps = {
 };
 
 export function TextAreaField({
+  autoFocus = false,
   disabled = false,
   error,
   hint,
@@ -31,7 +33,7 @@ export function TextAreaField({
       <FormControl.Label>{label}</FormControl.Label>
       <div className={error ? styles['textareaError'] : styles['textarea']}>
         <ReshapedTextArea
-          inputAttributes={{ maxLength }}
+          inputAttributes={{ autoFocus, maxLength }}
           name={name}
           onChange={({ value: nextValue }: { value: string }) => onChange(nextValue)}
           placeholder={placeholder}
