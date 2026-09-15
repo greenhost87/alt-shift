@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
 import bannerStyles from '../../ui/banner/Banner.module.css';
 import { Button } from '../../ui/button/Button';
@@ -15,9 +16,15 @@ type ApplicationsDashboardProps = {
 
 export function ApplicationsDashboard({ applicationLimit, onCreate }: ApplicationsDashboardProps) {
   const { applications, deleteApplication, status: storageStatus } = useStoredApplications();
+  const [copyError, setCopyError] = useState('');
   const applicationCount = applications.length;
-  const copyApplication = (letter: string) => {
-    void navigator.clipboard.writeText(letter);
+  const copyApplication = async (letter: string) => {
+    try {
+      await navigator.clipboard.writeText(letter);
+      setCopyError('');
+    } catch {
+      setCopyError('The application could not be copied to the clipboard. Please try again.');
+    }
   };
 
   return (
@@ -44,6 +51,11 @@ export function ApplicationsDashboard({ applicationLimit, onCreate }: Applicatio
         {storageStatus === 'unavailable' ? (
           <p className={styles['storageMessage']} role="alert">
             Browser storage is unavailable. Changes cannot be saved.
+          </p>
+        ) : null}
+        {copyError ? (
+          <p className={styles['clipboardError']} role="alert">
+            {copyError}
           </p>
         ) : null}
         {storageStatus === 'ready' && applicationCount === 0 ? (
@@ -92,7 +104,7 @@ export function ApplicationsDashboard({ applicationLimit, onCreate }: Applicatio
                     icon={<CopyIcon />}
                     iconPosition="end"
                     onClick={() => {
-                      copyApplication(application.letter);
+                      void copyApplication(application.letter);
                     }}
                     variant="ghost"
                   >

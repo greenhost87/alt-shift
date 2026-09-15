@@ -47,6 +47,42 @@ test('deleted applications stay deleted after reload and synchronize across tabs
   await expect(page).toHaveURL(/\/applications\/new$/);
 });
 
+test('reports clipboard rejection without changing dashboard applications', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: () => Promise.reject(new DOMException('Clipboard denied', 'NotAllowedError')),
+      },
+    });
+  });
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
+
+  await page.getByRole('button', { name: 'Copy to clipboard' }).first().click();
+
+  await expect(page.getByRole('alert')).toContainText('could not be copied to the clipboard');
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
+  await expect(page.getByText('3/5 applications generated')).toBeVisible();
+});
+
+test('contains localStorage initialization failures and displays a warning', async ({ page }) => {
+  await page.addInitScript((storageKey) => {
+    const nativeGetItem = Storage.prototype.getItem;
+    Storage.prototype.getItem = function (key) {
+      if (key === storageKey) throw new DOMException('Storage unavailable', 'SecurityError');
+      return nativeGetItem.call(this, key);
+    };
+  }, STORAGE_KEY);
+
+  await page.goto('/');
+
+  await expect(page.getByRole('alert')).toContainText('Browser storage is unavailable');
+  await expect(page.getByRole('heading', { name: 'Applications', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
+  await expect(page.getByText('3/5 applications generated')).toBeVisible();
+});
+
 test('restores valid versioned applications created in the browser', async ({ page }) => {
   await page.addInitScript(
     ({ key }) => {

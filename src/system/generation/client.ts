@@ -182,7 +182,8 @@ export async function generateApplication(
         'timeout',
       );
     }
-    throw error;
+    if (error instanceof GenerationError || controller.signal.aborted) throw error;
+    throw new GenerationError('The application could not be generated. Please try again.');
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener('abort', abortFromCaller);

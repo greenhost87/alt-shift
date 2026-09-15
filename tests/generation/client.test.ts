@@ -125,6 +125,35 @@ test('does not set retry metadata for absent or invalid Retry-After values', asy
   }
 });
 
+test('normalizes transport failures while preserving API errors', async () => {
+  globalThis.fetch = (() => Promise.reject(new TypeError('Failed to fetch'))) as typeof fetch;
+
+  await expect(generateApplication(request, { onDelta() {} })).rejects.toMatchObject({
+    name: 'GenerationError',
+    code: 'generation_failed',
+    message: 'The application could not be generated. Please try again.',
+  });
+
+  globalThis.fetch = (() =>
+    Promise.resolve(
+      Response.json(
+        {
+          error: {
+            code: 'service_unavailable',
+            message: 'Generation is temporarily unavailable.',
+          },
+        },
+        { status: 503 },
+      ),
+    )) as typeof fetch;
+
+  await expect(generateApplication(request, { onDelta() {} })).rejects.toMatchObject({
+    name: 'GenerationError',
+    code: 'service_unavailable',
+    message: 'Generation is temporarily unavailable.',
+  });
+});
+
 test('aborts a hung stream when the caller cancels', async () => {
   globalThis.fetch = (() =>
     Promise.resolve(

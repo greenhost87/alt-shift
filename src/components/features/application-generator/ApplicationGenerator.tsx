@@ -45,6 +45,7 @@ export function ApplicationWorkspace() {
   const [phase, setPhase] = useState<GenerationPhase>('idle');
   const [letter, setLetter] = useState('');
   const [error, setError] = useState('');
+  const [copyError, setCopyError] = useState('');
   const [retryAvailableAt, setRetryAvailableAt] = useState<number>();
   const abortController = useRef<AbortController | null>(null);
   const { addApplication } = useStoredApplications();
@@ -80,8 +81,13 @@ export function ApplicationWorkspace() {
     };
   }, [retryAvailableAt]);
 
-  const copyApplication = () => {
-    void navigator.clipboard.writeText(letter);
+  const copyApplication = async () => {
+    try {
+      await navigator.clipboard.writeText(letter);
+      setCopyError('');
+    } catch {
+      setCopyError('The application could not be copied to the clipboard. Please try again.');
+    }
   };
 
   const cancel = () => {
@@ -163,7 +169,12 @@ export function ApplicationWorkspace() {
     <div className={styles['preview']}>
       <p className={[styles['letter'], typographyStyles['body']].join(' ')}>{letter}</p>
       <div className={styles['previewAction']}>
-        <Button icon={<CopyIcon />} iconPosition="end" onClick={copyApplication} variant="ghost">
+        <Button
+          icon={<CopyIcon />}
+          iconPosition="end"
+          onClick={() => void copyApplication()}
+          variant="ghost"
+        >
           Copy to clipboard
         </Button>
       </div>
@@ -181,7 +192,12 @@ export function ApplicationWorkspace() {
         Your personalized job application will appear here...
       </p>
       <div className={styles['previewAction']}>
-        <Button icon={<CopyIcon />} iconPosition="end" onClick={copyApplication} variant="ghost">
+        <Button
+          icon={<CopyIcon />}
+          iconPosition="end"
+          onClick={() => void copyApplication()}
+          variant="ghost"
+        >
           Copy to clipboard
         </Button>
       </div>
@@ -243,6 +259,11 @@ export function ApplicationWorkspace() {
             {error ? (
               <p className={styles['error']} role="alert">
                 {error}
+              </p>
+            ) : null}
+            {copyError ? (
+              <p className={styles['error']} role="alert">
+                {copyError}
               </p>
             ) : null}
             {retryBlocked ? (
