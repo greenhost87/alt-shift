@@ -32,7 +32,7 @@ Create the local environment file and set the server-only API token:
 cp .env.example .env
 ```
 
-Generation provider settings, field limits, product goals, initial content, and browser storage identifiers are documented in `.env.example`. `GENERATION_API_TOKEN` is the only required value without a default. `APPLICATION_INITIAL_APPLICATIONS_JSON` may contain a JSON array of initial applications; leaving it empty preserves the built-in demonstration data.
+Generation provider settings, field limits, product goals, initial content, and browser storage identifiers are documented in `.env.example`. `GENERATION_API_TOKEN` is the only required value without a default. Fresh browser storage starts with an empty application list and an empty generator form; the initial-content variables can provide explicit seed data when needed.
 
 Start the development server:
 

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import generationFixtures from '../fixtures/generation.json' with { type: 'json' };
+import { expectApplicationProgress } from '../support/applications';
 import { rejectClipboardWrites } from '../support/clipboard';
 
 declare global {
@@ -55,7 +56,20 @@ const STREAMED_LETTER = generationFixtures.streamedLetter;
 
 async function generateApplication(page: Page) {
   await page.goto('/applications/new', { waitUntil: 'networkidle' });
+  await page.getByLabel('Job title').fill('Product manager');
+  await page.getByLabel('Company').fill('Apple');
+  await page.getByLabel('I am good at...').fill('HTML, CSS and doing things in time');
+  await page
+    .getByLabel('Additional details')
+    .fill('I want to help you build awesome solutions to accomplish your goals and vision');
   await page.getByRole('button', { name: 'Generate Now' }).click();
+}
+
+async function useCopyableGeneration(page: Page) {
+  await page.addInitScript(() => {
+    window.respondToGeneration = () =>
+      window.generationResponse(window.generationFixtures.copyableStream);
+  });
 }
 
 async function expectCompletedGeneration(page: Page, letter: string) {
@@ -67,12 +81,12 @@ async function expectCompletedGeneration(page: Page, letter: string) {
   await expect(tryAgain.locator('svg')).toHaveCSS('height', '24px');
   await page.mouse.move(0, 0);
   await expect(tryAgain).toHaveCSS('background-color', 'rgb(255, 255, 255)');
-  await expect(page.getByText('4/5 applications generated')).toBeVisible();
+  await expect(page.getByText('1/5 applications generated')).toBeVisible();
   const goalHeading = page.getByRole('heading', { name: 'Hit your goal' });
   await expect(goalHeading).toBeVisible();
   await expect(
-    page.getByRole('main').getByRole('progressbar', { name: '4 of 5 applications generated' }),
-  ).toHaveAttribute('aria-valuenow', '4');
+    page.getByRole('main').getByRole('progressbar', { name: '1 of 5 applications generated' }),
+  ).toHaveAttribute('aria-valuenow', '1');
   const previewBox = await page
     .locator('section')
     .filter({ hasText: letter })
@@ -199,20 +213,48 @@ test('streams, saves, restores, and counts a completed application once', async 
   await expectCompletedGeneration(page, STREAMED_LETTER);
 
   await page.reload();
-  await expect(page.getByText('4/5 applications generated')).toBeVisible();
+  await expect(page.getByText('1/5 applications generated')).toBeVisible();
   await page.getByRole('button', { name: 'Home' }).click();
   await expect(page.getByText(STREAMED_LETTER)).toBeVisible();
-  await expect(page.getByText('4/5 applications generated')).toBeVisible();
+  await expectApplicationProgress(page, 1);
+});
+
+test('supports generation without crypto.randomUUID', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(globalThis.crypto, 'randomUUID', {
+      configurable: true,
+      value: undefined,
+    });
+  });
+  await useCopyableGeneration(page);
+
+  await generateApplication(page);
+  await expectCompletedGeneration(page, 'Copyable application');
+});
+
+test('reports when the Clipboard API is unavailable', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: undefined,
+    });
+  });
+  await useCopyableGeneration(page);
+  await generateApplication(page);
+
+  await page.getByRole('button', { name: 'Copy to clipboard' }).click();
+
+  await expect(page.getByRole('alert')).toContainText('could not be copied to the clipboard');
+  await expect(page.getByRole('button', { name: 'Copied!' })).toHaveCount(0);
 });
 
 test('reports clipboard rejection and clears the alert after a successful copy', async ({
   page,
 }) => {
   await rejectClipboardWrites(page, 1);
-  await page.addInitScript(() => {
-    window.respondToGeneration = () =>
-      window.generationResponse(window.generationFixtures.copyableStream);
-  });
+  await useCopyableGeneration(page);
   await generateApplication(page);
   await expect(page.getByText('Copyable application')).toBeVisible();
 
@@ -236,8 +278,8 @@ test('does not save or increment progress when generation fails', async ({ page 
   await generateApplication(page);
 
   await expect(page.getByRole('alert')).toContainText('temporarily unavailable');
-  await expect(page.getByText('3/5 applications generated')).toBeVisible();
-  await openDashboardAndExpectCount(page, 3);
+  await expect(page.getByText('0/5 applications generated')).toBeVisible();
+  await openDashboardAndExpectCount(page, 0);
 });
 
 test('blocks retry only for a valid server Retry-After period', async ({ page }) => {
@@ -288,7 +330,7 @@ test('reports a transport failure and retries only after an explicit action', as
   await expect(page.getByRole('alert')).toHaveText(
     'The application could not be generated. Please try again.',
   );
-  await expect(page.getByText('3/5 applications generated')).toBeVisible();
+  await expect(page.getByText('0/5 applications generated')).toBeVisible();
   expect(attempts).toBe(1);
 
   await page.getByRole('button', { name: 'Retry generation' }).click();
@@ -315,9 +357,9 @@ test('preserves a generated letter when browser storage rejects the save', async
 
   await expect(page.getByText('Letter that could not be saved')).toBeVisible();
   await expect(page.getByRole('alert')).toContainText('browser storage could not save it');
-  await expect(page.getByText('3/5 applications generated')).toBeVisible();
+  await expect(page.getByText('0/5 applications generated')).toBeVisible();
 
-  await openDashboardAndExpectCount(page, 3);
+  await openDashboardAndExpectCount(page, 0);
   await expect(page.getByText('Letter that could not be saved')).toHaveCount(0);
 });
 
@@ -369,7 +411,7 @@ test('keeps interrupted output unsaved and retries only after an explicit action
   interruptStream();
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByText('Partial application')).toBeVisible();
-  await expect(page.getByText('3/5 applications generated')).toBeVisible();
+  await expect(page.getByText('0/5 applications generated')).toBeVisible();
   await expect.poll(() => requestCount).toBe(1);
   await page.waitForTimeout(100);
   expect(requestCount).toBe(1);
@@ -380,8 +422,8 @@ test('keeps interrupted output unsaved and retries only after an explicit action
   finishRetry();
   await expectCompletedGeneration(page, 'Recovered application');
 
-  await openDashboardAndExpectCount(page, 4);
+  await openDashboardAndExpectCount(page, 1);
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(4);
-  await expect(page.getByText('4/5 applications generated')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(1);
+  await expect(page.getByText('1/5 applications generated')).toBeVisible();
 });

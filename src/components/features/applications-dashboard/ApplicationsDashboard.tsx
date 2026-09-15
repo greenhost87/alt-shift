@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
 import { GoalBanner } from '../../ui/banner/Banner';
 import { Button } from '../../ui/button/Button';
+import { ConfirmationDialog } from '../../ui/confirmation/ConfirmationDialog';
 import { CopyButton } from '../../ui/button/CopyButton';
 import { CreateButton } from '../../ui/button/CreateButton';
 import { Icon } from '../../ui/icon/Icon';
@@ -19,9 +20,7 @@ type StorageStatus = 'loading' | 'ready' | 'invalid' | 'unavailable';
 
 function renderStorageStatusMessage(status: StorageStatus) {
   if (status === 'loading') {
-    return (
-      <output className={styles['storageMessage']}>Loading applications…</output>
-    );
+    return <output className={styles['storageMessage']}>Loading applications…</output>;
   }
   if (status === 'invalid') {
     return (
@@ -52,13 +51,28 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
   const { applicationLimit } = useApplicationConfig();
   const { applications, deleteApplication, status: storageStatus } = useStoredApplications();
   const [copyError, setCopyError] = useState('');
+  const [pendingDeletion, setPendingDeletion] = useState<string | null>(null);
   const applicationCount = applications.length;
   const copyApplication = async (letter: string) => {
-    setCopyError(await writeClipboardText(letter));
+    const error = await writeClipboardText(letter);
+    setCopyError(error);
+    return !error;
   };
 
   return (
     <div className={styles['content']}>
+      <ConfirmationDialog
+        active={pendingDeletion !== null}
+        title="Delete application?"
+        description="This application will be permanently deleted. This action cannot be undone."
+        onCancel={() => {
+          setPendingDeletion(null);
+        }}
+        onConfirm={() => {
+          if (pendingDeletion !== null) deleteApplication(pendingDeletion);
+          setPendingDeletion(null);
+        }}
+      />
       <section className={styles['applications']}>
         <SectionHeader
           action={<CreateButton label="Create New" onClick={onCreate} />}
@@ -82,8 +96,8 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
             <div className={styles['emptyStateCopy']}>
               <h2 className={styles['emptyStateTitle']}>No applications yet</h2>
               <p className={styles['emptyStateDescription']}>
-                Your next chapter starts with a great letter. Add a role, share your strengths,
-                and create a personalized application in seconds.
+                Your next chapter starts with a great letter. Add a role, share your strengths, and
+                create a personalized application in seconds.
               </p>
             </div>
             <div className={styles['emptyStateAction']}>
@@ -105,17 +119,13 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
                       </Icon>
                     }
                     onClick={() => {
-                      deleteApplication(application.id);
+                      setPendingDeletion(application.id);
                     }}
                     variant="ghost"
                   >
                     Delete
                   </Button>
-                  <CopyButton
-                    onClick={() => {
-                      void copyApplication(application.letter);
-                    }}
-                  />
+                  <CopyButton onClick={async () => copyApplication(application.letter)} />
                 </div>
               </article>
             ))}

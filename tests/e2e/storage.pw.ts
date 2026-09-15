@@ -1,23 +1,34 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import {
+  APPLICATION_STORAGE_KEY,
+  createApplicationFixtures,
+  expectApplicationProgress,
+  seedApplications,
+} from '../support/applications';
 import { rejectClipboardWrites } from '../support/clipboard';
-
-const STORAGE_KEY = 'variant-cover-letters:v1';
 
 async function openDashboard(page: Page, applicationCount: number) {
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
 }
 
-async function expectApplicationProgress(page: Page, applicationCount: number) {
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
-  await expect(page.getByText(`${applicationCount}/5 applications generated`)).toBeVisible();
+async function expectEmptyDashboard(page: Page) {
+  await expect(page.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
+  await expectApplicationProgress(page, 0);
 }
+
+test('fresh browser storage starts with an empty dashboard', async ({ page }) => {
+  await openDashboard(page, 0);
+
+  await expectEmptyDashboard(page);
+});
 
 test('deleted applications stay deleted after reload and synchronize across tabs', async ({
   context,
   page,
 }) => {
+  await seedApplications(page);
   await openDashboard(page, 3);
 
   const secondPage = await context.newPage();
@@ -25,11 +36,13 @@ test('deleted applications stay deleted after reload and synchronize across tabs
 
   for (const applicationCount of [2, 1]) {
     await page.getByRole('button', { name: 'Delete' }).first().click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Confirm deletion' }).click();
     await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
     await expect(secondPage.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
   }
 
   await page.getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Confirm deletion' }).click();
 
   for (const dashboardPage of [page, secondPage]) {
     await expect(dashboardPage.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
@@ -46,19 +59,42 @@ test('deleted applications stay deleted after reload and synchronize across tabs
   }
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0);
-  await expect(page.getByText('0/5 applications generated')).toBeVisible();
+  await expectEmptyDashboard(page);
 
   await page.getByRole('button', { name: 'Create your first application' }).click();
   await expect(page).toHaveURL(/\/applications\/new$/);
 });
 
-test('reports clipboard rejection without changing dashboard applications', async ({ page }) => {
-  await rejectClipboardWrites(page);
+test('deletion can be cancelled without changing stored applications', async ({ page }) => {
+  await seedApplications(page);
   await openDashboard(page, 3);
+  for (const dismissal of ['button', 'escape']) {
+    await page.getByRole('button', { name: 'Delete' }).first().click();
+    const cancel = page.getByRole('button', { name: 'Cancel', exact: true });
+    await expect(cancel).toBeEnabled();
+    if (dismissal === 'button') await cancel.click();
+    else await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toBeHidden();
+  }
+  await page.reload();
+  await expectApplicationProgress(page, 3);
+});
 
+async function copyStoredApplication(page: Page, failures: number) {
+  await rejectClipboardWrites(page, failures);
+  await seedApplications(page);
+  await openDashboard(page, 3);
   await page.getByRole('button', { name: 'Copy to clipboard' }).first().click();
+}
+
+test('shows temporary feedback after copying an application', async ({ page }) => {
+  await copyStoredApplication(page, 0);
+  await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Copy to clipboard' })).toHaveCount(3);
+});
+
+test('reports clipboard rejection without changing dashboard applications', async ({ page }) => {
+  await copyStoredApplication(page, 1);
 
   await expect(page.getByRole('alert')).toContainText('could not be copied to the clipboard');
   await expectApplicationProgress(page, 3);
@@ -71,13 +107,13 @@ test('contains localStorage initialization failures and displays a warning', asy
       if (key === storageKey) throw new DOMException('Storage unavailable', 'SecurityError');
       return nativeGetItem(key);
     };
-  }, STORAGE_KEY);
+  }, APPLICATION_STORAGE_KEY);
 
-  await openDashboard(page, 3);
+  await openDashboard(page, 0);
 
   await expect(page.getByRole('alert')).toContainText('Browser storage is unavailable');
   await expect(page.getByRole('heading', { name: 'Applications', exact: true })).toBeVisible();
-  await expect(page.getByText('3/5 applications generated')).toBeVisible();
+  await expectApplicationProgress(page, 0);
 });
 
 test('restores valid versioned applications created in the browser', async ({ page }) => {
@@ -99,29 +135,23 @@ test('restores valid versioned applications created in the browser', async ({ pa
         }),
       );
     },
-    { key: STORAGE_KEY },
+    { key: APPLICATION_STORAGE_KEY },
   );
 
   await page.goto('/');
 
   await expect(page.getByText('A persisted cover letter')).toBeVisible();
-  await expect(page.getByText('1/5 applications generated')).toBeVisible();
+  await expectApplicationProgress(page, 1);
 });
 
 test('hides the goal banner after restoring five applications', async ({ page }) => {
-  const applications = Array.from({ length: 5 }, (_, index) => ({
-    id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
-    company: `Company ${index + 1}`,
-    role: `Role ${index + 1}`,
-    letter: `Persisted cover letter ${index + 1}`,
-    createdAt: `2025-01-0${index + 1}T03:04:05.000Z`,
-  }));
+  const applications = createApplicationFixtures(5, 'Persisted cover letter');
 
   await page.addInitScript(
     ({ key, storedApplications }) => {
       localStorage.setItem(key, JSON.stringify({ version: 1, applications: storedApplications }));
     },
-    { key: STORAGE_KEY, storedApplications: applications },
+    { key: APPLICATION_STORAGE_KEY, storedApplications: applications },
   );
 
   await openDashboard(page, 5);
@@ -135,13 +165,16 @@ test('rejects invalid stored data without overwriting it', async ({ page }) => {
     ({ key, value }) => {
       localStorage.setItem(key, value);
     },
-    { key: STORAGE_KEY, value: invalidValue },
+    { key: APPLICATION_STORAGE_KEY, value: invalidValue },
   );
 
   await page.goto('/');
 
   await expect(page.getByRole('alert')).toContainText('stored data was left unchanged');
   await expect(page.getByRole('heading', { name: 'No applications yet' })).toHaveCount(0);
-  const storedValue = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+  const storedValue = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    APPLICATION_STORAGE_KEY,
+  );
   expect(storedValue).toBe(invalidValue);
 });

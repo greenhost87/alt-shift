@@ -26,6 +26,16 @@ afterEach(() => {
 });
 
 describe('application environment configuration', () => {
+  test('starts with an empty form and application list', () => {
+    setEnv('APPLICATION_INITIAL_FORM_JSON', undefined);
+    setEnv('APPLICATION_INITIAL_APPLICATIONS_JSON', undefined);
+
+    const config = getApplicationConfig();
+
+    expect(config.initialForm).toEqual({ jobTitle: '', company: '', strengths: '', details: '' });
+    expect(config.storage.initialApplications).toEqual([]);
+  });
+
   test('loads product, field, content, and storage settings', () => {
     setEnv('APPLICATION_LIMIT', '7');
     setEnv(

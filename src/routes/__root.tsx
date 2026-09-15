@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { Reshaped } from 'reshaped';
+import { NotFound } from '../components/layout/not-found/NotFound';
 import { getApplicationConfig } from '../server/config/application';
 import { ApplicationConfigProvider } from '../system/config/application';
 import '../styles/global.css';
@@ -12,6 +13,7 @@ const loadApplicationConfig = createServerFn({ method: 'GET' }).handler(() =>
 
 export const Route = createRootRoute({
   component: RootComponent,
+  notFoundComponent: NotFound,
   loader: async () => {
     const config = await loadApplicationConfig();
     return config;

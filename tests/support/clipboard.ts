@@ -15,6 +15,12 @@ export async function rejectClipboardWrites(page: Page, rejectionCount?: number)
           },
         },
       });
+      Object.defineProperty(Document.prototype, 'execCommand', {
+        configurable: true,
+        value(command: string) {
+          return command !== 'copy' || (failures !== undefined && attempts > failures);
+        },
+      });
     },
     { failures: rejectionCount },
   );

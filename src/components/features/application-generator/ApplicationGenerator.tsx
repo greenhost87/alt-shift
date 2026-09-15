@@ -134,9 +134,9 @@ function renderApplicationPreview(
   letter: string,
   isCompleted: boolean,
   isGenerating: boolean,
-  onCopy: () => Promise<void>,
+  onCopy: () => Promise<boolean>,
 ) {
-  const copyButton = <CopyButton onClick={() => void onCopy()} />;
+  const copyButton = <CopyButton onClick={onCopy} />;
   if (letter) {
     return (
       <div className={[styles['preview'], isCompleted ? styles['completedPreview'] : ''].join(' ')}>
@@ -275,7 +275,10 @@ export function ApplicationWorkspace() {
   useRetryAvailability(retryAvailableAt, setRetryAvailableAt);
 
   const copyApplication = async () => {
-    if (letter) setCopyError(await writeClipboardText(letter));
+    if (!letter) return false;
+    const error = await writeClipboardText(letter);
+    setCopyError(error);
+    return !error;
   };
 
   const submit = () => {

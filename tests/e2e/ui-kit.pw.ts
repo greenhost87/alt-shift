@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { seedApplications } from '../support/applications';
 import { rejectClipboardWrites } from '../support/clipboard';
 
 async function expectContentFitsViewport(page: Page) {
@@ -26,6 +27,7 @@ function getGoalBanner(page: Page) {
 
 test('desktop primitives match the design geometry and typography', async ({ page }) => {
   await page.setViewportSize({ height: 1300, width: 1440 });
+  await seedApplications(page);
   await page.goto('/', { waitUntil: 'networkidle' });
 
   await expect(page.getByRole('button', { name: 'Home' })).toHaveAccessibleName('Home');
@@ -86,7 +88,7 @@ test('desktop primitives match the design geometry and typography', async ({ pag
 async function expectMobileStatusLayout(page: Page) {
   const brand = await page.getByAltText('Alt+Shift').boundingBox();
   const home = await page.getByRole('button', { name: 'Home' }).boundingBox();
-  const status = page.getByText('3/5 applications generated');
+  const status = page.getByText('0/5 applications generated');
   const label = await status.boundingBox();
   const progress = await status.locator('..').locator('progress').locator('..').boundingBox();
   expect(home?.y).toBe(brand?.y);
@@ -109,9 +111,6 @@ for (const width of [320, 375, 480, 767, 768, 899, 900, 1024, 1440]) {
     await page.goto('/', { waitUntil: 'networkidle' });
     await expectPageWidth(page, width);
     if (width < 768) await expectMobileStatusLayout(page);
-    for (let remaining = 3; remaining > 0; remaining -= 1) {
-      await page.getByRole('button', { name: 'Delete' }).first().click();
-    }
     await expect(page.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
     await expectPageWidth(page, width);
     await page.getByRole('button', { name: 'Create your first application' }).click();
@@ -153,6 +152,9 @@ test('textarea exposes the over-limit error state without truncating input', asy
   const generate = page.getByRole('button', { name: 'Generate Now' });
   const overLimitValue = 'a'.repeat(1201);
 
+  await page.getByLabel('Job title').fill('Engineer');
+  await page.getByLabel('Company').fill('Variant');
+  await page.getByLabel('I am good at...').fill('TypeScript');
   await details.fill(overLimitValue);
 
   await expect(details).toHaveValue(overLimitValue);
@@ -195,6 +197,7 @@ test('mobile actions have touch targets of at least 44 pixels', async ({ page })
 
 test('dashboard uses the compact layout at 320 pixels', async ({ page }) => {
   await page.setViewportSize({ height: 568, width: 320 });
+  await seedApplications(page);
   await page.goto('/', { waitUntil: 'networkidle' });
 
   await expectContentFitsViewport(page);
@@ -263,7 +266,7 @@ test('generator uses the compact layout at 320 pixels', async ({ page }) => {
 
   await expectContentFitsViewport(page);
 
-  const title = page.getByRole('heading', { name: 'Product manager, Apple' });
+  const title = page.getByRole('heading', { name: 'New application' });
   await expect(title).toHaveCSS('font-size', '28px');
 
   const jobTitleBox = await page.getByLabel('Job title').boundingBox();

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Text, View } from 'reshaped';
+import { View } from 'reshaped';
+import { Heading } from '../../ui/message/Heading';
 import styles from './SectionHeader.module.css';
 
 type SectionHeaderProps = {
@@ -34,13 +35,7 @@ export function SectionHeader({
       }}
       paddingBottom={{ s: 4, m: isSection ? 3 : 4 }}
     >
-      <Text
-        as="h1"
-        color={muted ? 'neutral-faded' : 'neutral'}
-        variant={level === 'section' ? 'headline-2' : { s: 'headline-2', m: 'headline-1' }}
-      >
-        {title}
-      </Text>
+      <Heading kind={muted ? 'placeholder' : level}>{title}</Heading>
       {action ? <div className={styles['action']}>{action}</div> : null}
     </View>
   );
