@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
 import { GoalBanner } from '../../ui/banner/Banner';
@@ -114,8 +115,15 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
           <div className={styles['cardGrid']}>
             {applications.map((application) => (
               <article className={cardStyles['card']} key={application.id}>
-                <p className={cardStyles['letter']}>{application.letter}</p>
-                <div aria-hidden="true" className={cardStyles['fade']} />
+                <Link
+                  aria-label={`Open application for ${application.role} at ${application.company}`}
+                  className={cardStyles['detailsLink']}
+                  params={{ applicationId: application.id }}
+                  to="/applications/$applicationId"
+                >
+                  <p className={cardStyles['letter']}>{application.letter}</p>
+                  <div aria-hidden="true" className={cardStyles['fade']} />
+                </Link>
                 <div className={cardStyles['actions']}>
                   <Button
                     icon={

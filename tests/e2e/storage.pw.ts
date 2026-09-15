@@ -65,6 +65,22 @@ test('deleted applications stay deleted after reload and synchronize across tabs
   await expect(page).toHaveURL(/\/applications\/new$/);
 });
 
+test('opens a stored application with its generation details', async ({ page }) => {
+  await seedApplications(page);
+  await openDashboard(page, 3);
+
+  await page.getByRole('link', { name: 'Open application for Role 3 at Company 3' }).click();
+
+  await expect(page).toHaveURL(/\/applications\/00000000-0000-4000-8000-000000000003$/);
+  await expect(page.getByRole('heading', { name: 'Role 3, Company 3' })).toBeVisible();
+  await expect(page.getByLabel('Job title')).toHaveValue('Role 3');
+  await expect(page.getByLabel('Company')).toHaveValue('Company 3');
+  await expect(page.getByLabel('I am good at...')).toHaveValue('Strengths 3');
+  await expect(page.getByLabel('Additional details')).toHaveValue('Details 3');
+  await expect(page.getByText('Cover letter 3')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Generate Now' })).toHaveCount(0);
+});
+
 test('deletion can be cancelled without changing stored applications', async ({ page }) => {
   await seedApplications(page);
   await openDashboard(page, 3);

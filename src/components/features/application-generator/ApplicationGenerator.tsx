@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import * as v from 'valibot';
 import { useShallow } from 'zustand/react/shallow';
+import type { StoredApplication } from '../../../system/applications/schema';
+import type { NewStoredApplication } from '../../../system/applications/storage';
 import { writeClipboardText } from '../../../system/clipboard/write';
 import { useApplicationStore } from '../../../system/state/application';
 import type { GenerationPhase } from '../../../system/state/application-store';
@@ -8,6 +10,7 @@ import { GenerationError, generateApplication } from '../../../system/generation
 import { safeParseGenerationRequest } from '../../../system/generation/schema';
 import type { GenerationRequest } from '../../../system/generation/schema';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
+import { Shell } from '../../layout/shell/Shell';
 import { Workspace } from '../../layout/workspace/Workspace';
 import { GoalBanner } from '../../ui/banner/Banner';
 import { Button } from '../../ui/button/Button';
@@ -30,18 +33,12 @@ type FailureOptions = {
 
 type SubmissionOptions = {
   abortController: { current: AbortController | null };
-  addApplication: (application: NewApplication) => boolean;
+  addApplication: (application: NewStoredApplication) => boolean;
   generationEndpoint: string | undefined;
   setError: (message: string) => void;
   setLetter: (letter: string) => void;
   setPhase: (phase: GenerationPhase) => void;
   setRetryAvailableAt: (value: number | undefined) => void;
-};
-
-type NewApplication = {
-  company: string;
-  role: string;
-  letter: string;
 };
 
 type FormActionsOptions = {
@@ -104,6 +101,8 @@ async function submitApplication(request: GenerationRequest, options: Submission
     const saved = options.addApplication({
       company: request.company,
       role: request.jobTitle,
+      strengths: request.strengths,
+      details: request.details,
       letter: generatedLetter,
     });
     if (!saved) {
@@ -237,10 +236,63 @@ function renderFormAction(options: FormActionsOptions) {
 }
 
 type ApplicationWorkspaceProps = {
+  application?: StoredApplication;
   generationEndpoint?: string;
 };
 
-export function ApplicationWorkspace({ generationEndpoint }: ApplicationWorkspaceProps) {
+type WorkspaceValues = {
+  jobTitle: string;
+  company: string;
+  strengths: string;
+  details: string;
+  letter: string;
+};
+
+function resolveWorkspaceValues(
+  application: StoredApplication | undefined,
+  generatorValues: WorkspaceValues,
+) {
+  if (application) {
+    return {
+      jobTitle: application.role,
+      company: application.company,
+      strengths: application.strengths,
+      details: application.details,
+      letter: application.letter,
+    };
+  }
+  return generatorValues;
+}
+
+function getFieldsDisabled(isViewing: boolean, isGenerating: boolean) {
+  return isViewing || isGenerating;
+}
+
+function getIsGenerating(isViewing: boolean, phase: GenerationPhase) {
+  return !isViewing && ACTIVE_PHASES.includes(phase);
+}
+
+function getIsCompleted(isViewing: boolean, phase: GenerationPhase) {
+  return isViewing || phase === 'completed';
+}
+
+function renderWorkspaceFormAction(isViewing: boolean, options: FormActionsOptions) {
+  return isViewing ? null : renderFormAction(options);
+}
+
+function shouldShowGoalBanner(
+  isViewing: boolean,
+  isCompleted: boolean,
+  applicationCount: number,
+  applicationLimit: number,
+) {
+  return !isViewing && isCompleted && applicationCount < applicationLimit;
+}
+
+export function ApplicationWorkspace({
+  application,
+  generationEndpoint,
+}: ApplicationWorkspaceProps) {
   const {
     config,
     jobTitle,
@@ -292,15 +344,31 @@ export function ApplicationWorkspace({ generationEndpoint }: ApplicationWorkspac
   );
   const abortController = useRef<AbortController | null>(null);
   const { applicationLimit, fieldLimits } = config;
-  const detailsLength = details.length;
+  const displayedValues = resolveWorkspaceValues(application, {
+    jobTitle,
+    company,
+    strengths,
+    details,
+    letter,
+  });
+  const isViewing = Boolean(application);
+  const detailsLength = displayedValues.details.length;
   const parsedRequest = safeParseGenerationRequest(
-    { jobTitle, company, strengths, details },
+    {
+      jobTitle: displayedValues.jobTitle,
+      company: displayedValues.company,
+      strengths: displayedValues.strengths,
+      details: displayedValues.details,
+    },
     fieldLimits,
   );
-  const isGenerating = ACTIVE_PHASES.includes(phase);
+  const isGenerating = getIsGenerating(isViewing, phase);
+  const fieldsDisabled = getFieldsDisabled(isViewing, isGenerating);
   const retryBlocked = isRetryBlocked(retryAvailableAt);
-  const hasApplicationTitle = [jobTitle, company].every((value) => value.trim().length > 0);
-  const applicationTitle = getApplicationTitle(jobTitle, company);
+  const hasApplicationTitle = [displayedValues.jobTitle, displayedValues.company].every(
+    (value) => value.trim().length > 0,
+  );
+  const applicationTitle = getApplicationTitle(displayedValues.jobTitle, displayedValues.company);
   const submissionBlocked = isSubmissionBlocked(parsedRequest.success, isGenerating, retryBlocked);
 
   useEffect(
@@ -314,8 +382,8 @@ export function ApplicationWorkspace({ generationEndpoint }: ApplicationWorkspac
   useRetryAvailability(retryAvailableAt, setRetryAvailableAt);
 
   const copyApplication = async () => {
-    if (!letter) return false;
-    const error = await writeClipboardText(letter);
+    if (!displayedValues.letter) return false;
+    const error = await writeClipboardText(displayedValues.letter);
     setCopyError(error);
     return !error;
   };
@@ -341,74 +409,90 @@ export function ApplicationWorkspace({ generationEndpoint }: ApplicationWorkspac
   };
 
   const canRetry = phase === 'failed';
-  const isCompleted = phase === 'completed';
+  const isCompleted = getIsCompleted(isViewing, phase);
 
   return (
-    <div className={styles['content']}>
-      <Workspace
-        primary={
-          <div className={styles['editor']}>
-            <SectionHeader level="section" muted={!hasApplicationTitle} title={applicationTitle} />
-            <form
-              className={styles['form']}
-              onSubmit={(event) => {
-                event.preventDefault();
-                submit();
-              }}
-            >
-              <div className={styles['fieldRow']}>
-                <TextField
-                  disabled={isGenerating}
-                  id="job-title"
-                  label="Job title"
-                  name="jobTitle"
-                  onChange={setJobTitle}
-                  value={jobTitle}
-                />
-                <TextField
-                  disabled={isGenerating}
-                  id="company"
-                  label="Company"
-                  name="company"
-                  onChange={setCompany}
-                  value={company}
-                />
-              </div>
-              <TextField
-                disabled={isGenerating}
-                id="strengths"
-                label="I am good at..."
-                name="strengths"
-                onChange={setStrengths}
-                value={strengths}
+    <Shell>
+      <div className={styles['content']}>
+        <Workspace
+          primary={
+            <div className={styles['editor']}>
+              <SectionHeader
+                level="section"
+                muted={!hasApplicationTitle}
+                title={applicationTitle}
               />
-              <TextAreaField
-                characterLimit={fieldLimits.details}
-                disabled={isGenerating}
-                hint={`${detailsLength}/${fieldLimits.details}`}
-                id="details"
-                label="Additional details"
-                name="details"
-                onChange={setDetails}
-                placeholder="Describe why you are a great fit or paste your bio"
-                value={details}
-              />
-              {renderAlert(error)}
-              {renderAlert(copyError)}
-              {renderRetryMessage(retryBlocked)}
-              {renderFormAction({ canRetry, isCompleted, isGenerating, submissionBlocked })}
-            </form>
-          </div>
-        }
-        secondary={renderApplicationPreview(letter, isCompleted, isGenerating, copyApplication)}
-      />
-      <GoalBanner
-        current={applicationCount}
-        description="Generate and send out couple more job applications to get hired faster"
-        onCreate={startNewApplication}
-        total={applicationLimit}
-        visible={isCompleted && applicationCount < applicationLimit}
-      />
-    </div>
+              <form
+                className={styles['form']}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  submit();
+                }}
+              >
+                <div className={styles['fieldRow']}>
+                  <TextField
+                    disabled={fieldsDisabled}
+                    id="job-title"
+                    label="Job title"
+                    name="jobTitle"
+                    onChange={setJobTitle}
+                    value={displayedValues.jobTitle}
+                  />
+                  <TextField
+                    disabled={fieldsDisabled}
+                    id="company"
+                    label="Company"
+                    name="company"
+                    onChange={setCompany}
+                    value={displayedValues.company}
+                  />
+                </div>
+                <TextField
+                  disabled={fieldsDisabled}
+                  id="strengths"
+                  label="I am good at..."
+                  name="strengths"
+                  onChange={setStrengths}
+                  value={displayedValues.strengths}
+                />
+                <TextAreaField
+                  characterLimit={fieldLimits.details}
+                  disabled={fieldsDisabled}
+                  hint={`${detailsLength}/${fieldLimits.details}`}
+                  id="details"
+                  label="Additional details"
+                  name="details"
+                  onChange={setDetails}
+                  placeholder="Describe why you are a great fit or paste your bio"
+                  value={displayedValues.details}
+                />
+                {renderAlert(error)}
+                {renderAlert(copyError)}
+                {renderRetryMessage(retryBlocked)}
+                {renderWorkspaceFormAction(isViewing, {
+                  canRetry,
+                  isCompleted,
+                  isGenerating,
+                  submissionBlocked,
+                })}
+              </form>
+            </div>
+          }
+          secondary={renderApplicationPreview(
+            displayedValues.letter,
+            isCompleted,
+            isGenerating,
+            copyApplication,
+          )}
+        />
+        <GoalBanner
+          current={applicationCount}
+          description="Generate and send out couple more job applications to get hired faster"
+          onCreate={startNewApplication}
+          total={applicationLimit}
+          visible={shouldShowGoalBanner(isViewing, isCompleted, applicationCount, applicationLimit)}
+        />
+      </div>
+    </Shell>
   );
 }

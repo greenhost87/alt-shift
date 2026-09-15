@@ -13,6 +13,8 @@ function createStoredApplicationsSchema(version: number) {
 export type NewStoredApplication = {
   company: string;
   role: string;
+  strengths: string;
+  details: string;
   letter: string;
 };
 

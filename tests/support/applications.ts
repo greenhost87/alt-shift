@@ -7,6 +7,8 @@ type ApplicationFixture = {
   id: string;
   company: string;
   role: string;
+  strengths: string;
+  details: string;
   letter: string;
   createdAt: string;
 };
@@ -19,6 +21,8 @@ export function createApplicationFixtures(
     id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
     company: `Company ${index + 1}`,
     role: `Role ${index + 1}`,
+    strengths: `Strengths ${index + 1}`,
+    details: `Details ${index + 1}`,
     letter: `${letterPrefix} ${index + 1}`,
     createdAt: `2025-01-0${index + 1}T03:04:05.000Z`,
   }));

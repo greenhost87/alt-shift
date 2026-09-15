@@ -85,7 +85,13 @@ export function createApplicationStore(config: ApplicationConfig): ApplicationSt
     },
     addApplication(application) {
       if (
-        ![application.company, application.role, application.letter].every((value) => value.trim())
+        ![
+          application.company,
+          application.role,
+          application.strengths,
+          application.details,
+          application.letter,
+        ].every((value) => value.trim())
       ) {
         return false;
       }
