@@ -67,6 +67,10 @@ bun run build
 | `bun test`            | Run Bun tests                                               |
 | `bun run test:e2e`    | Run Playwright tests                                        |
 
+## Troubleshooting
+
+The reported `reportAllChanges` signature does not occur in the application source or dependency lockfile. A source named `VM…` with only `<anonymous>` frames indicates runtime-generated code and is consistent with externally injected page code, but this repository cannot identify the injector. Reproduce the error in a fresh browser profile or a private window with extensions disabled, then check extensions, DevTools add-ons, and other browser-side page instrumentation. The Playwright navigation suite checks the application's core routes for uncaught page errors in a clean browser context.
+
 ## Project structure
 
 ```text
