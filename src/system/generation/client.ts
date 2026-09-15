@@ -1,12 +1,25 @@
+import { createParser } from 'eventsource-parser';
 import * as v from 'valibot';
 import type { GenerationRequest } from './schema';
 
 const INACTIVITY_TIMEOUT_MS = 30_000;
+const generationDeltaSchema = v.strictObject({ text: v.string() });
+const errorResponseSchema = v.strictObject({
+  error: v.strictObject({
+    code: v.optional(v.string()),
+    message: v.optional(v.string()),
+  }),
+});
 
 type GenerateOptions = {
   signal?: AbortSignal;
   onOpen?: () => void;
   onDelta: (delta: string) => void;
+};
+
+type InactivityTimer = {
+  clear: () => void;
+  reset: () => void;
 };
 
 export class GenerationError extends Error {
@@ -21,61 +34,13 @@ export class GenerationError extends Error {
   }
 }
 
-function createEventParser(onDelta: (delta: string) => void) {
-  let event = 'message';
-  let data: string[] = [];
-  let isFirstLine = true;
-  let hasPendingEvent = false;
-
-  return {
-    parseLine(line: string) {
-      if (isFirstLine) {
-        line = line.replace(/^\uFEFF/, '');
-        isFirstLine = false;
-      }
-
-      if (line === '') {
-        if (event === 'delta' && data.length > 0) onDelta(data.join('\n'));
-        event = 'message';
-        data = [];
-        hasPendingEvent = false;
-        return;
-      }
-      if (line.startsWith(':')) return;
-
-      const separator = line.indexOf(':');
-      const field = separator === -1 ? line : line.slice(0, separator);
-      let value = separator === -1 ? '' : line.slice(separator + 1);
-      if (value.startsWith(' ')) value = value.slice(1);
-      if (field === 'event') {
-        event = value;
-        hasPendingEvent = true;
-      }
-      if (field === 'data') {
-        data.push(value);
-        hasPendingEvent = true;
-      }
-    },
-    hasPendingEvent() {
-      return hasPendingEvent;
-    },
-  };
-}
-
-const ErrorResponseSchema = v.object({
-  error: v.object({
-    code: v.optional(v.string()),
-    message: v.optional(v.string()),
-  }),
-});
-
 async function readError(response: Response) {
   const fallback = {
     message: 'The application could not be generated. Please try again.',
     code: response.status === 429 ? 'rate_limited' : 'generation_failed',
   };
   const parsed = v.safeParse(
-    v.pipe(v.string(), v.parseJson(), ErrorResponseSchema),
+    v.pipe(v.string(), v.parseJson(), errorResponseSchema),
     await response.text(),
   );
   if (!parsed.success) return fallback;
@@ -96,16 +61,6 @@ function parseRetryAfter(value: string | null, now = Date.now()) {
   const isHttpDate = Number.isFinite(date) && new Date(date).toUTCString() === value;
   return isHttpDate && date > now ? date : undefined;
 }
-
-type EventParser = {
-  parseLine: (line: string) => void;
-  hasPendingEvent: () => boolean;
-};
-
-type InactivityTimer = {
-  clear: () => void;
-  reset: () => void;
-};
 
 function createInactivityTimer(controller: AbortController): InactivityTimer {
   let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -148,16 +103,16 @@ async function requestGenerationStream(request: GenerationRequest, signal: Abort
         : undefined,
     );
   }
-  if (!response.body) {
+  if (
+    !response.body ||
+    !response.headers.get('content-type')?.toLowerCase().includes('text/event-stream')
+  ) {
     throw new GenerationError('The generation stream was unavailable.', 'invalid_stream');
   }
   return response.body;
 }
 
-async function readWithAbort(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  signal: AbortSignal,
-) {
+async function readWithAbort(reader: ReadableStreamDefaultReader<Uint8Array>, signal: AbortSignal) {
   let rejectForAbort = () => {};
   const aborted = new Promise<never>((_, reject) => {
     rejectForAbort = () => {
@@ -171,44 +126,59 @@ async function readWithAbort(
   });
 }
 
-function parseBufferedLines(buffer: string, done: boolean, parser: EventParser) {
-  let offset = 0;
-  while (offset < buffer.length) {
-    const lineEnd = buffer.slice(offset).search(/[\r\n]/);
-    if (lineEnd === -1) break;
-
-    const end = offset + lineEnd;
-    if (buffer[end] === '\r' && end + 1 === buffer.length && !done) break;
-
-    parser.parseLine(buffer.slice(offset, end));
-    offset = end + (buffer[end] === '\r' && buffer[end + 1] === '\n' ? 2 : 1);
-  }
-  return buffer.slice(offset);
+function createCompletionTracker() {
+  let trailingFrame = '';
+  return {
+    feed(chunk: string) {
+      trailingFrame += chunk;
+      const boundaries = [...trailingFrame.matchAll(/(?:\r\n|\r|\n){2}/g)];
+      const lastBoundary = boundaries.at(-1);
+      if (lastBoundary?.index !== undefined) {
+        trailingFrame = trailingFrame.slice(lastBoundary.index + lastBoundary[0].length);
+      }
+    },
+    hasIncompleteEvent() {
+      return /(?:^|\r\n|\r|\n)(?:event|data):/.test(trailingFrame);
+    },
+  };
 }
 
-function finishEventStream(buffer: string, parser: EventParser) {
-  if (buffer.length > 0) parser.parseLine(buffer);
-  if (parser.hasPendingEvent()) {
+function parseDelta(data: string) {
+  const parsed = v.safeParse(v.pipe(v.string(), v.parseJson(), generationDeltaSchema), data);
+  if (!parsed.success) {
     throw new GenerationError(
-      'The generation stream ended before the final event completed.',
-      'incomplete_stream',
+      'The generation service returned an invalid event.',
+      'invalid_stream',
     );
   }
+  return parsed.output.text;
 }
 
 async function consumeEventStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   signal: AbortSignal,
-  parser: EventParser,
+  onDelta: (delta: string) => void,
 ) {
   const decoder = new TextDecoder();
-  let buffer = '';
+  const completion = createCompletionTracker();
+  const parser = createParser({
+    onEvent(event) {
+      if (event.event === 'delta') onDelta(parseDelta(event.data));
+    },
+  });
+
   for (;;) {
     const { value, done } = await readWithAbort(reader, signal);
-    buffer += decoder.decode(value, { stream: !done });
-    buffer = parseBufferedLines(buffer, done, parser);
+    const chunk = decoder.decode(value, { stream: !done });
+    completion.feed(chunk);
+    parser.feed(chunk);
     if (!done) continue;
-    finishEventStream(buffer, parser);
+    if (completion.hasIncompleteEvent()) {
+      throw new GenerationError(
+        'The generation stream ended before the final event completed.',
+        'incomplete_stream',
+      );
+    }
     return;
   }
 }
@@ -232,11 +202,10 @@ export async function generateApplication(
     const stream = await requestGenerationStream(request, controller.signal);
     onOpen?.();
     reader = stream.getReader();
-    const parser = createEventParser((delta) => {
+    await consumeEventStream(reader, controller.signal, (delta) => {
       timer.reset();
       onDelta(delta);
     });
-    await consumeEventStream(reader, controller.signal, parser);
   } catch (error) {
     if (controller.signal.reason === 'inactivity-timeout') {
       throw new GenerationError(

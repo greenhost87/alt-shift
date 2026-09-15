@@ -2,7 +2,10 @@ import { serve, sleep } from 'bun';
 import { afterAll, describe, expect, test } from 'bun:test';
 import { requestGeneration } from '../../src/server/generation/client';
 import { handleGenerateRequest } from '../../src/server/generation/handler';
-import { buildGenerationPrompt } from '../../src/server/generation/prompt';
+import {
+  buildGenerationPrompt,
+  GENERATION_SYSTEM_PROMPT,
+} from '../../src/server/generation/prompt';
 import { safeParseGenerationRequest } from '../../src/system/generation/schema';
 import generationFixtures from '../fixtures/generation.json' with { type: 'json' };
 
@@ -61,7 +64,9 @@ afterAll(async () => server.stop());
 describe('generation server contract', () => {
   test('rejects malformed, incomplete, and over-limit structured input', async () => {
     expect(safeParseGenerationRequest({ ...input, company: '' }).success).toBe(false);
-    expect(safeParseGenerationRequest({ ...input, details: 'x'.repeat(1_201) }).success).toBe(false);
+    expect(safeParseGenerationRequest({ ...input, details: 'x'.repeat(1_201) }).success).toBe(
+      false,
+    );
 
     const malformedResponse = await handleGenerateRequest(
       new Request('http://localhost/api/generate', {
@@ -89,9 +94,7 @@ describe('generation server contract', () => {
         body: JSON.stringify(input),
       }),
       async () =>
-        Promise.resolve(
-          new Response('limited', { status: 429, headers: { 'retry-after': '17' } }),
-        ),
+        Promise.resolve(new Response('limited', { status: 429, headers: { 'retry-after': '17' } })),
     );
 
     expect(response.status).toBe(429);
@@ -138,7 +141,11 @@ describe('generation server contract', () => {
     expect(receivedAccept).toBe('text/event-stream');
     expect(receivedAuthorization).toBe('Bearer server-secret');
     expect(receivedContentType).toBe('application/json');
-    expect(JSON.parse(receivedBody)).toEqual({ prompt: buildGenerationPrompt(input) });
+    expect(JSON.parse(receivedBody)).toEqual({
+      system: GENERATION_SYSTEM_PROMPT,
+      prompt: buildGenerationPrompt(input),
+      maxTokens: 1_500,
+    });
     expect(await response.text()).toBe(generationFixtures.helloServerStream);
   });
 
@@ -176,11 +183,13 @@ describe('generation server contract', () => {
     );
 
     const secondRead = await first.reader?.read();
-    expect(new TextDecoder().decode(secondRead?.value)).toBe(
-      generationFixtures.secondServerStream,
-    );
+    expect(new TextDecoder().decode(secondRead?.value)).toBe(generationFixtures.secondServerStream);
     expect(upstreamCompleted).toBe(true);
     expect(receivedAuthorization).toBe('Bearer server-secret');
-    expect(JSON.parse(receivedBody)).toEqual({ prompt: buildGenerationPrompt(input) });
+    expect(JSON.parse(receivedBody)).toEqual({
+      system: GENERATION_SYSTEM_PROMPT,
+      prompt: buildGenerationPrompt(input),
+      maxTokens: 1_500,
+    });
   });
 });

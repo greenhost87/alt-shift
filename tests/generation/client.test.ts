@@ -16,18 +16,21 @@ const request = {
 };
 
 function respondWithChunks(chunks: Uint8Array[]) {
-  Object.defineProperty(globalThis, 'fetch', { configurable: true, value: async () =>
-    Promise.resolve(
-      new Response(
-        new ReadableStream({
-          start(controller) {
-            for (const chunk of chunks) controller.enqueue(chunk);
-            controller.close();
-          },
-        }),
-        { headers: { 'content-type': 'text/event-stream' } },
+  Object.defineProperty(globalThis, 'fetch', {
+    configurable: true,
+    value: async () =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              for (const chunk of chunks) controller.enqueue(chunk);
+              controller.close();
+            },
+          }),
+          { headers: { 'content-type': 'text/event-stream' } },
+        ),
       ),
-    ) });
+  });
 }
 
 test('collects delta events across arbitrary byte chunks', async () => {
@@ -67,13 +70,16 @@ test('handles mixed SSE line endings and rejects an unterminated event', () => {
 
 test('keeps structured rate-limit metadata from the response', async () => {
   jest.setSystemTime(new Date('2026-01-01T00:00:00Z'));
-  Object.defineProperty(globalThis, 'fetch', { configurable: true, value: async () =>
-    Promise.resolve(
-      Response.json(
-        { error: { code: 'rate_limited', message: 'Please wait before trying again.' } },
-        { status: 429, headers: { 'retry-after': '12' } },
+  Object.defineProperty(globalThis, 'fetch', {
+    configurable: true,
+    value: async () =>
+      Promise.resolve(
+        Response.json(
+          { error: { code: 'rate_limited', message: 'Please wait before trying again.' } },
+          { status: 429, headers: { 'retry-after': '12' } },
+        ),
       ),
-    ) });
+  });
 
   try {
     await generateApplication(request, { onDelta() {} });
@@ -90,16 +96,19 @@ test('keeps structured rate-limit metadata from the response', async () => {
 
 test('accepts a future HTTP date for rate-limit retry metadata', () => {
   jest.setSystemTime(new Date('2026-01-01T00:00:00Z'));
-  Object.defineProperty(globalThis, 'fetch', { configurable: true, value: async () =>
-    Promise.resolve(
-      Response.json(
-        { error: { code: 'rate_limited', message: 'Please wait.' } },
-        {
-          status: 429,
-          headers: { 'retry-after': 'Thu, 01 Jan 2026 00:00:12 GMT' },
-        },
+  Object.defineProperty(globalThis, 'fetch', {
+    configurable: true,
+    value: async () =>
+      Promise.resolve(
+        Response.json(
+          { error: { code: 'rate_limited', message: 'Please wait.' } },
+          {
+            status: 429,
+            headers: { 'retry-after': 'Thu, 01 Jan 2026 00:00:12 GMT' },
+          },
+        ),
       ),
-    ) });
+  });
 
   const generation = generateApplication(request, { onDelta() {} }).then(() => 'completed');
   expect(generation).rejects.toMatchObject({
@@ -121,13 +130,16 @@ test('does not set retry metadata for absent or invalid Retry-After values', () 
   ]) {
     const headers = new Headers();
     if (retryAfter !== undefined) headers.set('retry-after', retryAfter);
-    Object.defineProperty(globalThis, 'fetch', { configurable: true, value: async () =>
-      Promise.resolve(
-        Response.json(
-          { error: { code: 'rate_limited', message: 'Please wait.' } },
-          { status: 429, headers },
+    Object.defineProperty(globalThis, 'fetch', {
+      configurable: true,
+      value: async () =>
+        Promise.resolve(
+          Response.json(
+            { error: { code: 'rate_limited', message: 'Please wait.' } },
+            { status: 429, headers },
+          ),
         ),
-      ) });
+    });
 
     const generation = generateApplication(request, { onDelta() {} }).then(() => 'completed');
     expect(generation).rejects.toMatchObject({
@@ -138,7 +150,10 @@ test('does not set retry metadata for absent or invalid Retry-After values', () 
 });
 
 test('normalizes transport failures while preserving API errors', () => {
-  Object.defineProperty(globalThis, 'fetch', { configurable: true, value: async () => Promise.reject(new TypeError('Failed to fetch')) });
+  Object.defineProperty(globalThis, 'fetch', {
+    configurable: true,
+    value: async () => Promise.reject(new TypeError('Failed to fetch')),
+  });
 
   const transportGeneration = generateApplication(request, { onDelta() {} }).then(
     () => 'completed',
@@ -149,22 +164,23 @@ test('normalizes transport failures while preserving API errors', () => {
     message: 'The application could not be generated. Please try again.',
   });
 
-  Object.defineProperty(globalThis, 'fetch', { configurable: true, value: async () =>
-    Promise.resolve(
-      Response.json(
-        {
-          error: {
-            code: 'service_unavailable',
-            message: 'Generation is temporarily unavailable.',
+  Object.defineProperty(globalThis, 'fetch', {
+    configurable: true,
+    value: async () =>
+      Promise.resolve(
+        Response.json(
+          {
+            error: {
+              code: 'service_unavailable',
+              message: 'Generation is temporarily unavailable.',
+            },
           },
-        },
-        { status: 503 },
+          { status: 503 },
+        ),
       ),
-    ) });
+  });
 
-  const serviceGeneration = generateApplication(request, { onDelta() {} }).then(
-    () => 'completed',
-  );
+  const serviceGeneration = generateApplication(request, { onDelta() {} }).then(() => 'completed');
   expect(serviceGeneration).rejects.toMatchObject({
     name: 'GenerationError',
     code: 'service_unavailable',
@@ -173,17 +189,20 @@ test('normalizes transport failures while preserving API errors', () => {
 });
 
 test('aborts a hung stream when the caller cancels', () => {
-  Object.defineProperty(globalThis, 'fetch', { configurable: true, value: async () =>
-    Promise.resolve(
-      new Response(
-        new ReadableStream({
-          start() {
-            // Remain pending until generateApplication cancels the reader.
-          },
-        }),
-        { headers: { 'content-type': 'text/event-stream' } },
+  Object.defineProperty(globalThis, 'fetch', {
+    configurable: true,
+    value: async () =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream({
+            start() {
+              // Remain pending until generateApplication cancels the reader.
+            },
+          }),
+          { headers: { 'content-type': 'text/event-stream' } },
+        ),
       ),
-    ) });
+  });
   const controller = new AbortController();
   const generation = generateApplication(request, {
     signal: controller.signal,
@@ -197,17 +216,20 @@ test('aborts a hung stream when the caller cancels', () => {
 
 test('times out after 30 seconds without another result', async () => {
   jest.useFakeTimers();
-  Object.defineProperty(globalThis, 'fetch', { configurable: true, value: async () =>
-    Promise.resolve(
-      new Response(
-        new ReadableStream({
-          start() {
-            // The inactivity timer is responsible for ending this stream.
-          },
-        }),
-        { headers: { 'content-type': 'text/event-stream' } },
+  Object.defineProperty(globalThis, 'fetch', {
+    configurable: true,
+    value: async () =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream({
+            start() {
+              // The inactivity timer is responsible for ending this stream.
+            },
+          }),
+          { headers: { 'content-type': 'text/event-stream' } },
+        ),
       ),
-    ) });
+  });
   const generation = generateApplication(request, { onDelta() {} }).then(() => 'completed');
   await Promise.resolve();
 

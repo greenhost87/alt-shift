@@ -114,7 +114,9 @@ test('streams, saves, restores, and counts a completed application once', async 
   await expect(page.getByText('4/5 applications generated')).toBeVisible();
 });
 
-test('reports clipboard rejection and clears the alert after a successful copy', async ({ page }) => {
+test('reports clipboard rejection and clears the alert after a successful copy', async ({
+  page,
+}) => {
   await rejectClipboardWrites(page, 1);
   await page.addInitScript(() => {
     window.respondToGeneration = () =>

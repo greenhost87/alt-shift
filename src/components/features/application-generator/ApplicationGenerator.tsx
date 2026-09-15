@@ -30,11 +30,7 @@ type GenerationPhase =
   | 'cancelled'
   | 'failed';
 
-const ACTIVE_PHASES: GenerationPhase[] = [
-  'submitting',
-  'waiting-for-first-token',
-  'streaming',
-];
+const ACTIVE_PHASES: GenerationPhase[] = ['submitting', 'waiting-for-first-token', 'streaming'];
 
 const PHASE_STATUS: Record<GenerationPhase, string> = {
   idle: '',
@@ -221,7 +217,11 @@ function isRetryBlocked(retryAvailableAt: number | undefined) {
   return retryAvailableAt !== undefined && retryAvailableAt > Date.now();
 }
 
-function isSubmissionBlocked(requestIsValid: boolean, isGenerating: boolean, retryBlocked: boolean) {
+function isSubmissionBlocked(
+  requestIsValid: boolean,
+  isGenerating: boolean,
+  retryBlocked: boolean,
+) {
   return !requestIsValid || isGenerating || retryBlocked;
 }
 
@@ -283,11 +283,7 @@ export function ApplicationWorkspace() {
   const retryBlocked = isRetryBlocked(retryAvailableAt);
   const hasApplicationTitle = [jobTitle, company].every((value) => value.trim().length > 0);
   const applicationTitle = getApplicationTitle(jobTitle, company);
-  const submissionBlocked = isSubmissionBlocked(
-    parsedRequest.success,
-    isGenerating,
-    retryBlocked,
-  );
+  const submissionBlocked = isSubmissionBlocked(parsedRequest.success, isGenerating, retryBlocked);
 
   useEffect(
     () => () => {

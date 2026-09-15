@@ -119,16 +119,12 @@ test('hides the goal banner after restoring five applications', async ({ page })
 
   await page.addInitScript(
     ({ key, storedApplications }) => {
-      localStorage.setItem(
-        key,
-        JSON.stringify({ version: 1, applications: storedApplications }),
-      );
+      localStorage.setItem(key, JSON.stringify({ version: 1, applications: storedApplications }));
     },
     { key: STORAGE_KEY, storedApplications: applications },
   );
 
   await openDashboard(page, 5);
-
 
   await expect(page.getByRole('heading', { name: 'Hit your goal' })).toHaveCount(0);
 });

@@ -1,5 +1,4 @@
-const CLIPBOARD_ERROR =
-  'The application could not be copied to the clipboard. Please try again.';
+const CLIPBOARD_ERROR = 'The application could not be copied to the clipboard. Please try again.';
 
 export async function writeClipboardText(text: string) {
   try {

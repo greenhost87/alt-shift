@@ -124,14 +124,11 @@ function storeApplications(
 }
 
 function addApplication(input: NewStoredApplication): ApplicationsState {
-  const parsed = v.safeParse(
-    applicationSchema,
-    {
-      ...input,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    },
-  );
+  const parsed = v.safeParse(applicationSchema, {
+    ...input,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+  });
   if (!parsed.success) {
     return readApplications();
   }
