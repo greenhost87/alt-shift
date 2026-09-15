@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import * as v from 'valibot';
 import { useShallow } from 'zustand/react/shallow';
@@ -284,8 +285,26 @@ function getIsCompleted(isViewing: boolean, phase: GenerationPhase) {
   return isViewing || phase === 'completed';
 }
 
-function renderWorkspaceFormAction(isViewing: boolean, options: FormActionsOptions) {
-  return isViewing ? null : renderFormAction(options);
+function renderWorkspaceFormAction(
+  isViewing: boolean,
+  options: FormActionsOptions,
+  startNewApplication: () => void,
+) {
+  if (!isViewing) return renderFormAction(options);
+
+  return (
+    <Button
+      disabled={options.submissionBlocked}
+      fullWidth
+      icon={<RepeatIcon />}
+      onClick={startNewApplication}
+      size="large"
+      type="button"
+      variant="secondary"
+    >
+      {m.try_again()}
+    </Button>
+  );
 }
 
 function shouldShowGoalBanner(
@@ -301,6 +320,7 @@ export function ApplicationWorkspace({
   application,
   generationEndpoint,
 }: ApplicationWorkspaceProps) {
+  const navigate = useNavigate();
   const {
     config,
     jobTitle,
@@ -419,6 +439,7 @@ export function ApplicationWorkspace({
 
   const startNewApplication = () => {
     resetGenerator();
+    if (isViewing) void navigate({ to: '/applications/new' });
   };
 
   const canRetry = phase === 'failed';
@@ -484,12 +505,16 @@ export function ApplicationWorkspace({
                 {renderAlert(error)}
                 {renderAlert(copyError)}
                 {renderRetryMessage(retryBlocked)}
-                {renderWorkspaceFormAction(isViewing, {
-                  canRetry,
-                  isCompleted,
-                  isGenerating,
-                  submissionBlocked,
-                })}
+                {renderWorkspaceFormAction(
+                  isViewing,
+                  {
+                    canRetry,
+                    isCompleted,
+                    isGenerating,
+                    submissionBlocked,
+                  },
+                  startNewApplication,
+                )}
               </form>
             </div>
           }
