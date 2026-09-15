@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { seedApplications } from '../support/applications';
+import {
+  expectApplicationFields,
+  expectBlankGenerator,
+  seedApplications,
+} from '../support/applications';
 import { rejectClipboardWrites } from '../support/clipboard';
 
 async function expectContentFitsViewport(page: Page) {
@@ -17,6 +21,12 @@ async function expectContentFitsViewport(page: Page) {
     expect(box?.width).toBeGreaterThanOrEqual(44);
     expect((box?.x ?? viewportWidth) + (box?.width ?? 1)).toBeLessThanOrEqual(viewportWidth);
   }
+}
+
+async function openSeededMobilePage(page: Page, path: string) {
+  await page.setViewportSize({ height: 568, width: 320 });
+  await seedApplications(page);
+  await page.goto(path, { waitUntil: 'networkidle' });
 }
 
 function getGoalBanner(page: Page) {
@@ -133,16 +143,12 @@ test('empty preview retains its copy action without copying placeholder text', a
   for (const label of ['Job title', 'Company', 'I am good at...', 'Additional details']) {
     await page.getByLabel(label, { exact: true }).fill('');
   }
-  await expect(page.getByRole('heading', { name: 'New application' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Generate Now' })).toBeDisabled();
+  await expectBlankGenerator(page);
   await expect(page.getByText('0/1200')).toBeVisible();
   const copy = page.getByRole('button', { name: 'Copy to clipboard' });
   await expect(copy).toBeVisible();
   await copy.click();
   await expect(page.getByRole('alert')).toHaveCount(0);
-  await expect(
-    page.getByText('Your personalized job application will appear here...'),
-  ).toBeVisible();
 });
 
 test('textarea exposes the over-limit error state without truncating input', async ({ page }) => {
@@ -196,9 +202,7 @@ test('mobile actions have touch targets of at least 44 pixels', async ({ page })
 });
 
 test('dashboard uses the compact layout at 320 pixels', async ({ page }) => {
-  await page.setViewportSize({ height: 568, width: 320 });
-  await seedApplications(page);
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await openSeededMobilePage(page, '/');
 
   await expectContentFitsViewport(page);
 
@@ -258,6 +262,17 @@ test('dashboard uses the compact layout at 320 pixels', async ({ page }) => {
   const emptyState = page.getByRole('heading', { name: 'No applications yet' }).locator('../..');
   await expect(emptyState).toHaveCSS('min-height', '240px');
   await expectContentFitsViewport(page);
+});
+
+test('stored application view fits and stays read-only on mobile', async ({ page }) => {
+  await openSeededMobilePage(page, '/applications/00000000-0000-4000-8000-000000000003');
+
+  await expectContentFitsViewport(page);
+  await expect(page.getByRole('heading', { name: 'Role 3, Company 3' })).toBeVisible();
+  await expectApplicationFields(page, 'disabled');
+  const details = page.getByLabel('Additional details');
+  const preview = page.getByText('Cover letter 3');
+  expect((await preview.boundingBox())?.y).toBeGreaterThan((await details.boundingBox())?.y ?? 0);
 });
 
 test('generator uses the compact layout at 320 pixels', async ({ page }) => {

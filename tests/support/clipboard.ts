@@ -1,4 +1,10 @@
+import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
+
+export async function expectSuccessfulCopy(page: Page) {
+  await page.getByRole('button', { name: 'Copy to clipboard' }).first().click();
+  await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
+}
 
 export async function rejectClipboardWrites(page: Page, rejectionCount?: number) {
   await page.addInitScript(

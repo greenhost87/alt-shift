@@ -4,9 +4,10 @@ import {
   APPLICATION_STORAGE_KEY,
   createApplicationFixtures,
   expectApplicationProgress,
+  expectGoalBannerHidden,
   seedApplications,
 } from '../support/applications';
-import { rejectClipboardWrites } from '../support/clipboard';
+import { expectSuccessfulCopy, rejectClipboardWrites } from '../support/clipboard';
 
 async function openDashboard(page: Page, applicationCount: number) {
   await page.goto('/');
@@ -16,6 +17,11 @@ async function openDashboard(page: Page, applicationCount: number) {
 async function expectEmptyDashboard(page: Page) {
   await expect(page.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
   await expectApplicationProgress(page, 0);
+}
+
+async function expectApplicationPage(page: Page, url: RegExp, heading: string) {
+  await expect(page).toHaveURL(url);
+  await expect(page.getByRole('heading', { name: heading })).toBeVisible();
 }
 
 test('fresh browser storage starts with an empty dashboard', async ({ page }) => {
@@ -65,20 +71,55 @@ test('deleted applications stay deleted after reload and synchronize across tabs
   await expect(page).toHaveURL(/\/applications\/new$/);
 });
 
-test('opens a stored application with its generation details', async ({ page }) => {
+for (const [entryPoint, index] of [
+  ['header', 0],
+  ['goal banner', 1],
+] as const) {
+  test(`opens the generator from the dashboard ${entryPoint}`, async ({ page }) => {
+    await seedApplications(page);
+    await openDashboard(page, 3);
+
+    const createButtons = page.getByRole('button', { name: 'Create New' });
+    await expect(createButtons).toHaveCount(2);
+    await createButtons.nth(index).click();
+
+    await expectApplicationPage(page, /\/applications\/new$/, 'New application');
+  });
+}
+
+test('opens a stored application with read-only details, copy, and Home navigation', async ({
+  page,
+}) => {
+  await rejectClipboardWrites(page, 0);
   await seedApplications(page);
   await openDashboard(page, 3);
+  await expect(
+    page.getByRole('link').filter({ hasText: 'Cover letter' }).first(),
+  ).toHaveAccessibleName('Open application for Role 3 at Company 3');
 
   await page.getByRole('link', { name: 'Open application for Role 3 at Company 3' }).click();
 
-  await expect(page).toHaveURL(/\/applications\/00000000-0000-4000-8000-000000000003$/);
-  await expect(page.getByRole('heading', { name: 'Role 3, Company 3' })).toBeVisible();
-  await expect(page.getByLabel('Job title')).toHaveValue('Role 3');
-  await expect(page.getByLabel('Company')).toHaveValue('Company 3');
-  await expect(page.getByLabel('I am good at...')).toHaveValue('Strengths 3');
-  await expect(page.getByLabel('Additional details')).toHaveValue('Details 3');
+  await expectApplicationPage(
+    page,
+    /\/applications\/00000000-0000-4000-8000-000000000003$/,
+    'Role 3, Company 3',
+  );
+  for (const [label, value] of [
+    ['Job title', 'Role 3'],
+    ['Company', 'Company 3'],
+    ['I am good at...', 'Strengths 3'],
+    ['Additional details', 'Details 3'],
+  ] as const) {
+    await expect(page.getByLabel(label, { exact: true })).toHaveValue(value);
+    await expect(page.getByLabel(label, { exact: true })).toBeDisabled();
+  }
   await expect(page.getByText('Cover letter 3')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Generate Now' })).toHaveCount(0);
+  await expectSuccessfulCopy(page);
+
+  await page.getByRole('button', { name: 'Home' }).click();
+  await expect(page).toHaveURL('/');
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
 });
 
 test('deletion can be cancelled without changing stored applications', async ({ page }) => {
@@ -86,7 +127,11 @@ test('deletion can be cancelled without changing stored applications', async ({ 
   await openDashboard(page, 3);
   for (const dismissal of ['button', 'escape']) {
     await page.getByRole('button', { name: 'Delete' }).first().click();
-    const cancel = page.getByRole('button', { name: 'Cancel', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Delete application?' });
+    await expect(dialog).toContainText(
+      'This application will be permanently deleted. This action cannot be undone.',
+    );
+    const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });
     await expect(cancel).toBeEnabled();
     if (dismissal === 'button') await cancel.click();
     else await page.keyboard.press('Escape');
@@ -105,8 +150,10 @@ async function copyStoredApplication(page: Page, failures: number) {
 
 test('shows temporary feedback after copying an application', async ({ page }) => {
   await copyStoredApplication(page, 0);
-  await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
+  const copy = page.locator('article').first().getByRole('button').last();
+  await expect(copy).toHaveAccessibleName('Copied!');
   await expect(page.getByRole('button', { name: 'Copy to clipboard' })).toHaveCount(3);
+  await expect(copy).toHaveAccessibleName('Copy to clipboard', { timeout: 3_000 });
 });
 
 test('reports clipboard rejection without changing dashboard applications', async ({ page }) => {
@@ -172,7 +219,8 @@ test('hides the goal banner after restoring five applications', async ({ page })
 
   await openDashboard(page, 5);
 
-  await expect(page.getByRole('heading', { name: 'Hit your goal' })).toHaveCount(0);
+  await expectGoalBannerHidden(page, 5);
+  await expect(page.locator('header').getByRole('progressbar')).toHaveCount(0);
 });
 
 test('rejects invalid stored data without overwriting it', async ({ page }) => {

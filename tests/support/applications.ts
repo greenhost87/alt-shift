@@ -3,6 +3,13 @@ import type { Page } from '@playwright/test';
 
 export const APPLICATION_STORAGE_KEY = 'variant-cover-letters:v1';
 
+const APPLICATION_FIELD_LABELS = [
+  'Job title',
+  'Company',
+  'I am good at...',
+  'Additional details',
+] as const;
+
 type ApplicationFixture = {
   id: string;
   company: string;
@@ -42,4 +49,25 @@ export async function seedApplications(page: Page, count = 3) {
 export async function expectApplicationProgress(page: Page, applicationCount: number) {
   await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
   await expect(page.getByText(`${applicationCount}/5 applications generated`)).toBeVisible();
+}
+
+export async function expectApplicationFields(page: Page, state: 'disabled' | 'empty') {
+  for (const label of APPLICATION_FIELD_LABELS) {
+    const field = page.getByLabel(label, { exact: true });
+    if (state === 'disabled') await expect(field).toBeDisabled();
+    else await expect(field).toHaveValue('');
+  }
+}
+
+export async function expectGoalBannerHidden(page: Page, applicationCount: number) {
+  await expect(page.getByRole('heading', { name: 'Hit your goal' })).toHaveCount(0);
+  await expect(page.getByText(`${applicationCount}/5 applications generated`)).toBeVisible();
+}
+
+export async function expectBlankGenerator(page: Page) {
+  await expect(page.getByRole('heading', { name: 'New application' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Generate Now' })).toBeDisabled();
+  await expect(
+    page.getByText('Your personalized job application will appear here...'),
+  ).toBeVisible();
 }
