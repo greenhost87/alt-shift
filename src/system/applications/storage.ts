@@ -20,9 +20,11 @@ const storedApplicationsSchema = v.strictObject({
 
 const serializedApplicationsSchema = v.pipe(v.string(), v.parseJson(), storedApplicationsSchema);
 
-type StoredApplication = v.InferOutput<typeof applicationSchema>;
+export type StoredApplication = v.InferOutput<typeof applicationSchema>;
 
 type StoredApplications = v.InferOutput<typeof storedApplicationsSchema>;
+
+export type NewStoredApplication = Pick<StoredApplication, 'company' | 'role' | 'letter'>;
 
 type ApplicationsState = {
   applications: StoredApplication[];
@@ -32,6 +34,7 @@ type ApplicationsState = {
 type StoredApplicationsApi = {
   applications: StoredApplication[];
   status: 'loading' | 'ready' | 'invalid' | 'unavailable';
+  addApplication: (application: NewStoredApplication) => boolean;
   deleteApplication: (id: string) => void;
 };
 
@@ -103,6 +106,34 @@ function notifySameTab() {
   window.dispatchEvent(new Event(STORAGE_CHANGE_EVENT));
 }
 
+function addApplication(input: NewStoredApplication): ApplicationsState {
+  const parsed = v.safeParse(
+    applicationSchema,
+    {
+      ...input,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    },
+  );
+  if (!parsed.success) {
+    return readApplications();
+  }
+
+  const current = readApplications();
+  if (current.status !== 'ready') {
+    return current;
+  }
+
+  const applications = sortNewestFirst([parsed.output, ...current.applications]);
+  try {
+    window.localStorage.setItem(STORAGE_KEY, serializeApplications(applications));
+    notifySameTab();
+    return { applications, status: 'ready' };
+  } catch {
+    return { applications: current.applications, status: 'unavailable' };
+  }
+}
+
 function deleteApplication(id: string): ApplicationsState {
   const current = readApplications();
   if (current.status !== 'ready') {
@@ -141,9 +172,20 @@ export function useStoredApplications(): StoredApplicationsApi {
     };
   }, []);
 
+  const add = useCallback((application: NewStoredApplication) => {
+    if (
+      ![application.company, application.role, application.letter].every((value) => value.trim())
+    ) {
+      return false;
+    }
+    const nextState = addApplication(application);
+    setState(nextState);
+    return nextState.status === 'ready';
+  }, []);
+
   const remove = useCallback((id: string) => {
     setState(deleteApplication(id));
   }, []);
 
-  return { ...state, deleteApplication: remove };
+  return { ...state, addApplication: add, deleteApplication: remove };
 }

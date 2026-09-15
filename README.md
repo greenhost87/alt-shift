@@ -2,7 +2,7 @@
 
 A responsive cover-letter generator built for the Variant Group full-stack test assignment.
 
-> **Current status:** the repository contains the responsive UI prototype. The dashboard persists versioned, validated application data in the browser and synchronizes open tabs. The generation form shows the waiting state without calling the Generation API; streaming generation is not connected yet.
+> **Current status:** the responsive application proxies the Variant Generation API through a server-only endpoint, displays cover letters as they stream, and saves only completed letters in versioned browser storage. Saved applications survive reloads, synchronize across tabs, and update progress toward the five-letter goal.
 
 ## Stack
 
@@ -70,14 +70,14 @@ The implementation plan and technical boundaries are documented in [`documents/a
 
 ## Product direction
 
-The completed application is intended to:
+The application:
 
-- generate cover letters through Variant Group's streaming Generation API;
-- keep the API token on the server behind a same-origin endpoint;
-- persist completed letters in versioned, validated `localStorage` data;
-- restore saved letters after a reload and synchronize browser tabs;
-- track progress toward five completed applications;
-- support cancellation, retries, copy actions, storage failures, and responsive layouts.
+- generates cover letters through Variant Group's streaming Generation API;
+- keeps the API token on the server behind a same-origin endpoint;
+- persists completed letters in versioned, validated `localStorage` data;
+- restores saved letters after a reload and synchronizes browser tabs;
+- tracks progress toward five completed applications;
+- preserves partial output on generation failures so it can still be copied.
 
 ## AI-assisted workflow
 

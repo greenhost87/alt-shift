@@ -49,7 +49,15 @@ export function ApplicationsDashboard({ applicationLimit, onCreate }: Applicatio
         {storageStatus !== 'loading' ? (
           <div className={styles['cardGrid']}>
             {applications.map((application) => (
-              <div className={cardStyles['card']} key={application.id}>
+              <article className={cardStyles['card']} key={application.id}>
+                <div className={cardStyles['metadata']}>
+                  <h3 className={cardStyles['title']}>
+                    {application.role}, {application.company}
+                  </h3>
+                  <time className={cardStyles['date']} dateTime={application.createdAt}>
+                    {new Date(application.createdAt).toLocaleDateString()}
+                  </time>
+                </div>
                 <p className={cardStyles['letter']}>{application.letter}</p>
                 <div aria-hidden="true" className={cardStyles['fade']} />
                 <div className={cardStyles['actions']}>
@@ -73,7 +81,7 @@ export function ApplicationsDashboard({ applicationLimit, onCreate }: Applicatio
                     Copy to clipboard
                   </Button>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         ) : null}
