@@ -273,8 +273,12 @@ function resolveWorkspaceValues(
   return generatorValues;
 }
 
-function getFieldsDisabled(isViewing: boolean, isGenerating: boolean) {
-  return isViewing || isGenerating;
+function getFieldsDisabled(
+  isViewing: boolean,
+  isGenerating: boolean,
+  applicationLimitReached: boolean,
+) {
+  return isViewing || isGenerating || applicationLimitReached;
 }
 
 function getIsGenerating(isViewing: boolean, phase: GenerationPhase) {
@@ -391,7 +395,8 @@ export function ApplicationWorkspace({
     fieldLimits,
   );
   const isGenerating = getIsGenerating(isViewing, phase);
-  const fieldsDisabled = getFieldsDisabled(isViewing, isGenerating);
+  const applicationLimitReached = applicationCount >= applicationLimit;
+  const fieldsDisabled = getFieldsDisabled(isViewing, isGenerating, applicationLimitReached);
   const retryBlocked = isRetryBlocked(retryAvailableAt);
   const hasApplicationTitle = [displayedValues.jobTitle, displayedValues.company].every(
     (value) => value.trim().length > 0,
@@ -401,7 +406,7 @@ export function ApplicationWorkspace({
     parsedRequest.success,
     isGenerating,
     retryBlocked,
-    applicationCount >= applicationLimit,
+    applicationLimitReached,
   );
 
   useEffect(

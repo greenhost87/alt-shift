@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import {
   APPLICATION_STORAGE_KEY,
   createApplicationFixtures,
+  expectApplicationFields,
   expectApplicationProgress,
   expectBlankGenerator,
   expectGoalBannerHidden,
@@ -247,6 +248,20 @@ test('hides the goal banner after restoring five applications', async ({ page })
 
   await expectGoalBannerHidden(page, 5);
   await expect(page.locator('header').getByRole('progressbar')).toHaveCount(0);
+});
+
+test('blocks application forms after all attempts are used', async ({ page }) => {
+  await seedApplications(page, 5);
+
+  await page.goto('/applications/new', { waitUntil: 'networkidle' });
+
+  await expectApplicationFields(page, 'disabled');
+  await expect(page.getByRole('button', { name: 'Generate Now' })).toBeDisabled();
+
+  await page.goto('/applications/00000000-0000-4000-8000-000000000005');
+
+  await expectApplicationFields(page, 'disabled');
+  await expect(page.getByRole('button', { name: 'Try Again' })).toBeDisabled();
 });
 
 test('rejects invalid stored data without overwriting it', async ({ page }) => {
