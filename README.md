@@ -2,7 +2,7 @@
 
 A responsive cover-letter generator built for the Variant Group full-stack test assignment.
 
-> **Current status:** the repository contains the responsive UI prototype. The dashboard currently uses in-memory fixture data, and the generation form shows the waiting state without calling the Generation API. Streaming generation and browser persistence are not connected yet.
+> **Current status:** the repository contains the responsive UI prototype. The dashboard persists versioned, validated application data in the browser and synchronizes open tabs. The generation form shows the waiting state without calling the Generation API; streaming generation is not connected yet.
 
 ## Stack
 
@@ -42,14 +42,14 @@ bun run build
 
 ## Commands
 
-| Command | Purpose |
-| --- | --- |
-| `bun run dev` | Build the Reshaped theme and start Vite in development mode |
-| `bun run build` | Build the theme and production application |
-| `bun run theme:build` | Generate the custom Reshaped theme |
-| `bun run fmt` | Format the repository with oxfmt |
-| `bun test` | Run Bun tests |
-| `bun run test:e2e` | Run Playwright tests |
+| Command               | Purpose                                                     |
+| --------------------- | ----------------------------------------------------------- |
+| `bun run dev`         | Build the Reshaped theme and start Vite in development mode |
+| `bun run build`       | Build the theme and production application                  |
+| `bun run theme:build` | Generate the custom Reshaped theme                          |
+| `bun run fmt`         | Format the repository with oxfmt                            |
+| `bun test`            | Run Bun tests                                               |
+| `bun run test:e2e`    | Run Playwright tests                                        |
 
 ## Project structure
 

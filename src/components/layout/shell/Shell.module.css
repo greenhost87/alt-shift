@@ -33,6 +33,24 @@
   white-space: nowrap;
 }
 
+.doneBadge {
+  align-items: center;
+  background: var(--rs-color-success-badge);
+  border-radius: 50%;
+  color: var(--rs-color-foreground-positive);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: var(--rs-unit-success-badge-size);
+  justify-content: center;
+  width: var(--rs-unit-success-badge-size);
+}
+
+.doneBadge svg {
+  display: block;
+  height: 12px;
+  width: 14px;
+}
+
 .main {
   margin: var(--rs-unit-x8) auto 0;
   max-width: var(--rs-unit-content-width);

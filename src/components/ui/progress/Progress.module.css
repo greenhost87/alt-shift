@@ -47,8 +47,6 @@
 
 .label {
   color: var(--rs-color-foreground-neutral-faded);
-  font-family: var(--rs-font-family-body);
-  font-size: var(--rs-font-size-body-3);
-  font-weight: var(--rs-font-weight-body-3);
-  line-height: var(--rs-line-height-body-3);
+  font: var(--rs-font-weight-body-3) var(--rs-font-size-body-3) / var(--rs-line-height-body-3)
+    var(--rs-font-family-body);
 }

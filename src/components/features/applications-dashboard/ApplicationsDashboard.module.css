@@ -11,3 +11,22 @@
 .applications {
   gap: var(--rs-unit-x6);
 }
+
+.storageMessage {
+  color: var(--rs-color-foreground-neutral-faded);
+  margin: 0;
+}
+
+.cardGrid {
+  display: grid;
+  column-gap: var(--rs-unit-x4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  row-gap: var(--rs-unit-x6);
+  width: 100%;
+}
+
+@media (--rs-viewport-s) {
+  .cardGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,13 +1,18 @@
+/// <reference types="bun" />
+
+import { spawnSync } from 'node:child_process';
 import { rm } from 'node:fs/promises';
 
-const build = Bun.spawn(['bunx', 'reshaped', 'theming', '--output', 'src/themes'], {
-  stderr: 'inherit',
-  stdout: 'inherit',
+const build = spawnSync('bunx', ['reshaped', 'theming', '--output', 'src/themes'], {
+  stdio: 'inherit',
 });
-const exitCode = await build.exited;
 
-if (exitCode !== 0) {
-  throw new Error(`Reshaped theme generation failed with exit code ${exitCode}`);
+if (build.error) {
+  throw build.error;
 }
 
-await rm(new URL('../src/themes/variant/tailwind.css', import.meta.url), { force: true });
+if (build.status !== 0) {
+  throw new Error(`Reshaped theme generation failed with exit code ${String(build.status)}`);
+}
+
+await rm('src/themes/variant/tailwind.css', { force: true });

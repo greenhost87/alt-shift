@@ -8,7 +8,6 @@
 }
 
 .control,
-.controlError,
 .textarea,
 .textareaError {
   background: var(--rs-color-background-elevation-base);
@@ -29,35 +28,35 @@
   width: 100%;
 }
 
-.control,
-.controlError {
+.control {
   min-height: var(--rs-unit-control-height);
   padding: calc(var(--rs-unit-control-padding-vertical) - var(--rs-unit-border-width))
     calc(var(--rs-unit-control-padding-horizontal) - var(--rs-unit-border-width));
 }
 
-.control:focus,
-.textarea:focus {
-  border-color: var(--rs-color-border-primary);
-  border-radius: calc(var(--rs-radius-medium) + var(--rs-unit-x0-5));
-  box-shadow:
-    var(--rs-shadow-control),
-    0 0 0 var(--rs-unit-x1) var(--rs-color-border-primary-faded);
+.control,
+.textarea {
+  --field-focus-border: var(--rs-color-border-primary);
+  --field-focus-ring: var(--rs-color-border-primary-faded);
 }
 
-.controlError,
+.textareaError {
+  --field-focus-border: var(--rs-color-border-critical);
+  --field-focus-ring: var(--rs-color-error-ring);
+}
+
+.control:focus,
+.textarea:focus,
 .textareaError,
-.controlError:focus,
 .textareaError:focus {
-  border-color: var(--rs-color-border-critical);
+  border-color: var(--field-focus-border);
   border-radius: calc(var(--rs-radius-medium) + var(--rs-unit-x0-5));
   box-shadow:
     var(--rs-shadow-control),
-    0 0 0 var(--rs-unit-x1) var(--rs-color-error-ring);
+    0 0 0 var(--rs-unit-x1) var(--field-focus-ring);
 }
 
 .control:disabled,
-.controlError:disabled,
 .textarea:disabled,
 .textareaError:disabled {
   background: var(--rs-color-background-disabled-faded);
@@ -75,7 +74,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .control,
-  .controlError,
   .textarea,
   .textareaError {
     transition-duration: var(--rs-duration-reduced-motion);

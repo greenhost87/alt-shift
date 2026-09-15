@@ -2,7 +2,7 @@ import styles from './Progress.module.css';
 
 const PROGRESS_VARIANTS = ['dots', 'segments'] as const;
 
-export type ProgressVariant = (typeof PROGRESS_VARIANTS)[number];
+type ProgressVariant = (typeof PROGRESS_VARIANTS)[number];
 
 type ProgressProps = {
   accessibleLabel: string;
@@ -11,9 +11,15 @@ type ProgressProps = {
   variant?: ProgressVariant;
 };
 
-export function Progress({ accessibleLabel, current, total, variant = 'segments' }: ProgressProps) {
+export function getProgressValues(current: number, total: number) {
   const safeTotal = Math.max(1, Math.floor(total));
   const safeCurrent = Math.min(Math.max(0, Math.floor(current)), safeTotal);
+
+  return { safeCurrent, safeTotal };
+}
+
+export function Progress({ accessibleLabel, current, total, variant = 'segments' }: ProgressProps) {
+  const { safeCurrent, safeTotal } = getProgressValues(current, total);
   const isDots = variant === 'dots';
 
   return (
