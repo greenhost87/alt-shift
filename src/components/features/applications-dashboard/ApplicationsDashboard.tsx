@@ -20,9 +20,6 @@ type ApplicationsDashboardProps = {
 type StorageStatus = 'loading' | 'ready' | 'invalid' | 'unavailable';
 
 function renderStorageStatusMessage(status: StorageStatus) {
-  if (status === 'loading') {
-    return <output className={styles['storageMessage']}>{m.applications_loading()}</output>;
-  }
   if (status === 'invalid') {
     return (
       <p className={styles['storageMessage']} role="alert">
@@ -38,6 +35,34 @@ function renderStorageStatusMessage(status: StorageStatus) {
     );
   }
   return null;
+}
+
+function renderLoadingCards(status: StorageStatus) {
+  if (status !== 'loading') return null;
+
+  return (
+    <output aria-label={m.applications_loading()} className={styles['loadingState']}>
+      <span aria-hidden="true" className={styles['cardGrid']}>
+        {[0, 1].map((index) => (
+          <span
+            className={[cardStyles['card'], cardStyles['loadingCard']].join(' ')}
+            data-testid="application-card-placeholder"
+            key={index}
+          >
+            <span className={cardStyles['loadingCopy']}>
+              <span className={cardStyles['loadingLine']} />
+              <span className={cardStyles['loadingLine']} />
+              <span className={cardStyles['loadingLineShort']} />
+            </span>
+            <span className={cardStyles['loadingActions']}>
+              <span className={cardStyles['loadingAction']} />
+              <span className={cardStyles['loadingAction']} />
+            </span>
+          </span>
+        ))}
+      </span>
+    </output>
+  );
 }
 
 function shouldShowEmptyState(status: StorageStatus, applicationCount: number) {
@@ -86,6 +111,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
           title={m.applications()}
         />
         {renderStorageStatusMessage(storageStatus)}
+        {renderLoadingCards(storageStatus)}
         {copyError ? (
           <p className={styles['clipboardError']} role="alert">
             {copyError}

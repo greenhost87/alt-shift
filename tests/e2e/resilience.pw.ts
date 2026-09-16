@@ -82,30 +82,42 @@ test('preserves an application and reports a storage write failure during deleti
   await expectApplicationProgress(page, 1);
 });
 
-test('shows a loading state while browser storage is initialized', async ({ page }) => {
-  let sawStorageLoadingState = false;
-  await page.exposeFunction('recordStorageLoadingState', () => {
-    sawStorageLoadingState = true;
-  });
+test('shows card placeholders while browser storage is initialized', async ({ page }) => {
+  let loadingCardCount = 0;
+  let loadingCardHeight = 0;
+  await page.exposeFunction(
+    'recordStorageLoadingState',
+    (cardCount: number, cardHeight: number) => {
+      loadingCardCount = cardCount;
+      loadingCardHeight = cardHeight;
+    },
+  );
   await page.addInitScript(() => {
     const observer = new MutationObserver(() => {
-      if (document.body.textContent.includes('Loading applications…')) {
-        void window.recordStorageLoadingState();
-      }
+      const loadingState = document.querySelector(
+        'output[aria-label="Loading applications…"]',
+      );
+      if (!loadingState) return;
+      const cards = loadingState.querySelectorAll('[data-testid="application-card-placeholder"]');
+      const firstCard = cards.item(0);
+      if (!(firstCard instanceof HTMLElement)) return;
+      void window.recordStorageLoadingState(cards.length, firstCard.getBoundingClientRect().height);
     });
     observer.observe(document, { childList: true, subtree: true });
   });
 
   await page.goto('/');
 
-  await expect.poll(() => sawStorageLoadingState).toBe(true);
-  await expect(page.getByText('Loading applications…')).toHaveCount(0);
+  await expect.poll(() => loadingCardCount).toBe(2);
+  expect(loadingCardHeight).toBe(240);
+  await expect(page.getByRole('status', { name: 'Loading applications…' })).toHaveCount(0);
+  await expect(page.getByTestId('application-card-placeholder')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
 });
 
 declare global {
   interface Window {
     recordGenerationAbort: () => Promise<void>;
-    recordStorageLoadingState: () => Promise<void>;
+    recordStorageLoadingState: (cardCount: number, cardHeight: number) => Promise<void>;
   }
 }

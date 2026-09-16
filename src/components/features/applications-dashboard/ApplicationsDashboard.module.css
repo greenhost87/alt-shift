@@ -21,6 +21,11 @@
   color: var(--rs-color-foreground-neutral-faded);
 }
 
+.loadingState {
+  display: block;
+  width: 100%;
+}
+
 .clipboardError {
   color: var(--rs-color-foreground-critical);
 }
@@ -107,6 +112,10 @@
 
   .cardGrid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .loadingState .cardGrid > :nth-child(2) {
+    display: none;
   }
 }
 
