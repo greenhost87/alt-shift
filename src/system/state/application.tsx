@@ -10,11 +10,16 @@ const ApplicationStoreContext = createContext<ApplicationStore | undefined>(unde
 type ApplicationStateProviderProps = {
   children: ReactNode;
   config: ApplicationConfig;
+  initialApplicationCount: number;
 };
 
-export function ApplicationStateProvider({ children, config }: ApplicationStateProviderProps) {
+export function ApplicationStateProvider({
+  children,
+  config,
+  initialApplicationCount,
+}: ApplicationStateProviderProps) {
   const store = useRef<ApplicationStore | null>(null);
-  store.current ??= createApplicationStore(config);
+  store.current ??= createApplicationStore(config, initialApplicationCount);
 
   useEffect(() => {
     const currentStore = store.current;

@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import * as m from '../../../paraglide/messages.js';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
 import { GoalBanner } from '../../ui/banner/Banner';
@@ -74,9 +75,14 @@ function shouldShowApplications(status: StorageStatus, applicationCount: number)
 }
 
 export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) {
-  const applicationLimit = useApplicationStore((state) => state.config.applicationLimit);
-  const applications = useApplicationStore((state) => state.applications);
-  const storageStatus = useApplicationStore((state) => state.storageStatus);
+  const { applicationLimit, applications, applicationCount, storageStatus } = useApplicationStore(
+    useShallow((state) => ({
+      applicationLimit: state.config.applicationLimit,
+      applications: state.applications,
+      applicationCount: state.applicationCount,
+      storageStatus: state.storageStatus,
+    })),
+  );
   const deleteApplication = useApplicationStore((state) => state.deleteApplication);
   const copyError = useApplicationStore((state) => state.dashboardCopyError);
   const setCopyError = useApplicationStore((state) => state.setDashboardCopyError);
@@ -84,7 +90,6 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
   const setPendingDeletion = useApplicationStore((state) => state.setPendingDeletion);
   const resetDashboard = useApplicationStore((state) => state.resetDashboard);
   useEffect(() => resetDashboard, [resetDashboard]);
-  const applicationCount = applications.length;
   const copyApplication = async (letter: string) => {
     const error = await writeClipboardText(letter);
     setCopyError(error);

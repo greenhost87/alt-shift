@@ -370,7 +370,7 @@ export function ApplicationWorkspace({
       retryAvailableAt: state.retryAvailableAt,
       setRetryAvailableAt: state.setRetryAvailableAt,
       addApplication: state.addApplication,
-      applicationCount: state.applications.length,
+      applicationCount: state.applicationCount,
       resetGenerator: state.resetGenerator,
     })),
   );

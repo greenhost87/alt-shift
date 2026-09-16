@@ -17,7 +17,8 @@ type ShellProps = {
 export function Shell({ children }: ShellProps) {
   const navigate = useNavigate();
   const applicationLimit = useApplicationStore((state) => state.config.applicationLimit);
-  const applicationCount = useApplicationStore((state) => state.applications.length);
+  const applicationCount = useApplicationStore((state) => state.applicationCount);
+  const storageStatus = useApplicationStore((state) => state.storageStatus);
   const returnHome = () => {
     void navigate({ to: '/' });
   };
@@ -75,6 +76,7 @@ export function Shell({ children }: ShellProps) {
             <LanguageSwitcher />
             <Button
               ariaLabel={m.home()}
+              disabled={storageStatus === 'loading'}
               icon={
                 <Icon viewBox="0 0 20 20">
                   <path d="m2.5 8.33 6.43-5.14a1.67 1.67 0 0 1 2.14 0l6.43 5.14M4.17 7.08v8.09c0 .92.74 1.66 1.66 1.66h2.5v-5h3.34v5h2.5c.92 0 1.66-.74 1.66-1.66V7.08" />

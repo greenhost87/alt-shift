@@ -1,16 +1,26 @@
 import type { ReactNode } from 'react';
 import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { getCookie } from '@tanstack/react-start/server';
 import { Reshaped } from 'reshaped';
 import { NotFound } from '../components/layout/not-found/NotFound';
 import { getLocale } from '../paraglide/runtime.js';
 import { getApplicationConfig } from '../server/config/application';
+import {
+  APPLICATION_COUNT_COOKIE_NAME,
+  parseApplicationCountCookie,
+} from '../system/applications/count-cookie';
 import { ApplicationStateProvider } from '../system/state/application';
 import '../styles/global.css';
 
-const loadApplicationConfig = createServerFn({ method: 'GET' }).handler(() =>
-  getApplicationConfig(),
-);
+const loadApplicationConfig = createServerFn({ method: 'GET' }).handler(() => {
+  const config = getApplicationConfig();
+  const initialApplicationCount = parseApplicationCountCookie(
+    getCookie(APPLICATION_COUNT_COOKIE_NAME),
+    config.applicationLimit,
+  );
+  return { config, initialApplicationCount };
+});
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -29,10 +39,10 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-  const config = Route.useLoaderData();
+  const { config, initialApplicationCount } = Route.useLoaderData();
   return (
     <RootDocument>
-      <ApplicationStateProvider config={config}>
+      <ApplicationStateProvider config={config} initialApplicationCount={initialApplicationCount}>
         <Reshaped colorMode="light" theme="variant">
           <Outlet />
         </Reshaped>

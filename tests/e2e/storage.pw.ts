@@ -10,11 +10,23 @@ import {
   seedApplications,
 } from '../support/applications';
 import { expectSuccessfulCopy, rejectClipboardWrites } from '../support/clipboard';
+import { expectCookie } from '../support/cookies';
 import { confirmDeletion, openDeletionDialog } from '../support/dialog';
 
 async function openDashboard(page: Page, applicationCount: number) {
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
+}
+
+async function setApplicationCountCookie(page: Page, count: number) {
+  await page
+    .context()
+    .addCookies([{ name: 'ALT_SHIFT_APPLICATION_COUNT', value: String(count), url: page.url() }]);
+}
+
+async function expectServerRenderedProgress(page: Page, expectedProgress: string) {
+  const response = await page.context().request.get('/');
+  expect(await response.text()).toContain(expectedProgress);
 }
 
 async function expectEmptyDashboard(page: Page) {
@@ -206,6 +218,18 @@ test('contains localStorage initialization failures and displays a warning', asy
   await expectApplicationProgress(page, 0);
 });
 
+test('stores and caps the application count for the next server render', async ({ page }) => {
+  await seedApplications(page);
+  await openDashboard(page, 3);
+
+  await expectCookie(page.context(), 'ALT_SHIFT_APPLICATION_COUNT', '3');
+
+  await expectServerRenderedProgress(page, '3/5 applications generated');
+
+  await setApplicationCountCookie(page, 6);
+  await expectServerRenderedProgress(page, '5/5 applications generated');
+});
+
 test('restores valid versioned applications created in the browser', async ({ page }) => {
   await page.addInitScript(
     ({ key }) => {
@@ -276,6 +300,10 @@ test('rejects invalid stored data without overwriting it', async ({ page }) => {
   await page.goto('/');
 
   await expect(page.getByRole('alert')).toContainText('stored data was left unchanged');
+  await setApplicationCountCookie(page, 3);
+  await page.reload();
+  await expectCookie(page.context(), 'ALT_SHIFT_APPLICATION_COUNT', '0');
+  await expectServerRenderedProgress(page, '0/5 applications generated');
   await expect(page.getByRole('heading', { name: 'No applications yet' })).toHaveCount(0);
   const storedValue = await page.evaluate(
     (key) => localStorage.getItem(key),

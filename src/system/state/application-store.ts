@@ -7,6 +7,7 @@ import {
 } from '../applications/storage';
 import type { NewStoredApplication } from '../applications/storage';
 import type { StoredApplication } from '../applications/schema';
+import { writeApplicationCountCookie } from '../applications/count-cookie';
 import type { ApplicationConfig } from '../config/application.types';
 
 const GENERATION_PHASES = [
@@ -25,6 +26,7 @@ type StorageStatus = 'loading' | 'ready' | 'invalid' | 'unavailable';
 export type ApplicationState = {
   config: ApplicationConfig;
   applications: StoredApplication[];
+  applicationCount: number;
   storageStatus: StorageStatus;
   jobTitle: string;
   company: string;
@@ -71,17 +73,39 @@ function getInitialGeneratorState(config: ApplicationConfig) {
   };
 }
 
-export function createApplicationStore(config: ApplicationConfig): ApplicationStore {
+export function createApplicationStore(
+  config: ApplicationConfig,
+  initialApplicationCount: number,
+): ApplicationStore {
+  const setApplications = (
+    set: (state: {
+      applications: StoredApplication[];
+      applicationCount: number;
+      storageStatus: StorageStatus;
+    }) => void,
+    nextState: { applications: StoredApplication[]; status: StorageStatus },
+  ) => {
+    const applicationCount = nextState.applications.length;
+    if (nextState.status === 'ready' || nextState.status === 'invalid') {
+      writeApplicationCountCookie(applicationCount);
+    }
+    set({
+      applications: nextState.applications,
+      applicationCount,
+      storageStatus: nextState.status,
+    });
+  };
+
   return createStore<ApplicationState>()((set) => ({
     config,
     applications: [],
+    applicationCount: initialApplicationCount,
     storageStatus: 'loading',
     ...getInitialGeneratorState(config),
     dashboardCopyError: '',
     pendingDeletion: null,
     refreshApplications() {
-      const nextState = readApplications(config.storage);
-      set({ applications: nextState.applications, storageStatus: nextState.status });
+      setApplications(set, readApplications(config.storage));
     },
     addApplication(application) {
       if (
@@ -96,12 +120,11 @@ export function createApplicationStore(config: ApplicationConfig): ApplicationSt
         return false;
       }
       const nextState = persistApplication(application, config.storage);
-      set({ applications: nextState.applications, storageStatus: nextState.status });
+      setApplications(set, nextState);
       return nextState.status === 'ready';
     },
     deleteApplication(id) {
-      const nextState = removePersistedApplication(id, config.storage);
-      set({ applications: nextState.applications, storageStatus: nextState.status });
+      setApplications(set, removePersistedApplication(id, config.storage));
     },
     setJobTitle(jobTitle) {
       set({ jobTitle });

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { expectCookie } from '../support/cookies';
 
 test('switches to Russian, persists the locale, and submits it for generation', async ({
   page,
@@ -23,13 +24,7 @@ test('switches to Russian, persists the locale, and submits it for generation', 
   expect(languageSelectBox?.height).toBe(homeButtonBox?.height);
   await languageSelect.selectOption('ru');
 
-  await expect
-    .poll(
-      async () =>
-        (await page.context().cookies()).find((cookie) => cookie.name === 'ALT_SHIFT_LOCALE')
-          ?.value,
-    )
-    .toBe('ru');
+  await expectCookie(page.context(), 'ALT_SHIFT_LOCALE', 'ru');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
   await expect(page.getByRole('heading', { name: 'Писем пока нет' })).toBeVisible();
   await page.reload();
