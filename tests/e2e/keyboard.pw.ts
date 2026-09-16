@@ -14,7 +14,7 @@ test('cycles through every dashboard action in document order', async ({ page })
   await expect(page.getByRole('button', { name: 'Delete' })).toBeVisible();
 
   const brand = page.getByRole('link', { name: 'Alt+Shift' });
-  const language = page.getByRole('combobox', { name: 'Language' });
+  const language = page.getByRole('button', { name: 'Language' });
   const home = page.getByRole('button', { name: 'Home' });
   const createButtons = page.getByRole('button', { name: 'Create New' });
   const openApplication = page.getByRole('link', {

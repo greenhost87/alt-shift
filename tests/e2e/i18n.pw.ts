@@ -14,15 +14,26 @@ test('switches to Russian, persists the locale, and submits it for generation', 
 
   await page.goto('/', { waitUntil: 'networkidle' });
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  const languageSelect = page.getByRole('combobox', { name: 'Language' });
+  const languageSelect = page.getByRole('button', { name: 'Language' });
   const homeButton = page.getByRole('button', { name: 'Home' });
-  await expect(languageSelect).toHaveValue('en');
-  await expect(languageSelect.getByRole('option', { name: '🇬🇧 English' })).toHaveCount(1);
-  await expect(languageSelect.getByRole('option', { name: '🇷🇺 Русский' })).toHaveCount(1);
+  await expect(languageSelect.getByText('🇬🇧', { exact: true })).toBeVisible();
+  await expect(page.getByRole('option', { name: '🇬🇧 English' })).toBeHidden();
   const languageSelectBox = await languageSelect.boundingBox();
   const homeButtonBox = await homeButton.boundingBox();
   expect(languageSelectBox?.height).toBe(homeButtonBox?.height);
-  await languageSelect.selectOption('ru');
+  await languageSelect.click();
+  const englishOption = page.getByRole('option', { name: '🇬🇧 English' });
+  await expect(englishOption).toBeVisible();
+  const menuHasHorizontalOverflow = await englishOption.evaluate((element) => {
+    let parent = element.parentElement;
+    while (parent && parent !== document.body) {
+      if (parent.scrollWidth > parent.clientWidth) return true;
+      parent = parent.parentElement;
+    }
+    return false;
+  });
+  expect(menuHasHorizontalOverflow).toBe(false);
+  await page.getByRole('option', { name: '🇷🇺 Русский' }).click();
 
   await expectCookie(page.context(), 'ALT_SHIFT_LOCALE', 'ru');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
@@ -38,8 +49,9 @@ test('switches to Russian, persists the locale, and submits it for generation', 
   await page.getByRole('button', { name: 'Создать письмо' }).click();
 
   await expect.poll(() => generationRequestBody).toContain('"locale":"ru"');
-  const russianLanguageSelect = page.getByRole('combobox', { name: 'Язык' });
-  await expect(russianLanguageSelect).toHaveValue('ru');
-  await russianLanguageSelect.selectOption('en');
+  const russianLanguageSelect = page.getByRole('button', { name: 'Язык' });
+  await expect(russianLanguageSelect.getByText('🇷🇺', { exact: true })).toBeVisible();
+  await russianLanguageSelect.click();
+  await page.getByRole('option', { name: '🇬🇧 English' }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });

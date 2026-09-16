@@ -94,9 +94,7 @@ test('shows card placeholders while browser storage is initialized', async ({ pa
   );
   await page.addInitScript(() => {
     const observer = new MutationObserver(() => {
-      const loadingState = document.querySelector(
-        'output[aria-label="Loading applications…"]',
-      );
+      const loadingState = document.querySelector('output[aria-label="Loading applications…"]');
       if (!loadingState) return;
       const cards = loadingState.querySelectorAll('[data-testid="application-card-placeholder"]');
       const firstCard = cards.item(0);

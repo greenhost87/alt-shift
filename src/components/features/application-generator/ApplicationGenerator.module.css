@@ -66,6 +66,40 @@
   min-height: calc(var(--rs-unit-completed-panel-height) - var(--rs-unit-x12));
 }
 
+.storedPanel.storedPanel {
+  --rs-unit-workspace-secondary-available-height: calc(
+    100dvh - var(--rs-unit-page-top) - var(--rs-unit-brand-height) - var(--rs-unit-x8)
+  );
+  --rs-unit-workspace-secondary-height: var(--rs-unit-panel-height);
+  --rs-unit-workspace-secondary-max-height: min(
+    var(--rs-unit-workspace-secondary-height),
+    var(--rs-unit-workspace-secondary-available-height)
+  );
+
+  align-self: start;
+  box-sizing: border-box;
+  max-height: var(--rs-unit-workspace-secondary-max-height);
+  overflow: hidden;
+}
+
+.storedPanel .preview {
+  max-height: calc(var(--rs-unit-workspace-secondary-max-height) - var(--rs-unit-x12));
+  min-height: min(
+    calc(var(--rs-unit-completed-panel-height) - var(--rs-unit-x12)),
+    calc(var(--rs-unit-workspace-secondary-max-height) - var(--rs-unit-x12))
+  );
+}
+
+.storedPanel .letter {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.mobilePreviewAction {
+  display: none;
+}
+
 .previewAction {
   align-items: center;
   display: flex;
@@ -146,13 +180,32 @@
   .fieldRow {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .storedPanel.storedPanel {
+    --rs-unit-workspace-secondary-available-height: calc(
+      100dvh - var(--rs-unit-mobile-page-top) - var(--rs-unit-control-height) - var(--rs-unit-x3) -
+        var(--rs-unit-x6) - var(--rs-unit-x8)
+    );
+  }
 }
 
 @media (max-width: 899px) {
+  .storedPanel.storedPanel {
+    --rs-unit-workspace-secondary-height: var(--rs-unit-panel-height-mobile);
+  }
+
   .preview,
   .completedPreview,
   .loadingPreview {
     min-height: calc(var(--rs-unit-panel-height-mobile) - var(--rs-unit-x8));
+  }
+
+  .storedPanel .preview {
+    max-height: calc(var(--rs-unit-workspace-secondary-max-height) - var(--rs-unit-x8));
+    min-height: min(
+      calc(var(--rs-unit-panel-height-mobile) - var(--rs-unit-x8)),
+      calc(var(--rs-unit-workspace-secondary-max-height) - var(--rs-unit-x8))
+    );
   }
 }
 
@@ -164,6 +217,27 @@
   .editor,
   .form {
     gap: var(--rs-unit-x3);
+  }
+
+  .storedPanel.storedPanel {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .storedPanel .preview {
+    max-height: none;
+    min-height: calc(var(--rs-unit-panel-height-mobile) - var(--rs-unit-x8));
+  }
+
+  .storedPanel .letter {
+    flex: none;
+    overflow-y: visible;
+  }
+
+  .mobilePreviewAction {
+    align-items: center;
+    display: flex;
+    justify-content: flex-end;
   }
 }
 

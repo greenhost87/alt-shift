@@ -35,14 +35,14 @@ export function createApplicationFixtures(
   }));
 }
 
-export async function seedApplications(page: Page, count = 3) {
+export async function seedApplications(page: Page, count = 3, letterPrefix = 'Cover letter') {
   await page.addInitScript(
     ({ applications, key }) => {
       if (localStorage.getItem(key) === null) {
         localStorage.setItem(key, JSON.stringify({ version: 1, applications }));
       }
     },
-    { applications: createApplicationFixtures(count), key: APPLICATION_STORAGE_KEY },
+    { applications: createApplicationFixtures(count, letterPrefix), key: APPLICATION_STORAGE_KEY },
   );
 }
 

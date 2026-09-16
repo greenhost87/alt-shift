@@ -37,10 +37,10 @@
 }
 
 .languageSelect {
-  width: 136px;
+  width: 64px;
 }
 
-.languageSelect select {
+.languageSelect button {
   height: var(--rs-unit-control-height);
 }
 
@@ -138,11 +138,7 @@
     width: 128px;
   }
 
-  .languageSelect {
-    width: 64px;
-  }
-
-  .languageSelect select {
+  .languageSelect button {
     height: var(--rs-unit-button-height-medium);
   }
 

@@ -129,12 +129,14 @@ function renderApplicationPreview(
   letter: string,
   isCompleted: boolean,
   isGenerating: boolean,
+  isViewing: boolean,
   onCopy: () => Promise<boolean>,
 ) {
   const copyButton = <CopyButton onClick={onCopy} />;
   if (letter) {
     return (
       <div className={[styles['preview'], isCompleted ? styles['completedPreview'] : ''].join(' ')}>
+        {isViewing ? <div className={styles['mobilePreviewAction']}>{copyButton}</div> : null}
         <p className={[styles['letter'], typographyStyles['body']].join(' ')}>
           {letter}
           {isGenerating ? (
@@ -536,8 +538,10 @@ export function ApplicationWorkspace({
             displayedValues.letter,
             isCompleted,
             isGenerating,
+            isViewing,
             copyApplication,
           )}
+          secondaryClassName={isViewing ? styles['storedPanel'] : undefined}
         />
         <GoalBanner
           current={applicationCount}

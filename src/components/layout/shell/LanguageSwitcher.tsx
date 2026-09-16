@@ -8,6 +8,14 @@ type LanguageChange = {
   value: string;
 };
 
+type LanguageValue = {
+  value: string;
+};
+
+function renderLanguageValue({ value }: LanguageValue) {
+  return <span aria-label={m.language()}>{value === 'ru' ? '🇷🇺' : '🇬🇧'}</span>;
+}
+
 export function LanguageSwitcher() {
   const currentLocale = getLocale();
   const changeLanguage = ({ value }: LanguageChange) => {
@@ -22,11 +30,13 @@ export function LanguageSwitcher() {
       inputAttributes={{ 'aria-label': m.language() }}
       name="language"
       onChange={changeLanguage}
+      renderValue={renderLanguageValue}
       size="medium"
       value={currentLocale}
+      width="max-content"
     >
-      <option value="en">🇬🇧 English</option>
-      <option value="ru">🇷🇺 Русский</option>
+      <Select.Option value="en">🇬🇧 English</Select.Option>
+      <Select.Option value="ru">🇷🇺 Русский</Select.Option>
     </Select>
   );
 }

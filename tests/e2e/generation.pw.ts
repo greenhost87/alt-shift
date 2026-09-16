@@ -173,8 +173,10 @@ test('waiting state preserves Figma colors, geometry, and vertical orb motion', 
     for (const label of ['Job title', 'Company', 'I am good at...', 'Additional details']) {
       const field = page.getByLabel(label, { exact: true });
       await expect(field).toBeDisabled();
-      await expect(field).toHaveCSS('background-color', 'rgb(255, 255, 255)');
-      await expect(field).toHaveCSS('color', 'rgb(16, 24, 40)');
+      await expect(field).toHaveCSS('background-color', 'rgb(242, 244, 247)');
+      await expect(field).toHaveCSS('border-color', 'rgb(208, 213, 221)');
+      await expect(field).toHaveCSS('box-shadow', 'none');
+      await expect(field).toHaveCSS('color', 'rgb(152, 162, 179)');
     }
     await expect(page.getByLabel('Additional details')).toHaveCSS('height', '240px');
     const preview = page.getByLabel('Generating application');
