@@ -135,7 +135,16 @@ function renderApplicationPreview(
   if (letter) {
     return (
       <div className={[styles['preview'], isCompleted ? styles['completedPreview'] : ''].join(' ')}>
-        <p className={[styles['letter'], typographyStyles['body']].join(' ')}>{letter}</p>
+        <p className={[styles['letter'], typographyStyles['body']].join(' ')}>
+          {letter}
+          {isGenerating ? (
+            <span
+              aria-hidden="true"
+              className={styles['generationCaret']}
+              data-testid="generation-caret"
+            />
+          ) : null}
+        </p>
         <div className={styles['previewAction']}>{copyButton}</div>
       </div>
     );

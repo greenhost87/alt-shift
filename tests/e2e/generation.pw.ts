@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import generationFixtures from '../fixtures/generation.json' with { type: 'json' };
 import { expectApplicationProgress } from '../support/applications';
 import { rejectClipboardWrites } from '../support/clipboard';
@@ -138,6 +138,19 @@ async function holdGenerationStream(page: Page) {
   return releaseStream;
 }
 
+async function readAnimationFrames(locator: Locator) {
+  return locator.evaluate((element) =>
+    element.getAnimations().flatMap((animation) =>
+      animation.effect instanceof KeyframeEffect
+        ? animation.effect.getKeyframes().map((frame) => ({
+            opacity: frame['opacity'],
+            transform: frame['transform'],
+          }))
+        : [],
+    ),
+  );
+}
+
 test('waiting state preserves Figma colors, geometry, and vertical orb motion', async ({
   page,
 }) => {
@@ -168,16 +181,7 @@ test('waiting state preserves Figma colors, geometry, and vertical orb motion', 
     await expect(preview).toBeVisible();
     await expect(page.getByRole('button', { name: 'Copy to clipboard' })).toHaveCount(0);
     const orb = preview.locator(':scope > span');
-    const frames = await orb.evaluate((element) =>
-      element.getAnimations().flatMap((animation) =>
-        animation.effect instanceof KeyframeEffect
-          ? animation.effect.getKeyframes().map((frame) => ({
-              opacity: frame['opacity'],
-              transform: frame['transform'],
-            }))
-          : [],
-      ),
-    );
+    const frames = await readAnimationFrames(orb);
     expect(frames).toEqual([
       { opacity: '1', transform: 'translateY(0.5px)' },
       { opacity: '0.48', transform: 'translateY(-15.5px)' },
@@ -221,6 +225,12 @@ test('streams, saves, restores, and counts a completed application once', async 
   await expect(page.getByText('Dear Apple team,')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Generate Now, loading' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Cancel generation' })).toHaveCount(0);
+  const generationCaret = page.getByTestId('generation-caret');
+  await expect(generationCaret).toBeVisible();
+  const caretFrames = await readAnimationFrames(generationCaret);
+  expect(caretFrames.map((frame) => frame.opacity)).toEqual(['1', '0']);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(generationCaret).toHaveCSS('animation-name', 'none');
 
   releaseStream();
   await expectCompletedGeneration(page, STREAMED_LETTER);

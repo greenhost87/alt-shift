@@ -43,6 +43,16 @@
   white-space: pre-wrap;
 }
 
+.generationCaret {
+  animation: blink 800ms steps(1, end) infinite alternate;
+  background: currentcolor;
+  display: inline-block;
+  height: 1em;
+  margin-inline-start: 2px;
+  vertical-align: -0.1em;
+  width: 2px;
+}
+
 .error {
   color: var(--rs-color-foreground-critical);
 }
@@ -122,6 +132,16 @@
   }
 }
 
+@keyframes blink {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
 @media (--rs-viewport-s) {
   .fieldRow {
     grid-template-columns: minmax(0, 1fr);
@@ -148,7 +168,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .orb {
+  .orb,
+  .generationCaret {
     animation: none;
   }
 }
