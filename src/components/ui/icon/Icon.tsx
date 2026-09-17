@@ -22,6 +22,14 @@ export function Icon({ children, strokeWidth = 1.67, viewBox }: IconProps) {
   );
 }
 
+export function CloseIcon() {
+  return (
+    <Icon strokeWidth={2} viewBox="0 0 20 20">
+      <path d="M4 4l12 12M16 4 4 16" />
+    </Icon>
+  );
+}
+
 export function CopyIcon() {
   return (
     <Icon strokeWidth={1.66667} viewBox="0 0 20 20">

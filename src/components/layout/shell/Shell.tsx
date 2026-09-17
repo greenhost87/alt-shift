@@ -17,11 +17,17 @@ export function Shell({ children }: ShellProps) {
   const navigate = useNavigate();
   const applicationLimit = useApplicationStore((state) => state.config.applicationLimit);
   const applicationCount = useApplicationStore((state) => state.applicationCount);
+  const serverApplicationLimitReached = useApplicationStore(
+    (state) => state.serverApplicationLimitReached,
+  );
   const storageStatus = useApplicationStore((state) => state.storageStatus);
   const returnHome = () => {
     void navigate({ to: '/' });
   };
-  const { safeCurrent, safeTotal } = getProgressValues(applicationCount, applicationLimit);
+  const displayedApplicationCount = serverApplicationLimitReached
+    ? applicationLimit
+    : applicationCount;
+  const { safeCurrent, safeTotal } = getProgressValues(displayedApplicationCount, applicationLimit);
   const accessibleLabel = m.applications_generated_accessible({
     current: safeCurrent,
     total: safeTotal,

@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import * as m from '../../paraglide/messages.js';
 import { getBrowserCsrfToken, CSRF_HEADER } from '../security/session';
 import { getClientDeviceSignal } from './device-signal';
+import { createEventStreamCompletionTracker } from './event-stream';
 import type { GenerationRequest } from './schema';
 
 const generationDeltaSchema = v.strictObject({ text: v.string() });
@@ -46,6 +47,9 @@ export class GenerationError extends Error {
 
 function getGenerationErrorMessage(code: string) {
   if (code === 'rate_limited') return m.generation_rate_limited();
+  if (code === 'application_limit_reached') {
+    return m.generation_application_limit_reached();
+  }
   if (code === 'invalid_request') return m.generation_invalid_request();
   if (code === 'generation_unavailable' || code === 'upstream_error') {
     return m.generation_unavailable();
@@ -161,23 +165,6 @@ async function readWithAbort(reader: ReadableStreamDefaultReader<Uint8Array>, si
   });
 }
 
-function createCompletionTracker() {
-  let trailingFrame = '';
-  return {
-    feed(chunk: string) {
-      trailingFrame += chunk;
-      const boundaries = [...trailingFrame.matchAll(/(?:\r\n|\r|\n){2}/g)];
-      const lastBoundary = boundaries.at(-1);
-      if (lastBoundary?.index !== undefined) {
-        trailingFrame = trailingFrame.slice(lastBoundary.index + lastBoundary[0].length);
-      }
-    },
-    hasIncompleteEvent() {
-      return /(?:^|\r\n|\r|\n)(?:event|data):/.test(trailingFrame);
-    },
-  };
-}
-
 function parseDelta(data: string) {
   const parsed = v.safeParse(v.pipe(v.string(), v.parseJson(), generationDeltaSchema), data);
   if (!parsed.success) {
@@ -192,7 +179,7 @@ async function consumeEventStream(
   onDelta: (delta: string) => void,
 ) {
   const decoder = new TextDecoder();
-  const completion = createCompletionTracker();
+  const completion = createEventStreamCompletionTracker();
   const parser = createParser({
     onEvent(event) {
       if (event.event === 'delta') onDelta(parseDelta(event.data));

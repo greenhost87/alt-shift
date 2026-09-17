@@ -21,6 +21,7 @@ type FormActions = {
   isGenerating: boolean;
   newApplicationBlocked: boolean;
   submissionBlocked: boolean;
+  subscriptionRequired: boolean;
 };
 
 type ApplicationFormProps = {
@@ -34,6 +35,7 @@ type ApplicationFormProps = {
   onDetailsChange: (value: string) => void;
   onJobTitleChange: (value: string) => void;
   onStartNew: () => void;
+  onSubscribe: () => void;
   onStrengthsChange: (value: string) => void;
   onSubmit: () => void;
   retryMessage: string;
@@ -49,7 +51,14 @@ function renderAlert(message: string) {
   ) : null;
 }
 
-function renderFormAction(actions: FormActions) {
+function renderFormAction(actions: FormActions, onSubscribe: () => void) {
+  if (actions.subscriptionRequired) {
+    return (
+      <Button onClick={onSubscribe} size="large">
+        {m.subscribe()}
+      </Button>
+    );
+  }
   if (actions.isGenerating) {
     return (
       <Button disabled loading size="large" submit>
@@ -77,8 +86,14 @@ function renderFormAction(actions: FormActions) {
   );
 }
 
-function renderFormActionForMode(isViewing: boolean, actions: FormActions, onStartNew: () => void) {
-  if (!isViewing) return renderFormAction(actions);
+function renderFormActionForMode(
+  isViewing: boolean,
+  actions: FormActions,
+  onStartNew: () => void,
+  onSubscribe: () => void,
+) {
+  if (!isViewing) return renderFormAction(actions, onSubscribe);
+  if (actions.subscriptionRequired) return renderFormAction(actions, onSubscribe);
 
   return (
     <Button
@@ -104,6 +119,7 @@ export function ApplicationForm({
   onDetailsChange,
   onJobTitleChange,
   onStartNew,
+  onSubscribe,
   onStrengthsChange,
   onSubmit,
   retryMessage,
@@ -163,7 +179,7 @@ export function ApplicationForm({
         {renderAlert(copyError)}
         {retryMessage ? <p className={styles['rateLimit']}>{retryMessage}</p> : null}
         <div className={styles['action']}>
-          {renderFormActionForMode(isViewing, actions, onStartNew)}
+          {renderFormActionForMode(isViewing, actions, onStartNew, onSubscribe)}
         </div>
       </form>
     </div>

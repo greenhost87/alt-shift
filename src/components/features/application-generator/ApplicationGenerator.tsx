@@ -14,7 +14,7 @@ import { safeParseGenerationRequest } from '../../../system/generation/schema';
 import type { GenerationRequest } from '../../../system/generation/schema';
 import { Shell } from '../../layout/shell/Shell';
 import workspaceStyles from '../../layout/workspace/Workspace.module.css';
-import { GoalBanner } from '../../ui/banner/Banner';
+import { GoalBanner, SubscriptionModal } from '../../ui/banner/Banner';
 import { ApplicationForm } from './ApplicationForm';
 import type { ApplicationFormValues } from './ApplicationForm';
 import { ApplicationPreview } from './ApplicationPreview';
@@ -23,22 +23,25 @@ import styles from './ApplicationGenerator.module.css';
 
 const ACTIVE_PHASES: GenerationPhase[] = ['submitting', 'waiting-for-first-token', 'streaming'];
 
-type FailureOptions = {
-  controller: AbortController;
-  currentController: AbortController | null;
+type GenerationStatusActions = {
   setError: (message: string) => void;
   setPhase: (phase: GenerationPhase) => void;
   setRetryAvailableAt: (value: number | undefined) => void;
+  setServerApplicationLimitReached: (value: boolean) => void;
+};
+
+type FailureOptions = {
+  controller: AbortController;
+  currentController: AbortController | null;
+  status: GenerationStatusActions;
 };
 
 type SubmissionOptions = {
   abortController: { current: AbortController | null };
   addApplication: (application: NewStoredApplication) => boolean;
   generationEndpoint: string | undefined;
-  setError: (message: string) => void;
   setLetter: (letter: string) => void;
-  setPhase: (phase: GenerationPhase) => void;
-  setRetryAvailableAt: (value: number | undefined) => void;
+  status: GenerationStatusActions;
 };
 
 const generationErrorSchema = v.instance(Error);
@@ -46,11 +49,16 @@ const generationErrorSchema = v.instance(Error);
 function handleGenerationFailure(generationError: Error, options: FailureOptions) {
   if (options.currentController !== options.controller) return;
   if (options.controller.signal.aborted) return;
-  if (generationError instanceof GenerationError && generationError.code === 'rate_limited') {
-    options.setRetryAvailableAt(generationError.retryAfter);
+  if (generationError instanceof GenerationError) {
+    if (generationError.code === 'rate_limited') {
+      options.status.setRetryAvailableAt(generationError.retryAfter);
+    }
+    if (generationError.code === 'application_limit_reached') {
+      options.status.setServerApplicationLimitReached(true);
+    }
   }
-  options.setError(generationError.message);
-  options.setPhase('failed');
+  options.status.setError(generationError.message);
+  options.status.setPhase('failed');
 }
 
 async function submitApplication(request: GenerationRequest, options: SubmissionOptions) {
@@ -58,9 +66,9 @@ async function submitApplication(request: GenerationRequest, options: Submission
   options.abortController.current?.abort();
   options.abortController.current = controller;
   options.setLetter('');
-  options.setError('');
-  options.setRetryAvailableAt(undefined);
-  options.setPhase('submitting');
+  options.status.setError('');
+  options.status.setRetryAvailableAt(undefined);
+  options.status.setPhase('submitting');
   let generatedLetter = '';
 
   try {
@@ -69,14 +77,14 @@ async function submitApplication(request: GenerationRequest, options: Submission
       signal: controller.signal,
       onOpen() {
         if (options.abortController.current === controller) {
-          options.setPhase('waiting-for-first-token');
+          options.status.setPhase('waiting-for-first-token');
         }
       },
       onDelta(delta) {
         if (options.abortController.current !== controller) return;
         generatedLetter += delta;
         options.setLetter(generatedLetter);
-        options.setPhase('streaming');
+        options.status.setPhase('streaming');
       },
     });
 
@@ -93,11 +101,11 @@ async function submitApplication(request: GenerationRequest, options: Submission
       letter: generatedLetter,
     });
     if (!saved) {
-      options.setError(m.generation_storage_failed());
-      options.setPhase('failed');
+      options.status.setError(m.generation_storage_failed());
+      options.status.setPhase('failed');
       return;
     }
-    options.setPhase('completed');
+    options.status.setPhase('completed');
   } catch (generationError) {
     const parsedError = v.safeParse(generationErrorSchema, generationError);
     handleGenerationFailure(
@@ -105,9 +113,7 @@ async function submitApplication(request: GenerationRequest, options: Submission
       {
         controller,
         currentController: options.abortController.current,
-        setError: options.setError,
-        setPhase: options.setPhase,
-        setRetryAvailableAt: options.setRetryAvailableAt,
+        status: options.status,
       },
     );
   } finally {
@@ -177,6 +183,14 @@ function resolveWorkspaceValues(
   return generatorValues;
 }
 
+function isApplicationLimitReached(
+  applicationCount: number,
+  applicationLimit: number,
+  serverApplicationLimitReached: boolean,
+) {
+  return applicationCount >= applicationLimit || serverApplicationLimitReached;
+}
+
 function getFieldsDisabled(
   isViewing: boolean,
   isGenerating: boolean,
@@ -227,6 +241,11 @@ export function ApplicationWorkspace({
     setCopyError,
     retryAvailableAt,
     setRetryAvailableAt,
+    serverApplicationLimitReached,
+    setServerApplicationLimitReached,
+    subscriptionModalVisible,
+    showSubscriptionModal,
+    hideSubscriptionModal,
     addApplication,
     applicationCount,
     resetGenerator,
@@ -251,6 +270,11 @@ export function ApplicationWorkspace({
       setCopyError: state.setGeneratorCopyError,
       retryAvailableAt: state.retryAvailableAt,
       setRetryAvailableAt: state.setRetryAvailableAt,
+      serverApplicationLimitReached: state.serverApplicationLimitReached,
+      setServerApplicationLimitReached: state.setServerApplicationLimitReached,
+      subscriptionModalVisible: state.subscriptionModalVisible,
+      showSubscriptionModal: state.showSubscriptionModal,
+      hideSubscriptionModal: state.hideSubscriptionModal,
       addApplication: state.addApplication,
       applicationCount: state.applicationCount,
       resetGenerator: state.resetGenerator,
@@ -277,7 +301,11 @@ export function ApplicationWorkspace({
     fieldLimits,
   );
   const isGenerating = getIsGenerating(isViewing, phase);
-  const applicationLimitReached = applicationCount >= applicationLimit;
+  const applicationLimitReached = isApplicationLimitReached(
+    applicationCount,
+    applicationLimit,
+    serverApplicationLimitReached,
+  );
   const fieldsDisabled = getFieldsDisabled(isViewing, isGenerating, applicationLimitReached);
   const retryBlocked = isRetryBlocked(retryAvailableAt);
   const applicationTitle = getApplicationTitle(displayedValues.jobTitle, displayedValues.company);
@@ -313,10 +341,13 @@ export function ApplicationWorkspace({
         abortController,
         addApplication,
         generationEndpoint,
-        setError,
         setLetter,
-        setPhase,
-        setRetryAvailableAt,
+        status: {
+          setError,
+          setPhase,
+          setRetryAvailableAt,
+          setServerApplicationLimitReached,
+        },
       },
     );
   };
@@ -326,7 +357,7 @@ export function ApplicationWorkspace({
     if (isViewing) void navigate({ to: '/applications/new' });
   };
 
-  const canRetry = phase === 'failed';
+  const canRetry = phase === 'failed' && !applicationLimitReached;
   const isCompleted = getIsCompleted(isViewing, phase);
   const secondaryClasses = [
     workspaceStyles['secondary'],
@@ -345,6 +376,7 @@ export function ApplicationWorkspace({
                 isGenerating,
                 newApplicationBlocked: applicationLimitReached,
                 submissionBlocked,
+                subscriptionRequired: applicationLimitReached,
               }}
               copyError={copyError}
               error={error}
@@ -355,6 +387,7 @@ export function ApplicationWorkspace({
               onDetailsChange={setDetails}
               onJobTitleChange={setJobTitle}
               onStartNew={startNewApplication}
+              onSubscribe={showSubscriptionModal}
               onStrengthsChange={setStrengths}
               onSubmit={submit}
               retryMessage={retryBlocked ? m.generation_retry_unavailable() : ''}
@@ -401,6 +434,7 @@ export function ApplicationWorkspace({
           total={applicationLimit}
           visible={shouldShowGoalBanner(isViewing, isCompleted, applicationCount, applicationLimit)}
         />
+        <SubscriptionModal active={subscriptionModalVisible} onClose={hideSubscriptionModal} />
       </div>
     </Shell>
   );

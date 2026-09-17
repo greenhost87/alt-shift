@@ -5,6 +5,8 @@ import {
   getGenerationSystemPrompt,
 } from '../../src/server/config/application';
 import { getOptionalEnv, setEnv } from '../../src/server/config/environment';
+import { createApplicationGenerationLimiter } from '../../src/server/generation/application-limit';
+import { storeAnonymousSession } from '../../src/server/database/session/session.dao';
 import { getClientFingerprint } from '../../src/server/generation/client-fingerprint';
 import { requestGeneration } from '../../src/server/generation/client';
 import { handleGenerateRequest } from '../../src/server/generation/handler';
@@ -172,6 +174,62 @@ describe('generation server contract', () => {
     );
 
     expect(response.status).toBe(400);
+    expect(upstreamCalls).toBe(0);
+  });
+
+  test('atomically persists application generation slots for a session', () => {
+    const database = getTestDatabase();
+    storeAnonymousSession(
+      {
+        database,
+        id: 'session-a',
+        csrfTokenHash: 'csrf-hash',
+        expiresAtMs: 60_000,
+      },
+      0,
+    );
+    const firstLimit = createApplicationGenerationLimiter(
+      () => 0,
+      2,
+      () => database,
+    );
+    const secondLimit = createApplicationGenerationLimiter(
+      () => 0,
+      2,
+      () => database,
+    );
+
+    const firstReservation = firstLimit('session-a');
+    expect(firstReservation).toBeDefined();
+    expect(secondLimit('session-a')).toBeDefined();
+    expect(firstLimit('session-a')).toBeUndefined();
+
+    firstReservation?.release();
+    expect(firstLimit('session-a')).toBeDefined();
+  });
+
+  test('rejects generation after the server application limit is reached', async () => {
+    let upstreamCalls = 0;
+    const response = await handleGenerateRequest(
+      new Request('http://localhost/api/generate', {
+        method: 'POST',
+        headers: {
+          [VERIFIED_SESSION_HEADER]: 'session-a',
+          'x-client-device-signals': 'a'.repeat(64),
+        },
+        body: JSON.stringify(input),
+      }),
+      async () => {
+        upstreamCalls += 1;
+        await sleep(0);
+        return new Response();
+      },
+      () => undefined,
+      () => undefined,
+    );
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual(generationFixtures.applicationLimitError);
     expect(upstreamCalls).toBe(0);
   });
 

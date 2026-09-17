@@ -7,6 +7,7 @@ import {
   expectApplicationProgress,
   expectBlankGenerator,
   expectGoalBannerHidden,
+  openSubscriptionModal,
   seedApplications,
   storeApplications,
 } from '../support/applications';
@@ -44,6 +45,11 @@ async function expectStorageWarningOnApplicationPage(page: Page, message: string
   await page.goto('/applications/00000000-0000-4000-8000-000000000001');
   await expect(page.getByRole('alert')).toContainText(message);
   await expect(page.getByRole('heading', { name: 'Page not found' })).toHaveCount(0);
+}
+
+async function expectSubscriptionRequired(page: Page) {
+  await expectApplicationFields(page, 'disabled');
+  await expect(page.getByRole('button', { name: 'Subscribe' })).toBeEnabled();
 }
 
 test('fresh browser storage starts with an empty dashboard', async ({ page }) => {
@@ -273,7 +279,7 @@ test('restores valid versioned applications created in the browser', async ({ pa
   await expect(page).toHaveURL(/\/applications\/new$/);
 });
 
-test('hides the goal banner after restoring five applications', async ({ page }) => {
+test('offers a subscription after restoring five applications', async ({ page }) => {
   const applications = createApplicationFixtures(5, 'Persisted cover letter');
 
   await storeApplications(page, applications, 'init');
@@ -282,6 +288,10 @@ test('hides the goal banner after restoring five applications', async ({ page })
 
   await expectGoalBannerHidden(page, 5);
   await expect(page.locator('header').getByRole('progressbar')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Create New' })).toHaveCount(0);
+  const subscriptionModal = await openSubscriptionModal(page);
+  await subscriptionModal.getByRole('button', { name: 'Close' }).click();
+  await expect(subscriptionModal).toBeHidden();
 });
 
 test('blocks application forms after all attempts are used', async ({ page }) => {
@@ -289,13 +299,11 @@ test('blocks application forms after all attempts are used', async ({ page }) =>
 
   await page.goto('/applications/new', { waitUntil: 'networkidle' });
 
-  await expectApplicationFields(page, 'disabled');
-  await expect(page.getByRole('button', { name: 'Generate Now' })).toBeDisabled();
+  await expectSubscriptionRequired(page);
 
   await page.goto('/applications/00000000-0000-4000-8000-000000000005');
 
-  await expectApplicationFields(page, 'disabled');
-  await expect(page.getByRole('button', { name: 'Try Again' })).toBeDisabled();
+  await expectSubscriptionRequired(page);
 });
 
 test('server-renders a loading status for a stored-application link', async ({ request }) => {

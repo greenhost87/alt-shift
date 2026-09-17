@@ -89,6 +89,16 @@ src/
 
 The implementation plan and technical boundaries are documented in [`documents/architecture.md`](documents/architecture.md). The original assignment is available in [`documents/task.md`](documents/task.md).
 
+## Generation API specification drift
+
+Testing the live Generation API revealed these differences from its published specification:
+
+- A successful stream starts with the SSE comment `: keepalive`, which is not shown in the documented response format.
+- After the last `delta`, the service emits an unnamed SSE event with `data: [DONE]` before closing the connection. The specification says there is no separate completion event.
+- The service accepted both an unknown JSON field and `maxTokens: 1501`. The latter only proves that an over-limit value is not rejected; a short response cannot establish whether the service still clamps generated output to 1,500 tokens.
+
+The integration remains deliberately strict when sending requests: it emits only `system`, `prompt`, and `maxTokens`, with a default of 1,500 tokens. Its SSE parser processes only named `delta` events, so it safely ignores both the keepalive comment and the undocumented `[DONE]` event while still requiring the stream to close cleanly.
+
 ## Product direction
 
 The application:

@@ -8,6 +8,7 @@ import {
   seedApplications,
   submitApplicationForm,
 } from '../support/applications';
+import { openDeletionDialog } from '../support/dialog';
 
 async function expectFakeLetter(page: Page) {
   await expect(page.getByText('no LLM request was made', { exact: false })).toBeVisible();
@@ -68,14 +69,20 @@ test('disables generation after creating the fifth application', async ({ page }
   await seedApplications(page, 4);
   await generateFakeApplication(page);
 
-  await expect(page.getByText('5/5 applications generated')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Try Again' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Subscribe' })).toBeEnabled();
 
   await page.locator('form').evaluate((form: HTMLFormElement) => {
     form.requestSubmit();
   });
   await page.getByRole('button', { name: 'Home' }).click();
   await expectApplicationProgress(page, 5);
+
+  const dialog = await openDeletionDialog(page);
+  await dialog.getByRole('button', { name: 'Confirm deletion' }).click();
+  await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(4);
+  await expect(page.getByText('5/5 applications generated')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create New' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Subscribe' })).toBeEnabled();
 });
 
 test('starts a blank application from the completed goal banner', async ({ page }) => {

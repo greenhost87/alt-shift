@@ -3,11 +3,12 @@ import { useShallow } from 'zustand/react/shallow';
 import * as m from '../../../paraglide/messages.js';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
 import { StorageStatusMessage } from '../../layout/storage-status/StorageStatus';
-import { GoalBanner } from '../../ui/banner/Banner';
+import { GoalBanner, SubscriptionModal } from '../../ui/banner/Banner';
+import { Button } from '../../ui/button/Button';
 import { ConfirmationDialog } from '../../ui/confirmation/ConfirmationDialog';
 import { CreateButton } from '../../ui/button/CreateButton';
+import { Icon } from '../../ui/icon/Icon';
 import { ApplicationCard, ApplicationCardPlaceholder } from './ApplicationCard';
-import { ApplicationsEmptyState } from './ApplicationsEmptyState';
 import { writeClipboardText } from '../../../system/clipboard/write';
 import { useApplicationStore } from '../../../system/state/application';
 import type { StorageStatus } from '../../../system/state/application-store';
@@ -39,17 +40,39 @@ function shouldShowApplications(status: StorageStatus, applicationCount: number)
   return status !== 'loading' && applicationCount > 0;
 }
 
+function renderCreateAction(
+  creationBlocked: boolean,
+  onCreate: () => void,
+  onSubscribe: () => void,
+) {
+  if (creationBlocked) return <Button onClick={onSubscribe}>{m.subscribe()}</Button>;
+  return <CreateButton label={m.create_new()} onClick={onCreate} />;
+}
+
 export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) {
-  const { applicationLimit, applications, applicationCount, copyFeedbackTimeoutMs, storageStatus } =
-    useApplicationStore(
-      useShallow((state) => ({
-        applicationLimit: state.config.applicationLimit,
-        applications: state.applications,
-        applicationCount: state.applicationCount,
-        copyFeedbackTimeoutMs: state.config.copyFeedbackTimeoutMs,
-        storageStatus: state.storageStatus,
-      })),
-    );
+  const {
+    applicationLimit,
+    applications,
+    applicationCount,
+    copyFeedbackTimeoutMs,
+    serverApplicationLimitReached,
+    storageStatus,
+    subscriptionModalVisible,
+    showSubscriptionModal,
+    hideSubscriptionModal,
+  } = useApplicationStore(
+    useShallow((state) => ({
+      applicationLimit: state.config.applicationLimit,
+      applications: state.applications,
+      applicationCount: state.applicationCount,
+      copyFeedbackTimeoutMs: state.config.copyFeedbackTimeoutMs,
+      serverApplicationLimitReached: state.serverApplicationLimitReached,
+      storageStatus: state.storageStatus,
+      subscriptionModalVisible: state.subscriptionModalVisible,
+      showSubscriptionModal: state.showSubscriptionModal,
+      hideSubscriptionModal: state.hideSubscriptionModal,
+    })),
+  );
   const deleteApplication = useApplicationStore((state) => state.deleteApplication);
   const copyError = useApplicationStore((state) => state.dashboardCopyError);
   const setCopyError = useApplicationStore((state) => state.setDashboardCopyError);
@@ -57,6 +80,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
   const setPendingDeletion = useApplicationStore((state) => state.setPendingDeletion);
   const resetDashboard = useApplicationStore((state) => state.resetDashboard);
   useEffect(() => resetDashboard, [resetDashboard]);
+  const creationBlocked = applicationCount >= applicationLimit || serverApplicationLimitReached;
   const copyApplication = async (letter: string) => {
     const error = await writeClipboardText(letter);
     setCopyError(error);
@@ -79,7 +103,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
       />
       <section className={styles['applications']}>
         <SectionHeader
-          action={<CreateButton label={m.create_new()} onClick={onCreate} />}
+          action={renderCreateAction(creationBlocked, onCreate, showSubscriptionModal)}
           title={m.applications()}
         />
         <StorageStatusMessage status={storageStatus} />
@@ -90,7 +114,27 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
           </p>
         ) : null}
         {shouldShowEmptyState(storageStatus, applicationCount) ? (
-          <ApplicationsEmptyState onCreate={onCreate} />
+          <div className={styles['emptyState']}>
+            <div aria-hidden="true" className={styles['visual']}>
+              <Icon viewBox="0 0 64 64" strokeWidth={2}>
+                <rect x="16" y="6" width="32" height="44" rx="4" />
+                <path d="M24 17h16M24 25h16M24 33h8" />
+                <path d="M8 30v24a4 4 0 0 0 4 4h40a4 4 0 0 0 4-4V30L32 46Z" />
+              </Icon>
+            </div>
+            <div className={styles['copy']}>
+              <h2 className={styles['title']}>{m.no_applications_yet()}</h2>
+              <p className={styles['description']}>{m.empty_applications_description()}</p>
+            </div>
+            <div className={styles['action']}>
+              <CreateButton
+                disabled={creationBlocked}
+                label={m.create_first_application()}
+                onClick={onCreate}
+                prominent
+              />
+            </div>
+          </div>
         ) : null}
         {shouldShowApplications(storageStatus, applicationCount) ? (
           <div className={styles['cardGrid']}>
@@ -106,7 +150,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
           </div>
         ) : null}
       </section>
-      {applicationCount < applicationLimit ? (
+      {!creationBlocked ? (
         <GoalBanner
           current={applicationCount}
           description={m.goal_description()}
@@ -114,6 +158,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
           total={applicationLimit}
         />
       ) : null}
+      <SubscriptionModal active={subscriptionModalVisible} onClose={hideSubscriptionModal} />
     </div>
   );
 }

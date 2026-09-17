@@ -40,6 +40,7 @@
   "copied": "Скопировано!",
   "copy_to_clipboard": "Скопировать",
   "cancel": "Отмена",
+  "close": "Закрыть",
   "confirm_deletion": "Удалить",
   "clipboard_copy_failed": "Не удалось скопировать письмо. Попробуйте ещё раз.",
   "generation_stream_unavailable": "Поток генерации недоступен.",
@@ -48,6 +49,10 @@
   "generation_stream_incomplete": "Поток генерации завершился до получения последнего события.",
   "generation_timeout": "Сервис не ответил в течение {seconds} секунд. Попробуйте ещё раз.",
   "generation_rate_limited": "Слишком много запросов на генерацию. Попробуйте позже.",
+  "generation_application_limit_reached": "Вы достигли лимита генерации сопроводительных писем.",
+  "subscribe": "Оформить подписку",
+  "subscription_banner_title": "Откройте безлимитную генерацию",
+  "subscription_banner_description": "Оформите подписку, чтобы создавать персональные сопроводительные письма без ограничений.",
   "generation_invalid_request": "Заполните все поля, не превышая ограничения.",
   "generation_unavailable": "Сервис генерации недоступен."
 }

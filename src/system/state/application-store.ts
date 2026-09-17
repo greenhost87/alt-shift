@@ -39,6 +39,8 @@ export type ApplicationState = {
   generationError: string;
   generatorCopyError: string;
   retryAvailableAt: number | undefined;
+  serverApplicationLimitReached: boolean;
+  subscriptionModalVisible: boolean;
   dashboardCopyError: string;
   pendingDeletion: string | null;
   refreshApplications: () => void;
@@ -53,6 +55,9 @@ export type ApplicationState = {
   setGenerationError: (message: string) => void;
   setGeneratorCopyError: (message: string) => void;
   setRetryAvailableAt: (value: number | undefined) => void;
+  setServerApplicationLimitReached: (value: boolean) => void;
+  showSubscriptionModal: () => void;
+  hideSubscriptionModal: () => void;
   resetGenerator: () => void;
   setDashboardCopyError: (message: string) => void;
   setPendingDeletion: (id: string | null) => void;
@@ -98,74 +103,97 @@ export function createApplicationStore(
     });
   };
 
-  return createStore<ApplicationState>()((set) => ({
-    config,
-    applications: [],
-    applicationCount: initialApplicationCount,
-    storageStatus: 'loading',
-    ...getInitialGeneratorState(config),
-    dashboardCopyError: '',
-    pendingDeletion: null,
-    refreshApplications() {
-      setApplications(set, readApplications(config.storage));
-    },
-    addApplication(application) {
-      if (
-        ![
-          application.company,
-          application.role,
-          application.strengths,
-          application.details,
-          application.letter,
-        ].every((value) => value.trim())
-      ) {
-        return false;
-      }
-      const nextState = persistApplication(application, config.applicationLimit, config.storage);
+  return createStore<ApplicationState>()((set) => {
+    const synchronizeApplications = (nextState: {
+      applications: StoredApplication[];
+      status: StorageStatus;
+    }) => {
       setApplications(set, nextState);
-      return nextState.added;
-    },
-    deleteApplication(id) {
-      setApplications(set, removePersistedApplication(id, config.storage));
-    },
-    setJobTitle(jobTitle) {
-      set({ jobTitle });
-    },
-    setCompany(company) {
-      set({ company });
-    },
-    setStrengths(strengths) {
-      set({ strengths });
-    },
-    setDetails(details) {
-      set({ details });
-    },
-    setGenerationPhase(generationPhase) {
-      set({ generationPhase });
-    },
-    setLetter(letter) {
-      set({ letter });
-    },
-    setGenerationError(generationError) {
-      set({ generationError });
-    },
-    setGeneratorCopyError(generatorCopyError) {
-      set({ generatorCopyError });
-    },
-    setRetryAvailableAt(retryAvailableAt) {
-      set({ retryAvailableAt });
-    },
-    resetGenerator() {
-      set(getInitialGeneratorState(config));
-    },
-    setDashboardCopyError(dashboardCopyError) {
-      set({ dashboardCopyError });
-    },
-    setPendingDeletion(pendingDeletion) {
-      set({ pendingDeletion });
-    },
-    resetDashboard() {
-      set({ dashboardCopyError: '', pendingDeletion: null });
-    },
-  }));
+      if (nextState.applications.length >= config.applicationLimit) {
+        set({ serverApplicationLimitReached: true });
+      }
+    };
+
+    return {
+      config,
+      applications: [],
+      applicationCount: initialApplicationCount,
+      storageStatus: 'loading',
+      ...getInitialGeneratorState(config),
+      serverApplicationLimitReached: initialApplicationCount >= config.applicationLimit,
+      subscriptionModalVisible: false,
+      dashboardCopyError: '',
+      pendingDeletion: null,
+      refreshApplications() {
+        synchronizeApplications(readApplications(config.storage));
+      },
+      addApplication(application) {
+        if (
+          ![
+            application.company,
+            application.role,
+            application.strengths,
+            application.details,
+            application.letter,
+          ].every((value) => value.trim())
+        ) {
+          return false;
+        }
+        const nextState = persistApplication(application, config.applicationLimit, config.storage);
+        synchronizeApplications(nextState);
+        return nextState.added;
+      },
+      deleteApplication(id) {
+        synchronizeApplications(removePersistedApplication(id, config.storage));
+      },
+      setJobTitle(jobTitle) {
+        set({ jobTitle });
+      },
+      setCompany(company) {
+        set({ company });
+      },
+      setStrengths(strengths) {
+        set({ strengths });
+      },
+      setDetails(details) {
+        set({ details });
+      },
+      setGenerationPhase(generationPhase) {
+        set({ generationPhase });
+      },
+      setLetter(letter) {
+        set({ letter });
+      },
+      setGenerationError(generationError) {
+        set({ generationError });
+      },
+      setGeneratorCopyError(generatorCopyError) {
+        set({ generatorCopyError });
+      },
+      setRetryAvailableAt(retryAvailableAt) {
+        set({ retryAvailableAt });
+      },
+      setServerApplicationLimitReached(serverApplicationLimitReached) {
+        set({ serverApplicationLimitReached });
+      },
+      showSubscriptionModal() {
+        set({ subscriptionModalVisible: true });
+      },
+      hideSubscriptionModal() {
+        set({ subscriptionModalVisible: false });
+      },
+      resetGenerator() {
+        set(getInitialGeneratorState(config));
+      },
+      setDashboardCopyError(dashboardCopyError) {
+        set({ dashboardCopyError });
+      },
+      setPendingDeletion(pendingDeletion) {
+        set({ pendingDeletion });
+      },
+      resetDashboard() {
+        set({ dashboardCopyError: '', pendingDeletion: null });
+      },
+    };
+  });
 }

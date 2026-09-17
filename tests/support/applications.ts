@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 export const APPLICATION_STORAGE_KEY = 'variant-cover-letters:v1';
 
@@ -86,6 +86,15 @@ export async function navigateHome(page: Page) {
   await brand.focus();
   await brand.press('Enter');
   await expect(page).toHaveURL('/');
+}
+
+export async function openSubscriptionModal(page: Page): Promise<Locator> {
+  const subscribe = page.getByRole('button', { name: 'Subscribe' });
+  await expect(subscribe).toBeEnabled();
+  await subscribe.click();
+  const modal = page.getByRole('dialog', { name: 'Unlock unlimited applications' });
+  await expect(modal).toBeVisible();
+  return modal;
 }
 
 export async function expectApplicationProgress(page: Page, applicationCount: number) {

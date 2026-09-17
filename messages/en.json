@@ -40,6 +40,7 @@
   "copied": "Copied!",
   "copy_to_clipboard": "Copy to clipboard",
   "cancel": "Cancel",
+  "close": "Close",
   "confirm_deletion": "Confirm deletion",
   "clipboard_copy_failed": "The application could not be copied to the clipboard. Please try again.",
   "generation_stream_unavailable": "The generation stream was unavailable.",
@@ -48,6 +49,10 @@
   "generation_stream_incomplete": "The generation stream ended before the final event completed.",
   "generation_timeout": "Generation timed out after {seconds} seconds without a response. Please try again.",
   "generation_rate_limited": "Too many generation requests. Please try again later.",
+  "generation_application_limit_reached": "You have reached the application generation limit.",
+  "subscribe": "Subscribe",
+  "subscription_banner_title": "Unlock unlimited applications",
+  "subscription_banner_description": "Subscribe to keep generating tailored cover letters whenever you need them.",
   "generation_invalid_request": "Please complete all fields within their limits.",
   "generation_unavailable": "The generation service is unavailable."
 }

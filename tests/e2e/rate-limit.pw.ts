@@ -17,9 +17,11 @@ async function requestGeneration(
   page: Page,
   includeCsrf: boolean,
   deviceSignal: string | null = TEST_DEVICE_SIGNAL,
+  endpoint = '/api/generate',
+  consumeSuccessfulResponse = false,
 ) {
   return page.evaluate(
-    async ({ requestInput, sendCsrf, signal }) => {
+    async ({ consumeResponse, requestInput, sendCsrf, signal, generationEndpoint }) => {
       const headers = new Headers({ 'content-type': 'application/json' });
       if (signal !== null) headers.set('x-client-device-signals', signal);
       if (sendCsrf) {
@@ -31,14 +33,17 @@ async function requestGeneration(
         controller.abort();
       }, 2_000);
       try {
-        const response = await fetch('/api/generate', {
+        const response = await fetch(generationEndpoint, {
           method: 'POST',
           headers,
           body: JSON.stringify(requestInput),
           signal: controller.signal,
         });
         const body = response.status === 429 ? await response.text() : '';
-        if (response.status !== 429) await response.body?.cancel();
+        if (response.status !== 429) {
+          if (consumeResponse) await response.text();
+          else await response.body?.cancel();
+        }
         return {
           body,
           retryAfter: response.headers.get('retry-after'),
@@ -50,7 +55,13 @@ async function requestGeneration(
         window.clearTimeout(timeout);
       }
     },
-    { requestInput: input, sendCsrf: includeCsrf, signal: deviceSignal },
+    {
+      consumeResponse: consumeSuccessfulResponse,
+      requestInput: input,
+      sendCsrf: includeCsrf,
+      signal: deviceSignal,
+      generationEndpoint: endpoint,
+    },
   );
 }
 
@@ -75,6 +86,28 @@ test('sends browser device signals through the production generation path', asyn
   await page.goto('/');
 
   expect((await requestGeneration(page, true, null)).status).toBe(400);
+});
+
+test('releases failed streams and enforces the application limit', async ({ page }) => {
+  await page.goto('/');
+  const interrupted = await requestGeneration(
+    page,
+    true,
+    'b'.repeat(64),
+    '/fake?incomplete=1',
+    true,
+  );
+  expect(interrupted.status).toBe(0);
+
+  const signals = ['c', 'c', 'd', 'd', 'e'].map((value) => value.repeat(64));
+  for (const signal of signals) {
+    const response = await requestGeneration(page, true, signal, '/fake', true);
+    expect(response.status).toBe(200);
+  }
+
+  const limited = await requestGeneration(page, true, 'f'.repeat(64), '/fake');
+  expect(limited.status).toBe(429);
+  expect(JSON.parse(limited.body)).toEqual(generationFixtures.applicationLimitError);
 });
 
 test('protects generation across anonymous session rotation', async ({ page }) => {

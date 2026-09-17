@@ -19,6 +19,7 @@
   "firstServerStream": "event: delta\ndata: {\"text\":\"First\"}\n\n",
   "secondServerStream": "event: delta\ndata: {\"text\":\"second\"}\n\n",
   "helloServerStream": "event: delta\ndata: {\"text\":\"Hello\"}\n\n",
+  "incompleteServerStream": "event: delta\ndata: {\"text\":\"partial\"}",
   "invalidJsonError": {
     "error": { "code": "invalid_request", "message": "The request body must be valid JSON." }
   },
@@ -32,6 +33,12 @@
     "error": {
       "code": "rate_limited",
       "message": "Too many generation requests. Please try again later."
+    }
+  },
+  "applicationLimitError": {
+    "error": {
+      "code": "application_limit_reached",
+      "message": "The application generation limit has been reached."
     }
   },
   "unavailableError": {

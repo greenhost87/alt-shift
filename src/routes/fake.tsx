@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { ApplicationWorkspace } from '../components/features/application-generator/ApplicationGenerator';
+import { handleGenerateRequest } from '../server/generation/handler';
 
 const FAKE_LETTER = `Dear Hiring Team,
 
@@ -9,8 +10,9 @@ My experience and strengths would allow me to contribute effectively to the team
 
 Thank you for considering my application.`;
 
-function createFakeGenerationResponse() {
-  const event = `event: delta\ndata: ${JSON.stringify({ text: FAKE_LETTER })}\n\n`;
+function createFakeGenerationResponse(incomplete: boolean) {
+  const completeEvent = `event: delta\ndata: ${JSON.stringify({ text: FAKE_LETTER })}\n\n`;
+  const event = incomplete ? completeEvent.slice(0, -2) : completeEvent;
   return new Response(event, {
     headers: {
       'cache-control': 'no-cache, no-store',
@@ -24,7 +26,18 @@ export const Route = createFileRoute('/fake')({
   component: FakeApplicationGeneratorPage,
   server: {
     handlers: {
-      POST: () => createFakeGenerationResponse(),
+      POST: async ({ request }) => {
+        const response = await handleGenerateRequest(
+          request,
+          async () => {
+            const incomplete = new URL(request.url).searchParams.has('incomplete');
+            const generated = await Promise.resolve(createFakeGenerationResponse(incomplete));
+            return generated;
+          },
+          () => undefined,
+        );
+        return response;
+      },
     },
   },
 });

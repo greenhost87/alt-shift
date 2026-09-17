@@ -1,14 +1,17 @@
 import * as v from 'valibot';
 import { getGenerationFieldLimits } from '../config/application';
+import { createEventStreamCompletionTracker } from '../../system/generation/event-stream';
 import { createGenerationRequestSchema } from '../../system/generation/schema';
 import { getClientFingerprint, hasValidClientDeviceSignal } from './client-fingerprint';
+import { createApplicationGenerationLimiter } from './application-limit';
 import { GenerationRequestError, requestGeneration } from './client';
 import { getGenerationInactivityTimeoutMs } from './config';
 import { createGenerationRateLimiter } from './rate-limit';
 import { VERIFIED_SESSION_HEADER } from '../../system/security/session';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
-const takeGenerationSlot = createGenerationRateLimiter();
+const takeApplicationGenerationSlot = createApplicationGenerationLimiter();
+const takeGenerationRateLimitSlot = createGenerationRateLimiter();
 const upstreamErrorSchema = v.strictObject({
   error: v.strictObject({
     code: v.string(),
@@ -20,6 +23,10 @@ type NormalizedError = {
   status: number;
   code: string;
   message: string;
+};
+
+type ApplicationGenerationReservation = {
+  release: () => void;
 };
 
 function errorResponse(
@@ -99,10 +106,63 @@ async function createUpstreamErrorResponse(upstream: Response) {
   return errorResponse(error.status, error.code, error.message, getDiagnosticHeaders(upstream));
 }
 
+function createReservedGenerationStream(
+  upstreamBody: ReadableStream<Uint8Array>,
+  reservation: ApplicationGenerationReservation,
+) {
+  const reader = upstreamBody.getReader();
+  const decoder = new TextDecoder();
+  const completion = createEventStreamCompletionTracker();
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    reservation.release();
+  };
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        const chunk = decoder.decode(value, { stream: !done });
+        completion.feed(chunk);
+        if (done) {
+          if (completion.hasIncompleteEvent()) {
+            release();
+            controller.error(new Error('The generation stream ended with an incomplete event.'));
+            return;
+          }
+          controller.close();
+          return;
+        }
+        controller.enqueue(value);
+      } catch {
+        release();
+        controller.error(new Error('The generation stream failed.'));
+      }
+    },
+    async cancel() {
+      release();
+      await reader.cancel();
+    },
+  });
+}
+
+function reserveGenerationStream(
+  upstreamBody: ReadableStream<Uint8Array>,
+  reservation: ApplicationGenerationReservation | undefined,
+) {
+  if (reservation === undefined) return upstreamBody;
+  return createReservedGenerationStream(upstreamBody, reservation);
+}
+
 export async function handleGenerateRequest(
   request: Request,
   generate: typeof requestGeneration = requestGeneration,
-  rateLimit: (clientFingerprint: string) => number | undefined = takeGenerationSlot,
+  rateLimit: (clientFingerprint: string) => number | undefined = takeGenerationRateLimitSlot,
+  applicationLimit: (
+    sessionId: string,
+  ) => ApplicationGenerationReservation | undefined = takeApplicationGenerationSlot,
 ) {
   const parsed = v.safeParse(
     v.pipe(v.string(), v.parseJson(), createGenerationRequestSchema(getGenerationFieldLimits())),
@@ -123,7 +183,8 @@ export async function handleGenerateRequest(
     return errorResponse(400, 'invalid_client_signal', 'Client device signal rejected.');
   }
 
-  const retryAfter = rateLimit(getClientFingerprint(request));
+  const clientFingerprint = getClientFingerprint(request);
+  const retryAfter = rateLimit(clientFingerprint);
   if (retryAfter !== undefined) {
     return errorResponse(
       429,
@@ -133,22 +194,37 @@ export async function handleGenerateRequest(
     );
   }
 
+  const sessionId = request.headers.get(VERIFIED_SESSION_HEADER);
+  const reservation = sessionId === null ? undefined : applicationLimit(sessionId);
+  if (sessionId !== null && reservation === undefined) {
+    return errorResponse(
+      429,
+      'application_limit_reached',
+      'The application generation limit has been reached.',
+    );
+  }
+
   let upstream: Response;
   try {
     upstream = await generate(parsed.output, { signal: request.signal });
   } catch (error) {
+    reservation?.release();
     if (error instanceof GenerationRequestError) {
       return errorResponse(400, 'invalid_request', error.message);
     }
     return errorResponse(502, 'generation_unavailable', 'The generation service is unavailable.');
   }
 
-  if (!upstream.ok) return createUpstreamErrorResponse(upstream);
+  if (!upstream.ok) {
+    reservation?.release();
+    return createUpstreamErrorResponse(upstream);
+  }
 
   if (
     !upstream.body ||
     !upstream.headers.get('content-type')?.toLowerCase().includes('text/event-stream')
   ) {
+    reservation?.release();
     return errorResponse(
       502,
       'invalid_stream',
@@ -157,7 +233,7 @@ export async function handleGenerateRequest(
     );
   }
 
-  return new Response(upstream.body, {
+  return new Response(reserveGenerationStream(upstream.body, reservation), {
     status: 200,
     headers: {
       'cache-control': 'no-cache, no-store',
