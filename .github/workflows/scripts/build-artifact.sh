@@ -39,7 +39,7 @@ main() {
   bun run i18n:compile
   bunx oxfmt --check .
   bunx tsc --noEmit
-  bun test
+  bun run test
   bun run build
 
   require_dir dist/client
