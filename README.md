@@ -93,8 +93,6 @@ src/
 └── themes/variant/  # Generated Reshaped theme
 ```
 
-The implementation plan and technical boundaries are documented in [`documents/architecture.md`](documents/architecture.md). The original assignment is available in [`documents/task.md`](documents/task.md).
-
 ## Generation API specification drift
 
 Testing the live Generation API revealed these differences from its published specification:

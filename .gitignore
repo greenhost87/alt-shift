@@ -28,6 +28,9 @@ playwright/.cache/
 .aqg/
 *.log
 
+# Removed project documentation
+/documents/
+
 # Editors and operating systems
 .DS_Store
 .idea/
