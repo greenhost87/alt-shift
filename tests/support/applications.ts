@@ -81,6 +81,11 @@ export async function submitApplicationForm(page: Page, path: string) {
   await page.getByRole('button', { name: 'Generate Now' }).click();
 }
 
+export async function openDashboardAndExpectProgress(page: Page, applicationCount: number) {
+  await page.getByRole('link', { name: 'Home' }).click();
+  await expectApplicationProgress(page, applicationCount);
+}
+
 export async function navigateHome(page: Page) {
   const home = page.getByRole('link', { name: 'Home' });
   await home.focus();

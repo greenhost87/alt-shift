@@ -5,6 +5,7 @@ import {
   expectApplicationProgress,
   expectBlankGenerator,
   expectGoalBannerHidden,
+  openDashboardAndExpectProgress,
   seedApplications,
   submitApplicationForm,
 } from '../support/applications';
@@ -32,8 +33,7 @@ test('generates, saves, and synchronizes a local result without requesting the L
   await generateFakeApplication(page);
   expect(llmRequestCount).toBe(0);
   await expectApplicationProgress(dashboardPage, 1);
-  await page.getByRole('link', { name: 'Home' }).click();
-  await expectApplicationProgress(page, 1);
+  await openDashboardAndExpectProgress(page, 1);
 });
 
 test('requires every field, submits with the keyboard, and generates again', async ({ page }) => {

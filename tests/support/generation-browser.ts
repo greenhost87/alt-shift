@@ -16,6 +16,13 @@ declare global {
   }
 }
 
+export async function installCopyableGenerationResponse(page: Page) {
+  await page.addInitScript(() => {
+    window.respondToGeneration = () =>
+      window.generationResponse(window.generationFixtures.copyableStream);
+  });
+}
+
 export async function installGenerationBrowserFixtures(page: Page) {
   await page.addInitScript((fixtures) => {
     window.generationFixtures = fixtures;

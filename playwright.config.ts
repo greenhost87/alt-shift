@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 import * as v from 'valibot';
 import { getOptionalEnv, setEnv } from './src/server/config/environment';
 
@@ -23,6 +23,17 @@ const baseURL = `https://127.0.0.1:${port}`;
 
 export default defineConfig({
   expect: { timeout: E2E_TIMEOUT_MS },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'mobile-webkit',
+      testMatch: '**/mobile.pw.ts',
+      use: { ...devices['iPhone SE'] },
+    },
+  ],
   testDir: './tests/e2e',
   testMatch: '**/*.pw.ts',
   timeout: E2E_TIMEOUT_MS,

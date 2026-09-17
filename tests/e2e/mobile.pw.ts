@@ -1,6 +1,15 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { createApplicationFixtures, storeApplications } from '../support/applications';
+import {
+  createApplicationFixtures,
+  openDashboardAndExpectProgress,
+  storeApplications,
+  submitApplicationForm,
+} from '../support/applications';
+import {
+  installCopyableGenerationResponse,
+  installGenerationBrowserFixtures,
+} from '../support/generation-browser';
 import { expectContentFitsViewport, expectDialogFitsViewport } from '../support/viewport';
 
 async function openFaqAnswers(page: Page, answers: string[]) {
@@ -48,6 +57,20 @@ test('Russian screens and subscription modal fit at 320 pixels', async ({ page }
     modal.getByRole('button', { name: 'Закрыть' }),
     modal.getByRole('heading', { name: 'Откройте безлимитную генерацию' }),
   );
+});
+
+test('streams and stores a completed application at 320 pixels', async ({ page }) => {
+  await page.setViewportSize({ height: 568, width: 320 });
+  await installGenerationBrowserFixtures(page);
+  await installCopyableGenerationResponse(page);
+  await submitApplicationForm(page, '/applications/new');
+
+  await expect(page.getByText('Copyable application')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
+  await expectContentFitsViewport(page);
+  await openDashboardAndExpectProgress(page, 1);
+  await expect(page.getByText('Copyable application')).toBeVisible();
+  await expectContentFitsViewport(page);
 });
 
 test('landing interactions fit at 320 pixels', async ({ page }) => {

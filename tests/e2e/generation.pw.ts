@@ -9,7 +9,10 @@ import {
   storeApplications,
 } from '../support/applications';
 import { rejectClipboardWrites } from '../support/clipboard';
-import { installGenerationBrowserFixtures } from '../support/generation-browser';
+import {
+  installCopyableGenerationResponse,
+  installGenerationBrowserFixtures,
+} from '../support/generation-browser';
 import { rejectApplicationStorageWrites } from '../support/storage';
 
 test.beforeEach(async ({ page }) => {
@@ -36,15 +39,8 @@ async function expectGenericGenerationFailure(page: Page) {
   await expect(page.getByText('0/5 applications generated')).toBeVisible();
 }
 
-async function setupCopyableGeneration(page: Page) {
-  await page.addInitScript(() => {
-    window.respondToGeneration = () =>
-      window.generationResponse(window.generationFixtures.copyableStream);
-  });
-}
-
 async function generateCopyableApplication(page: Page) {
-  await setupCopyableGeneration(page);
+  await installCopyableGenerationResponse(page);
   await generateApplication(page);
 }
 
@@ -244,7 +240,7 @@ test('supports generation without crypto.randomUUID', async ({ page }) => {
       value: undefined,
     });
   });
-  await setupCopyableGeneration(page);
+  await installCopyableGenerationResponse(page);
 
   await generateApplication(page);
   await expectCompletedGeneration(page, 'Copyable application');
@@ -272,7 +268,7 @@ test('reports clipboard rejection and clears the alert after a successful copy',
   page,
 }) => {
   await rejectClipboardWrites(page, 1);
-  await setupCopyableGeneration(page);
+  await installCopyableGenerationResponse(page);
   await generateApplication(page);
   await expect(page.getByText('Copyable application')).toBeVisible();
 
