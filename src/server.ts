@@ -7,6 +7,7 @@ import { runDatabaseMigrations } from './server/database/migrate';
 import { getSessionSecret } from './server/security/config';
 import { BASE_PATH } from './system/config/environment';
 import { handleSessionSecurity } from './server/security/session';
+import { startInstance } from './start';
 
 const clientDirectory = fileURLToPath(new URL('../client', import.meta.url));
 
@@ -56,6 +57,7 @@ function serveClientAsset(request: Request): Response | undefined {
   if (assetPath === undefined) return undefined;
 
   const headers = new Headers({
+    'Cache-Control': 'no-cache',
     'Content-Length': String(statSync(assetPath).size),
     'Content-Type': getContentType(assetPath),
   });
@@ -66,6 +68,7 @@ function serveClientAsset(request: Request): Response | undefined {
   return new Response(request.method === 'HEAD' ? null : readFileSync(assetPath), { headers });
 }
 
+await startInstance.getOptions();
 getSessionSecret();
 runDatabaseMigrations({
   directory: import.meta.env.DEV
