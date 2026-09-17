@@ -12,6 +12,9 @@ async function expectNotFoundAndReturnHome(page: Page) {
 test('unknown routes show a helpful page with a link home', async ({ page }) => {
   const response = await page.goto('/missing-page');
   expect(response?.status()).toBe(404);
+  await expect(page).toHaveTitle('Page Not Found — Alt+Shift');
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
   await expectNotFoundAndReturnHome(page);
 });
 

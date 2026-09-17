@@ -10,7 +10,6 @@ import {
   APPLICATION_COUNT_COOKIE_NAME,
   parseApplicationCountCookie,
 } from '../system/applications/count-cookie';
-import { PUBLIC_SITE_URL } from '../system/config/environment';
 import { ApplicationStateProvider } from '../system/state/application';
 import '../styles/global.css';
 
@@ -31,10 +30,7 @@ export const Route = createRootRoute({
     return config;
   },
   head: () => ({
-    links: [
-      { href: '/favicon.svg', rel: 'icon', type: 'image/svg+xml' },
-      { href: `${PUBLIC_SITE_URL}/`, rel: 'canonical' },
-    ],
+    links: [{ href: '/favicon.svg', rel: 'icon', type: 'image/svg+xml' }],
     meta: [
       { charSet: 'utf-8' },
       { content: 'width=device-width, initial-scale=1', name: 'viewport' },
@@ -42,10 +38,6 @@ export const Route = createRootRoute({
         content: 'Create personalized cover letters in seconds with AI.',
         name: 'description',
       },
-      { content: 'Alt+Shift', property: 'og:site_name' },
-      { content: 'website', property: 'og:type' },
-      { content: `${PUBLIC_SITE_URL}/og-cover.png`, property: 'og:image' },
-      { content: 'summary_large_image', name: 'twitter:card' },
       { title: 'Alt+Shift — AI Cover Letter Generator' },
     ],
   }),

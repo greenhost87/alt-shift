@@ -1,4 +1,10 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+async function expectPageIsNotIndexable(page: Page) {
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
+}
 
 test('home page exposes indexable metadata and structured landing content', async ({ page }) => {
   const response = await page.goto('/');
@@ -11,11 +17,49 @@ test('home page exposes indexable metadata and structured landing content', asyn
   );
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     'href',
-    'https://example.com/',
+    'https://seo.example.test/',
+  );
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    'content',
+    'AI Cover Letter Generator — Alt+Shift',
+  );
+  await expect(page.locator('meta[property="og:description"]')).toHaveAttribute(
+    'content',
+    'Generate a personalized cover letter for your next job application.',
+  );
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+    'content',
+    'https://seo.example.test/',
   );
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     'content',
-    'https://example.com/og-cover.png',
+    'https://seo.example.test/og-cover.png',
+  );
+  await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute(
+    'content',
+    'Alt+Shift AI Cover Letter Generator',
+  );
+  await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200');
+  await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630');
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+    'content',
+    'summary_large_image',
+  );
+  await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute(
+    'content',
+    'AI Cover Letter Generator — Alt+Shift',
+  );
+  await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute(
+    'content',
+    'Generate a personalized cover letter for your next job application.',
+  );
+  await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute(
+    'content',
+    'https://seo.example.test/og-cover.png',
+  );
+  await expect(page.locator('meta[name="twitter:image:alt"]')).toHaveAttribute(
+    'content',
+    'Alt+Shift AI Cover Letter Generator',
   );
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg');
   await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
@@ -39,24 +83,16 @@ test('private and test routes are not indexable', async ({ page }) => {
 
   for (const route of privateRoutes) {
     await page.goto(route);
-    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
-      'content',
-      'noindex, nofollow',
-    );
+    await expectPageIsNotIndexable(page);
   }
 });
 
-test('not-found pages are not indexable', async ({ page }) => {
-  const response = await page.goto('/not-a-real-page');
-
-  expect(response?.status()).toBe(404);
-  await expect(page).toHaveTitle('Page Not Found — Alt+Shift');
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
-});
-
-test('sitemap lists the public home page', async ({ page }) => {
+test('sitemap uses the configured public site URL', async ({ page }) => {
   const response = await page.goto('/sitemap.xml');
+  const body = await response?.text();
 
   expect(response?.status()).toBe(200);
-  await expect(page.locator('body')).toContainText('https://example.com/');
+  expect(response?.headers()['content-type']).toBe('application/xml; charset=utf-8');
+  expect(body).toContain('<loc>https://seo.example.test/</loc>');
+  expect(body).not.toContain('https://example.com/');
 });

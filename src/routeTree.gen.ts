@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as ApplicationsRouteImport } from './routes/applications'
 import { Route as FakeRouteImport } from './routes/fake'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ApiGenerateRouteImport } from './routes/api.generate'
 import { Route as ApplicationsIndexRouteImport } from './routes/applications.index'
 import { Route as ApplicationsApplicationIdRouteImport } from './routes/applications.$applicationId'
@@ -36,6 +37,11 @@ const ApplicationsRoute = ApplicationsRouteImport.update({
 const FakeRoute = FakeRouteImport.update({
   id: '/fake',
   path: '/fake',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateRoute = ApiGenerateRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/$': typeof SplatRoute
   '/applications': typeof ApplicationsRouteWithChildren
   '/fake': typeof FakeRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/generate': typeof ApiGenerateRoute
   '/applications/$applicationId': typeof ApplicationsApplicationIdRoute
   '/applications/new': typeof ApplicationsNewRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/fake': typeof FakeRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/generate': typeof ApiGenerateRoute
   '/applications/$applicationId': typeof ApplicationsApplicationIdRoute
   '/applications/new': typeof ApplicationsNewRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/$': typeof SplatRoute
   '/applications': typeof ApplicationsRouteWithChildren
   '/fake': typeof FakeRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/generate': typeof ApiGenerateRoute
   '/applications/$applicationId': typeof ApplicationsApplicationIdRoute
   '/applications/new': typeof ApplicationsNewRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/applications'
     | '/fake'
+    | '/sitemap.xml'
     | '/api/generate'
     | '/applications/$applicationId'
     | '/applications/new'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/fake'
+    | '/sitemap.xml'
     | '/api/generate'
     | '/applications/$applicationId'
     | '/applications/new'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/applications'
     | '/fake'
+    | '/sitemap.xml'
     | '/api/generate'
     | '/applications/$applicationId'
     | '/applications/new'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   SplatRoute: typeof SplatRoute
   ApplicationsRoute: typeof ApplicationsRouteWithChildren
   FakeRoute: typeof FakeRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiGenerateRoute: typeof ApiGenerateRoute
 }
 
@@ -158,6 +171,13 @@ declare module '@tanstack/react-router' {
       path: '/fake'
       fullPath: '/fake'
       preLoaderRoute: typeof FakeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate': {
@@ -212,6 +232,7 @@ const rootRouteChildren: RootRouteChildren = {
   SplatRoute: SplatRoute,
   ApplicationsRoute: ApplicationsRouteWithChildren,
   FakeRoute: FakeRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiGenerateRoute: ApiGenerateRoute,
 }
 export const routeTree = rootRouteImport
