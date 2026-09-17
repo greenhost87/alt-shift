@@ -18,7 +18,9 @@ export function ApplicationPreview({
   mode,
   onCopy,
 }: ApplicationPreviewProps) {
-  const copyButton = <CopyButton feedbackTimeoutMs={copyFeedbackTimeoutMs} onClick={onCopy} />;
+  const copyButton = (
+    <CopyButton feedbackTimeoutMs={copyFeedbackTimeoutMs} key={letter} onClick={onCopy} />
+  );
   if (letter) {
     return (
       <div

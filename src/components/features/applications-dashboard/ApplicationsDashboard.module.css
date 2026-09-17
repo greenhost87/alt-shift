@@ -12,13 +12,8 @@
   gap: var(--rs-unit-x6);
 }
 
-.storageMessage,
 .clipboardError {
   margin: 0;
-}
-
-.storageMessage {
-  color: var(--rs-color-foreground-neutral-faded);
 }
 
 .loadingState {

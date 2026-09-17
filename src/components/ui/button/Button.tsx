@@ -1,17 +1,12 @@
-import { forwardRef } from 'react';
-import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
+import type { KeyboardEvent, MouseEvent, ReactNode, Ref } from 'react';
 import { Actionable } from 'reshaped';
 import type { ActionableRef } from 'reshaped';
 import styles from './Button.module.css';
 
 const BUTTON_VARIANTS = ['primary', 'secondary', 'ghost'] as const;
 const BUTTON_SIZES = ['compact', 'medium', 'large', 'icon'] as const;
-const BUTTON_ICON_POSITIONS = ['start', 'end'] as const;
-
 type ButtonVariant = (typeof BUTTON_VARIANTS)[number];
 type ButtonSize = (typeof BUTTON_SIZES)[number];
-type ButtonIconPosition = (typeof BUTTON_ICON_POSITIONS)[number];
-
 type ButtonInteractionEvent = KeyboardEvent<HTMLElement> | MouseEvent<HTMLElement>;
 
 type ButtonProps = {
@@ -19,13 +14,13 @@ type ButtonProps = {
   ariaLabel?: string;
   children?: ReactNode;
   disabled?: boolean;
-  fullWidth?: boolean;
+  endIcon?: ReactNode;
   icon?: ReactNode;
-  iconPosition?: ButtonIconPosition;
   loading?: boolean | undefined;
   onClick?: (event: ButtonInteractionEvent) => void;
+  ref?: Ref<ActionableRef>;
   size?: ButtonSize;
-  type?: 'button' | 'submit';
+  submit?: true;
   variant?: ButtonVariant;
 };
 
@@ -65,12 +60,16 @@ function getStatefulAccessibleLabel(accessibleLabel: string | undefined, loading
   return loading && accessibleLabel ? `${accessibleLabel}, loading` : accessibleLabel;
 }
 
-function getDisabled(disabled: boolean, loading: boolean) {
-  return disabled || loading;
+function getDisabled(disabled: boolean | undefined, loading: boolean) {
+  return Boolean(disabled) || loading;
 }
 
-function getAriaDisabled(ariaDisabled: boolean, disabled: boolean) {
-  return ariaDisabled || disabled;
+function getAriaDisabled(ariaDisabled: boolean | undefined, disabled: boolean) {
+  return Boolean(ariaDisabled) || disabled;
+}
+
+function getButtonVariant(variant: ButtonVariant | undefined) {
+  return variant ?? 'primary';
 }
 
 function getButtonSize(size: ButtonSize | undefined, variant: ButtonVariant) {
@@ -80,58 +79,56 @@ function getButtonSize(size: ButtonSize | undefined, variant: ButtonVariant) {
 function renderButtonContent(
   children: ReactNode,
   icon: ReactNode,
-  iconPosition: ButtonIconPosition,
+  endIcon: ReactNode,
   loading: boolean,
 ) {
   return (
     <span className={loading ? styles['hidden'] : styles['content']}>
-      {icon && iconPosition === 'start' ? <span className={styles['icon']}>{icon}</span> : null}
+      {icon ? <span className={styles['icon']}>{icon}</span> : null}
       {children}
-      {icon && iconPosition === 'end' ? <span className={styles['icon']}>{icon}</span> : null}
+      {endIcon ? <span className={styles['icon']}>{endIcon}</span> : null}
     </span>
   );
 }
 
-export const Button = forwardRef<ActionableRef, ButtonProps>(function Button(
-  {
-    ariaDisabled = false,
-    ariaLabel,
-    children,
-    disabled = false,
-    fullWidth,
-    icon,
-    iconPosition = 'start',
-    loading = false,
-    onClick,
-    size,
-    type = 'button',
-    variant = 'primary',
-  },
+export function Button({
+  ariaDisabled,
+  ariaLabel,
+  children,
+  disabled,
+  endIcon,
+  icon,
+  loading,
+  onClick,
   ref,
-) {
+  size,
+  submit,
+  variant,
+}: ButtonProps) {
+  const resolvedLoading = Boolean(loading);
+  const resolvedVariant = getButtonVariant(variant);
   const accessibleLabel = getAccessibleLabel(ariaLabel, children);
-  validateAccessibleLabel(accessibleLabel, children, loading);
-  const statefulAccessibleLabel = getStatefulAccessibleLabel(accessibleLabel, loading);
-  const resolvedSize = getButtonSize(size, variant);
-  const resolvedDisabled = getDisabled(disabled, loading);
+  validateAccessibleLabel(accessibleLabel, children, resolvedLoading);
+  const statefulAccessibleLabel = getStatefulAccessibleLabel(accessibleLabel, resolvedLoading);
+  const resolvedSize = getButtonSize(size, resolvedVariant);
+  const resolvedDisabled = getDisabled(disabled, resolvedLoading);
 
   return (
     <Actionable
       attributes={{
-        'aria-busy': loading,
+        'aria-busy': resolvedLoading,
         'aria-disabled': getAriaDisabled(ariaDisabled, resolvedDisabled),
         'aria-label': statefulAccessibleLabel,
       }}
-      className={[styles['button'], styles[variant], BUTTON_SIZE_CLASS_NAMES[resolvedSize]]}
+      className={[styles['button'], styles[resolvedVariant], BUTTON_SIZE_CLASS_NAMES[resolvedSize]]}
       disabled={resolvedDisabled}
-      fullWidth={fullWidth}
       onClick={onClick}
       ref={ref}
       touchHitbox={BUTTON_TOUCH_HITBOX[resolvedSize]}
-      type={type}
+      type={submit ? 'submit' : 'button'}
     >
-      {renderButtonContent(children, icon, iconPosition, loading)}
-      {loading ? <span className={styles['spinner']} aria-hidden="true" /> : null}
+      {renderButtonContent(children, icon, endIcon, resolvedLoading)}
+      {resolvedLoading ? <span className={styles['spinner']} aria-hidden="true" /> : null}
     </Actionable>
   );
-});
+}

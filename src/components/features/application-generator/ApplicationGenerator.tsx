@@ -138,7 +138,7 @@ function useRetryAvailability(
 }
 
 function isRetryBlocked(retryAvailableAt: number | undefined) {
-  return retryAvailableAt !== undefined && retryAvailableAt > Date.now();
+  return retryAvailableAt !== undefined;
 }
 
 function isSubmissionBlocked(
@@ -339,7 +339,13 @@ export function ApplicationWorkspace({
         <div className={workspaceStyles['workspace']}>
           <section className={workspaceStyles['primary']}>
             <ApplicationForm
-              actions={{ canRetry, isCompleted, isGenerating, submissionBlocked }}
+              actions={{
+                canRetry,
+                isCompleted,
+                isGenerating,
+                newApplicationBlocked: applicationLimitReached,
+                submissionBlocked,
+              }}
               copyError={copyError}
               error={error}
               fieldLimits={fieldLimits}

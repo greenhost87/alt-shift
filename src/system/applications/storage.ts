@@ -23,6 +23,12 @@ export type ApplicationsState = {
   status: 'loading' | 'ready' | 'invalid' | 'unavailable';
 };
 
+type AddApplicationResult = {
+  added: boolean;
+  applications: StoredApplication[];
+  status: 'loading' | 'ready' | 'invalid' | 'unavailable';
+};
+
 function sortNewestFirst(applications: StoredApplication[]) {
   return [...applications].sort((first, second) => second.createdAt.localeCompare(first.createdAt));
 }
@@ -99,24 +105,26 @@ function createApplicationId() {
 
 export function addApplication(
   input: NewStoredApplication,
+  applicationLimit: number,
   config: ApplicationStorageConfig,
-): ApplicationsState {
+): AddApplicationResult {
   const parsed = v.safeParse(applicationSchema, {
     ...input,
     id: createApplicationId(),
     createdAt: new Date().toISOString(),
   });
   if (!parsed.success) {
-    return readApplications(config);
+    return { ...readApplications(config), added: false };
   }
 
   const current = readApplications(config);
-  if (current.status !== 'ready') {
-    return current;
+  if (current.status !== 'ready' || current.applications.length >= applicationLimit) {
+    return { ...current, added: false };
   }
 
   const applications = sortNewestFirst([parsed.output, ...current.applications]);
-  return storeApplications(applications, current.applications, config);
+  const nextState = storeApplications(applications, current.applications, config);
+  return { ...nextState, added: nextState.status === 'ready' };
 }
 
 export function deleteApplication(id: string, config: ApplicationStorageConfig): ApplicationsState {

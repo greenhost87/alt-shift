@@ -1,56 +1,19 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import generationFixtures from '../fixtures/generation.json' with { type: 'json' };
-import { expectApplicationProgress } from '../support/applications';
+import {
+  APPLICATION_STORAGE_KEY,
+  createApplicationFixtures,
+  expectApplicationProgress,
+  seedApplications,
+  storeApplications,
+} from '../support/applications';
 import { rejectClipboardWrites } from '../support/clipboard';
+import { installGenerationBrowserFixtures } from '../support/generation-browser';
 import { rejectApplicationStorageWrites } from '../support/storage';
 
-declare global {
-  interface Window {
-    delayedGenerationResponse: (release: () => Promise<void>, content: string) => Response;
-    finishInterruptedGenerationRetry: () => Promise<void>;
-    generationResponse: (body: BodyInit) => Response;
-    recordGenerationRequest: () => Promise<void>;
-    recordInterruptedGenerationRequest: () => Promise<void>;
-    recordTransportAttempt: () => Promise<void>;
-    respondToGeneration: (init?: RequestInit) => Promise<Response> | Response;
-    waitToFinishGeneration: () => Promise<void>;
-    waitToInterruptGeneration: () => Promise<void>;
-    generationFixtures: typeof generationFixtures;
-  }
-}
-
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript((fixtures) => {
-    window.generationFixtures = fixtures;
-    window.generationResponse = (body) =>
-      new Response(body, {
-        headers: {
-          'content-type': 'text/event-stream',
-          'x-generation-inactivity-timeout-ms': '30000',
-        },
-        status: 200,
-      });
-    window.delayedGenerationResponse = (release, content) =>
-      window.generationResponse(
-        new ReadableStream({
-          async start(controller) {
-            await release();
-            controller.enqueue(new TextEncoder().encode(content));
-            controller.close();
-          },
-        }),
-      );
-    const nativeFetch = window.fetch;
-    Object.defineProperty(window, 'fetch', {
-      configurable: true,
-      value: async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = new URL(input instanceof Request ? input.url : input.toString(), location.href);
-        if (url.pathname !== '/api/generate') return nativeFetch.call(window, input, init);
-        return window.respondToGeneration(init);
-      },
-    });
-  }, generationFixtures);
+  await installGenerationBrowserFixtures(page);
 });
 
 const STREAMED_LETTER = generationFixtures.streamedLetter;
@@ -138,6 +101,16 @@ async function holdGenerationStream(page: Page) {
   return releaseStream;
 }
 
+async function useDelayedCopyableStream(page: Page) {
+  await page.addInitScript(() => {
+    window.respondToGeneration = () =>
+      window.delayedGenerationResponse(
+        window.waitToFinishGeneration,
+        window.generationFixtures.copyableStream,
+      );
+  });
+}
+
 async function readAnimationFrames(locator: Locator) {
   return locator.evaluate((element) =>
     element.getAnimations().flatMap((animation) =>
@@ -156,13 +129,7 @@ test('waiting state preserves Figma colors, geometry, and vertical orb motion', 
 }) => {
   await page.setViewportSize({ width: 1440, height: 1300 });
   const releaseStream = await holdGenerationStream(page);
-  await page.addInitScript(() => {
-    window.respondToGeneration = () =>
-      window.delayedGenerationResponse(
-        window.waitToFinishGeneration,
-        window.generationFixtures.copyableStream,
-      );
-  });
+  await useDelayedCopyableStream(page);
   await generateApplication(page);
   try {
     const loading = page.getByRole('button', { name: 'Generate Now, loading' });
@@ -242,6 +209,32 @@ test('streams, saves, restores, and counts a completed application once', async 
   await page.getByRole('button', { name: 'Home' }).click();
   await expect(page.getByText(STREAMED_LETTER)).toBeVisible();
   await expectApplicationProgress(page, 1);
+});
+
+test('does not save a generated application when another tab reaches the limit', async ({
+  page,
+}) => {
+  await seedApplications(page, 4);
+  const releaseStream = await holdGenerationStream(page);
+  await useDelayedCopyableStream(page);
+  await generateApplication(page);
+  await expect(page.getByRole('button', { name: 'Generate Now, loading' })).toBeVisible();
+
+  const applicationsAtLimit = createApplicationFixtures(5);
+  await storeApplications(page, applicationsAtLimit, 'now');
+  releaseStream();
+
+  await expect(page.getByRole('alert')).toContainText(
+    'Your letter was generated, but browser storage could not save it.',
+  );
+  await expect(page.getByText('5/5 applications generated')).toBeVisible();
+  const storedApplications = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    APPLICATION_STORAGE_KEY,
+  );
+  expect(storedApplications).toBe(
+    JSON.stringify({ version: 1, applications: applicationsAtLimit }),
+  );
 });
 
 test('supports generation without crypto.randomUUID', async ({ page }) => {

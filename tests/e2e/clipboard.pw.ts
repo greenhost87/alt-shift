@@ -2,6 +2,38 @@ import { expect, test } from '@playwright/test';
 import { seedApplications } from '../support/applications';
 import { expectSuccessfulCopy } from '../support/clipboard';
 
+declare global {
+  interface Window {
+    waitToWriteClipboard: () => Promise<void>;
+  }
+}
+
+test('disables copy while a clipboard operation is pending', async ({ page }) => {
+  let releaseClipboard = () => {};
+  const clipboardReleased = new Promise<void>((resolve) => {
+    releaseClipboard = resolve;
+  });
+  await page.exposeFunction('waitToWriteClipboard', async () => clipboardReleased);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        async writeText() {
+          await window.waitToWriteClipboard();
+        },
+      },
+    });
+  });
+  await seedApplications(page, 1);
+  await page.goto('/');
+
+  const copy = page.getByRole('button', { name: 'Copy to clipboard' });
+  await copy.click();
+  await expect(copy).toBeDisabled();
+  releaseClipboard();
+  await expect(page.getByRole('button', { name: 'Copied!' })).toBeEnabled();
+});
+
 test('copies an application through the browser clipboard on the HTTPS origin', async ({
   context,
   page,

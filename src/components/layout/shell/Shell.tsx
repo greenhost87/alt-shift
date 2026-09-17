@@ -70,7 +70,6 @@ export function Shell({ children }: ShellProps) {
               }
               onClick={returnHome}
               size="icon"
-              type="button"
               variant="secondary"
             />
           </div>

@@ -33,10 +33,13 @@ export function LanguageSwitcher() {
       renderValue={renderLanguageValue}
       size="medium"
       value={currentLocale}
-      width="max-content"
     >
-      <Select.Option value="en">🇬🇧 English</Select.Option>
-      <Select.Option value="ru">🇷🇺 Русский</Select.Option>
+      <Select.Option className={styles['languageOption']} value="en">
+        🇬🇧 English
+      </Select.Option>
+      <Select.Option className={styles['languageOption']} value="ru">
+        🇷🇺 Русский
+      </Select.Option>
     </Select>
   );
 }

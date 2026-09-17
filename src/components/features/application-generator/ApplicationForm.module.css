@@ -9,6 +9,10 @@
   gap: var(--rs-unit-x4);
 }
 
+.action > button {
+  width: 100%;
+}
+
 .fieldRow {
   display: grid;
   gap: var(--rs-unit-x4);

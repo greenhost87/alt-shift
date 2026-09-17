@@ -56,6 +56,7 @@ export function ConfirmationDialog({
       ariaLabel={title}
       attributes={{ 'aria-describedby': descriptionId }}
       active={active}
+      className={styles['dialog']}
       onClose={onCancel}
       onAfterOpen={() => {
         setReady(true);
@@ -63,8 +64,6 @@ export function ConfirmationDialog({
       onAfterClose={() => {
         setReady(false);
       }}
-      size="440px"
-      padding={6}
     >
       <span data-dialog-ready={ready} hidden />
       <Message title={title} description={description} descriptionId={descriptionId} level="h2">

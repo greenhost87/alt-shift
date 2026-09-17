@@ -21,7 +21,9 @@ const GENERATION_PHASES = [
 
 export type GenerationPhase = (typeof GENERATION_PHASES)[number];
 
-type StorageStatus = 'loading' | 'ready' | 'invalid' | 'unavailable';
+const STORAGE_STATUSES = ['loading', 'ready', 'invalid', 'unavailable'] as const;
+
+export type StorageStatus = (typeof STORAGE_STATUSES)[number];
 
 export type ApplicationState = {
   config: ApplicationConfig;
@@ -119,9 +121,9 @@ export function createApplicationStore(
       ) {
         return false;
       }
-      const nextState = persistApplication(application, config.storage);
+      const nextState = persistApplication(application, config.applicationLimit, config.storage);
       setApplications(set, nextState);
-      return nextState.status === 'ready';
+      return nextState.added;
     },
     deleteApplication(id) {
       setApplications(set, removePersistedApplication(id, config.storage));

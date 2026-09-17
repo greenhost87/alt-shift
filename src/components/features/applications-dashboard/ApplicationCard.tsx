@@ -49,7 +49,8 @@ export function ApplicationCard({
         </Button>
         <CopyButton
           feedbackTimeoutMs={copyFeedbackTimeoutMs}
-          onClick={async () => onCopy(application.letter)}
+          key={application.letter}
+          onClick={onCopy.bind(null, application.letter)}
         />
       </div>
     </article>

@@ -8,6 +8,7 @@ import {
   expectBlankGenerator,
   expectGoalBannerHidden,
   seedApplications,
+  storeApplications,
 } from '../support/applications';
 import { expectSuccessfulCopy, rejectClipboardWrites } from '../support/clipboard';
 import { expectCookie } from '../support/cookies';
@@ -37,6 +38,12 @@ async function expectEmptyDashboard(page: Page) {
 async function expectApplicationPage(page: Page, url: RegExp, heading: string) {
   await expect(page).toHaveURL(url);
   await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+}
+
+async function expectStorageWarningOnApplicationPage(page: Page, message: string) {
+  await page.goto('/applications/00000000-0000-4000-8000-000000000001');
+  await expect(page.getByRole('alert')).toContainText(message);
+  await expect(page.getByRole('heading', { name: 'Page not found' })).toHaveCount(0);
 }
 
 test('fresh browser storage starts with an empty dashboard', async ({ page }) => {
@@ -216,6 +223,8 @@ test('contains localStorage initialization failures and displays a warning', asy
   await expect(page.getByRole('alert')).toContainText('Browser storage is unavailable');
   await expect(page.getByRole('heading', { name: 'Applications', exact: true })).toBeVisible();
   await expectApplicationProgress(page, 0);
+
+  await expectStorageWarningOnApplicationPage(page, 'Browser storage is unavailable');
 });
 
 test('stores and caps the application count for the next server render', async ({ page }) => {
@@ -256,17 +265,18 @@ test('restores valid versioned applications created in the browser', async ({ pa
 
   await expect(page.getByText('A persisted cover letter')).toBeVisible();
   await expectApplicationProgress(page, 1);
+
+  await page.goto('/applications/b12e8f4c-ea95-42cc-9e48-41fd1d29a977');
+  const tryAgain = page.getByRole('button', { name: 'Try Again' });
+  await expect(tryAgain).toBeEnabled();
+  await tryAgain.click();
+  await expect(page).toHaveURL(/\/applications\/new$/);
 });
 
 test('hides the goal banner after restoring five applications', async ({ page }) => {
   const applications = createApplicationFixtures(5, 'Persisted cover letter');
 
-  await page.addInitScript(
-    ({ key, storedApplications }) => {
-      localStorage.setItem(key, JSON.stringify({ version: 1, applications: storedApplications }));
-    },
-    { key: APPLICATION_STORAGE_KEY, storedApplications: applications },
-  );
+  await storeApplications(page, applications, 'init');
 
   await openDashboard(page, 5);
 
@@ -286,6 +296,12 @@ test('blocks application forms after all attempts are used', async ({ page }) =>
 
   await expectApplicationFields(page, 'disabled');
   await expect(page.getByRole('button', { name: 'Try Again' })).toBeDisabled();
+});
+
+test('server-renders a loading status for a stored-application link', async ({ request }) => {
+  const response = await request.get('/applications/00000000-0000-4000-8000-000000000001');
+
+  expect(await response.text()).toContain('Loading applications…');
 });
 
 test('rejects invalid stored data without overwriting it', async ({ page }) => {
@@ -310,4 +326,6 @@ test('rejects invalid stored data without overwriting it', async ({ page }) => {
     APPLICATION_STORAGE_KEY,
   );
   expect(storedValue).toBe(invalidValue);
+
+  await expectStorageWarningOnApplicationPage(page, 'stored data was left unchanged');
 });

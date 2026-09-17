@@ -19,6 +19,7 @@ type FormActions = {
   canRetry: boolean;
   isCompleted: boolean;
   isGenerating: boolean;
+  newApplicationBlocked: boolean;
   submissionBlocked: boolean;
 };
 
@@ -51,7 +52,7 @@ function renderAlert(message: string) {
 function renderFormAction(actions: FormActions) {
   if (actions.isGenerating) {
     return (
-      <Button disabled fullWidth loading size="large" type="submit">
+      <Button disabled loading size="large" submit>
         {m.generate_now()}
       </Button>
     );
@@ -60,10 +61,9 @@ function renderFormAction(actions: FormActions) {
     return (
       <Button
         disabled={actions.submissionBlocked}
-        fullWidth
         icon={<RepeatIcon />}
         size="large"
-        type="submit"
+        submit
         variant="secondary"
       >
         {m.try_again()}
@@ -71,7 +71,7 @@ function renderFormAction(actions: FormActions) {
     );
   }
   return (
-    <Button disabled={actions.submissionBlocked} fullWidth size="large" type="submit">
+    <Button disabled={actions.submissionBlocked} size="large" submit>
       {actions.canRetry ? m.retry_generation() : m.generate_now()}
     </Button>
   );
@@ -82,12 +82,10 @@ function renderFormActionForMode(isViewing: boolean, actions: FormActions, onSta
 
   return (
     <Button
-      disabled={actions.submissionBlocked}
-      fullWidth
+      disabled={actions.newApplicationBlocked}
       icon={<RepeatIcon />}
       onClick={onStartNew}
       size="large"
-      type="button"
       variant="secondary"
     >
       {m.try_again()}
@@ -164,7 +162,9 @@ export function ApplicationForm({
         {renderAlert(error)}
         {renderAlert(copyError)}
         {retryMessage ? <p className={styles['rateLimit']}>{retryMessage}</p> : null}
-        {renderFormActionForMode(isViewing, actions, onStartNew)}
+        <div className={styles['action']}>
+          {renderFormActionForMode(isViewing, actions, onStartNew)}
+        </div>
       </form>
     </div>
   );

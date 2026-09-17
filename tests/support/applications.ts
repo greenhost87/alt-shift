@@ -10,7 +10,7 @@ const APPLICATION_FIELD_LABELS = [
   'Additional details',
 ] as const;
 
-type ApplicationFixture = {
+export type ApplicationFixture = {
   id: string;
   company: string;
   role: string;
@@ -33,6 +33,28 @@ export function createApplicationFixtures(
     letter: `${letterPrefix} ${index + 1}`,
     createdAt: `2025-01-0${index + 1}T03:04:05.000Z`,
   }));
+}
+
+type StoredApplicationsInput = {
+  key: string;
+  storedApplications: ApplicationFixture[];
+};
+
+function writeApplicationsToStorage({ key, storedApplications }: StoredApplicationsInput) {
+  localStorage.setItem(key, JSON.stringify({ version: 1, applications: storedApplications }));
+}
+
+export async function storeApplications(
+  page: Page,
+  applications: ApplicationFixture[],
+  timing: 'init' | 'now',
+) {
+  const input = { key: APPLICATION_STORAGE_KEY, storedApplications: applications };
+  if (timing === 'init') {
+    await page.addInitScript(writeApplicationsToStorage, input);
+    return;
+  }
+  await page.evaluate(writeApplicationsToStorage, input);
 }
 
 export async function seedApplications(page: Page, count = 3, letterPrefix = 'Cover letter') {

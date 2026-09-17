@@ -47,6 +47,18 @@
   width: 64px;
 }
 
+.languageOption {
+  white-space: nowrap;
+}
+
+:global(div):has(> .languageOption),
+:global(div):has(> :global(div) > .languageOption),
+:global(div):has(> :global(div) > :global(div) > .languageOption),
+:global(div):has(> :global(div) > :global(div) > :global(div) > .languageOption),
+:global(div):has(> :global(div) > :global(div) > :global(div) > :global(div) > .languageOption) {
+  min-width: max-content;
+}
+
 .languageSelect button {
   height: var(--rs-unit-control-height);
 }

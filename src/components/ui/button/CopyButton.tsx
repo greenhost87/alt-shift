@@ -10,6 +10,7 @@ type CopyButtonProps = {
 
 export function CopyButton({ feedbackTimeoutMs, onClick }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
+  const [pending, setPending] = useState(false);
   useEffect(() => {
     if (!copied) return undefined;
     const timeout = window.setTimeout(() => {
@@ -21,18 +22,24 @@ export function CopyButton({ feedbackTimeoutMs, onClick }: CopyButtonProps) {
   }, [copied, feedbackTimeoutMs]);
 
   const copy = async () => {
+    if (pending) return;
+    setPending(true);
     setCopied(false);
-    setCopied(await onClick());
+    try {
+      setCopied(await onClick());
+    } finally {
+      setPending(false);
+    }
   };
 
   const label = copied ? m.copied() : m.copy_to_clipboard();
   return (
     <Button
       ariaLabel={label}
+      disabled={pending}
+      endIcon={<CopyIcon />}
       onClick={() => void copy()}
       variant="ghost"
-      icon={<CopyIcon />}
-      iconPosition="end"
     >
       <output aria-live="polite">{label}</output>
     </Button>

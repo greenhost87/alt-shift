@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import * as m from '../../../paraglide/messages.js';
 import { SectionHeader } from '../../layout/section-header/SectionHeader';
+import { StorageStatusMessage } from '../../layout/storage-status/StorageStatus';
 import { GoalBanner } from '../../ui/banner/Banner';
 import { ConfirmationDialog } from '../../ui/confirmation/ConfirmationDialog';
 import { CreateButton } from '../../ui/button/CreateButton';
@@ -9,31 +10,12 @@ import { ApplicationCard, ApplicationCardPlaceholder } from './ApplicationCard';
 import { ApplicationsEmptyState } from './ApplicationsEmptyState';
 import { writeClipboardText } from '../../../system/clipboard/write';
 import { useApplicationStore } from '../../../system/state/application';
+import type { StorageStatus } from '../../../system/state/application-store';
 import styles from './ApplicationsDashboard.module.css';
 
 type ApplicationsDashboardProps = {
   onCreate: () => void;
 };
-
-type StorageStatus = 'loading' | 'ready' | 'invalid' | 'unavailable';
-
-function renderStorageStatusMessage(status: StorageStatus) {
-  if (status === 'invalid') {
-    return (
-      <p className={styles['storageMessage']} role="alert">
-        {m.applications_storage_invalid()}
-      </p>
-    );
-  }
-  if (status === 'unavailable') {
-    return (
-      <p className={styles['storageMessage']} role="alert">
-        {m.applications_storage_unavailable()}
-      </p>
-    );
-  }
-  return null;
-}
 
 function renderLoadingCards(status: StorageStatus) {
   if (status !== 'loading') return null;
@@ -100,7 +82,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
           action={<CreateButton label={m.create_new()} onClick={onCreate} />}
           title={m.applications()}
         />
-        {renderStorageStatusMessage(storageStatus)}
+        <StorageStatusMessage status={storageStatus} />
         {renderLoadingCards(storageStatus)}
         {copyError ? (
           <p className={styles['clipboardError']} role="alert">
