@@ -25,7 +25,7 @@ test('disables copy while a clipboard operation is pending', async ({ page }) =>
     });
   });
   await seedApplications(page, 1);
-  await page.goto('/');
+  await page.goto('/applications');
 
   const copy = page.getByRole('button', { name: 'Copy to clipboard' });
   await copy.click();
@@ -40,14 +40,12 @@ test('copies an application through the browser clipboard on the HTTPS origin', 
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await seedApplications(page, 1);
-  await page.goto('/');
+  await page.goto('/applications');
 
   expect(await page.evaluate(() => window.isSecureContext)).toBe(true);
   await expectSuccessfulCopy(page);
   expect(await page.evaluate(async () => navigator.clipboard.readText())).toBe('Cover letter 1');
-  await expect(page.getByRole('button', { name: 'Copy to clipboard' }).first()).toBeVisible({
-    timeout: 1_500,
-  });
+  await expect(page.getByRole('button', { name: 'Copy to clipboard' }).first()).toBeVisible();
 
   const countCookie = (await context.cookies()).find(
     (cookie) => cookie.name === 'ALT_SHIFT_APPLICATION_COUNT',

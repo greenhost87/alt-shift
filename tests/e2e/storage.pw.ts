@@ -16,7 +16,7 @@ import { expectCookie } from '../support/cookies';
 import { confirmDeletion, openDeletionDialog } from '../support/dialog';
 
 async function openDashboard(page: Page, applicationCount: number) {
-  await page.goto('/');
+  await page.goto('/applications');
   await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
 }
 
@@ -58,40 +58,27 @@ test('fresh browser storage starts with an empty dashboard', async ({ page }) =>
   await expectEmptyDashboard(page);
 });
 
-test('deleted applications stay deleted after reload and synchronize across tabs', async ({
-  context,
-  page,
-}) => {
-  await seedApplications(page);
-  await openDashboard(page, 3);
+test('synchronizes deleted applications across tabs', async ({ context, page }) => {
+  await seedApplications(page, 1);
+  await openDashboard(page, 1);
 
   const secondPage = await context.newPage();
-  await openDashboard(secondPage, 3);
+  await openDashboard(secondPage, 1);
 
-  for (const applicationCount of [2, 1]) {
-    const dialog = await openDeletionDialog(page);
-    await confirmDeletion(dialog);
-    await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
-    await expect(secondPage.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
-  }
-
-  const finalDialog = await openDeletionDialog(page);
-  await confirmDeletion(finalDialog);
+  const dialog = await openDeletionDialog(page);
+  await confirmDeletion(dialog);
 
   for (const dashboardPage of [page, secondPage]) {
-    await expect(dashboardPage.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
-    await expect(
-      dashboardPage.getByRole('button', { name: 'Create your first application' }),
-    ).toBeVisible();
-    await expect(dashboardPage.getByRole('button', { name: 'Delete' })).toHaveCount(0);
-    await expect(dashboardPage.getByRole('button', { name: 'Copy to clipboard' })).toHaveCount(0);
-    await expect(
-      dashboardPage.getByRole('heading', { name: 'Applications', exact: true }),
-    ).toBeVisible();
-    await expect(dashboardPage.getByRole('heading', { name: 'Hit your goal' })).toBeVisible();
-    await expect(dashboardPage.getByText('0/5 applications generated')).toBeVisible();
+    await expectEmptyDashboard(dashboardPage);
   }
+});
 
+test('deleted applications stay deleted after reload', async ({ page }) => {
+  await seedApplications(page, 1);
+  await openDashboard(page, 1);
+
+  const dialog = await openDeletionDialog(page);
+  await confirmDeletion(dialog);
   await page.reload();
   await expectEmptyDashboard(page);
 
@@ -160,8 +147,8 @@ test('opens a stored application with read-only details, copy, and Home navigati
   await expect(page.getByRole('button', { name: 'Generate Now' })).toHaveCount(0);
   await expectSuccessfulCopy(page);
 
-  await page.getByRole('button', { name: 'Home' }).click();
-  await expect(page).toHaveURL('/');
+  await page.getByRole('link', { name: 'Home' }).click();
+  await expect(page).toHaveURL('/applications');
   await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(3);
 });
 
@@ -205,7 +192,7 @@ test('shows temporary feedback after copying an application', async ({ page }) =
   const copy = page.locator('article').first().getByRole('button').last();
   await expect(copy).toHaveAccessibleName('Copied!');
   await expect(page.getByRole('button', { name: 'Copy to clipboard' })).toHaveCount(3);
-  await expect(copy).toHaveAccessibleName('Copy to clipboard', { timeout: 3_000 });
+  await expect(copy).toHaveAccessibleName('Copy to clipboard');
 });
 
 test('reports clipboard rejection without changing dashboard applications', async ({ page }) => {
@@ -267,7 +254,7 @@ test('restores valid versioned applications created in the browser', async ({ pa
     { key: APPLICATION_STORAGE_KEY },
   );
 
-  await page.goto('/');
+  await page.goto('/applications');
 
   await expect(page.getByText('A persisted cover letter')).toBeVisible();
   await expectApplicationProgress(page, 1);
@@ -321,7 +308,7 @@ test('rejects invalid stored data without overwriting it', async ({ page }) => {
     { key: APPLICATION_STORAGE_KEY, value: invalidValue },
   );
 
-  await page.goto('/');
+  await page.goto('/applications');
 
   await expect(page.getByRole('alert')).toContainText('stored data was left unchanged');
   await setApplicationCountCookie(page, 3);

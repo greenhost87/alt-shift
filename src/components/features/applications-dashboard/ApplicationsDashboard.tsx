@@ -104,6 +104,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
       <section className={styles['applications']}>
         <SectionHeader
           action={renderCreateAction(creationBlocked, onCreate, showSubscriptionModal)}
+          level="section"
           title={m.applications()}
         />
         <StorageStatusMessage status={storageStatus} />

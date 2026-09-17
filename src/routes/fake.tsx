@@ -24,6 +24,13 @@ function createFakeGenerationResponse(incomplete: boolean) {
 
 export const Route = createFileRoute('/fake')({
   component: FakeApplicationGeneratorPage,
+  head: () => ({
+    meta: [
+      { title: 'Cover Letter Generator Test — Alt+Shift' },
+      { content: 'Test-only cover letter generator.', name: 'description' },
+      { content: 'noindex, nofollow', name: 'robots' },
+    ],
+  }),
   server: {
     handlers: {
       POST: async ({ request }) => {

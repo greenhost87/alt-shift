@@ -28,11 +28,11 @@ test('generates, saves, and synchronizes a local result without requesting the L
     if (new URL(request.url()).pathname === '/api/generate') llmRequestCount += 1;
   });
   const dashboardPage = await context.newPage();
-  await dashboardPage.goto('/', { waitUntil: 'networkidle' });
+  await dashboardPage.goto('/applications', { waitUntil: 'networkidle' });
   await generateFakeApplication(page);
   expect(llmRequestCount).toBe(0);
   await expectApplicationProgress(dashboardPage, 1);
-  await page.getByRole('button', { name: 'Home' }).click();
+  await page.getByRole('link', { name: 'Home' }).click();
   await expectApplicationProgress(page, 1);
 });
 
@@ -61,7 +61,7 @@ test('requires every field, submits with the keyboard, and generates again', asy
 
   await page.getByRole('button', { name: 'Try Again' }).click();
   await expect(page.getByText('2/5 applications generated')).toBeVisible();
-  await page.getByRole('button', { name: 'Home' }).click();
+  await page.getByRole('link', { name: 'Home' }).click();
   await expectApplicationProgress(page, 2);
 });
 
@@ -74,7 +74,7 @@ test('disables generation after creating the fifth application', async ({ page }
   await page.locator('form').evaluate((form: HTMLFormElement) => {
     form.requestSubmit();
   });
-  await page.getByRole('button', { name: 'Home' }).click();
+  await page.getByRole('link', { name: 'Home' }).click();
   await expectApplicationProgress(page, 5);
 
   const dialog = await openDeletionDialog(page);

@@ -10,14 +10,27 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SplatRouteImport } from './routes/$'
+import { Route as ApplicationsRouteImport } from './routes/applications'
 import { Route as FakeRouteImport } from './routes/fake'
 import { Route as ApiGenerateRouteImport } from './routes/api.generate'
+import { Route as ApplicationsIndexRouteImport } from './routes/applications.index'
 import { Route as ApplicationsApplicationIdRouteImport } from './routes/applications.$applicationId'
 import { Route as ApplicationsNewRouteImport } from './routes/applications.new'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApplicationsRoute = ApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FakeRoute = FakeRouteImport.update({
@@ -30,70 +43,91 @@ const ApiGenerateRoute = ApiGenerateRouteImport.update({
   path: '/api/generate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApplicationsIndexRoute = ApplicationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ApplicationsRoute,
+} as any)
 const ApplicationsApplicationIdRoute =
   ApplicationsApplicationIdRouteImport.update({
-    id: '/applications/$applicationId',
-    path: '/applications/$applicationId',
-    getParentRoute: () => rootRouteImport,
+    id: '/$applicationId',
+    path: '/$applicationId',
+    getParentRoute: () => ApplicationsRoute,
   } as any)
 const ApplicationsNewRoute = ApplicationsNewRouteImport.update({
-  id: '/applications/new',
-  path: '/applications/new',
-  getParentRoute: () => rootRouteImport,
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => ApplicationsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
+  '/applications': typeof ApplicationsRouteWithChildren
   '/fake': typeof FakeRoute
   '/api/generate': typeof ApiGenerateRoute
   '/applications/$applicationId': typeof ApplicationsApplicationIdRoute
   '/applications/new': typeof ApplicationsNewRoute
+  '/applications/': typeof ApplicationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/fake': typeof FakeRoute
   '/api/generate': typeof ApiGenerateRoute
   '/applications/$applicationId': typeof ApplicationsApplicationIdRoute
   '/applications/new': typeof ApplicationsNewRoute
+  '/applications': typeof ApplicationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
+  '/applications': typeof ApplicationsRouteWithChildren
   '/fake': typeof FakeRoute
   '/api/generate': typeof ApiGenerateRoute
   '/applications/$applicationId': typeof ApplicationsApplicationIdRoute
   '/applications/new': typeof ApplicationsNewRoute
+  '/applications/': typeof ApplicationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$'
+    | '/applications'
     | '/fake'
     | '/api/generate'
     | '/applications/$applicationId'
     | '/applications/new'
+    | '/applications/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$'
     | '/fake'
     | '/api/generate'
     | '/applications/$applicationId'
     | '/applications/new'
+    | '/applications'
   id:
     | '__root__'
     | '/'
+    | '/$'
+    | '/applications'
     | '/fake'
     | '/api/generate'
     | '/applications/$applicationId'
     | '/applications/new'
+    | '/applications/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SplatRoute: typeof SplatRoute
+  ApplicationsRoute: typeof ApplicationsRouteWithChildren
   FakeRoute: typeof FakeRoute
   ApiGenerateRoute: typeof ApiGenerateRoute
-  ApplicationsApplicationIdRoute: typeof ApplicationsApplicationIdRoute
-  ApplicationsNewRoute: typeof ApplicationsNewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -103,6 +137,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/applications': {
+      id: '/applications'
+      path: '/applications'
+      fullPath: '/applications'
+      preLoaderRoute: typeof ApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fake': {
@@ -119,29 +167,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/applications/': {
+      id: '/applications/'
+      path: '/'
+      fullPath: '/applications/'
+      preLoaderRoute: typeof ApplicationsIndexRouteImport
+      parentRoute: typeof ApplicationsRoute
+    }
     '/applications/$applicationId': {
       id: '/applications/$applicationId'
-      path: '/applications/$applicationId'
+      path: '/$applicationId'
       fullPath: '/applications/$applicationId'
       preLoaderRoute: typeof ApplicationsApplicationIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ApplicationsRoute
     }
     '/applications/new': {
       id: '/applications/new'
-      path: '/applications/new'
+      path: '/new'
       fullPath: '/applications/new'
       preLoaderRoute: typeof ApplicationsNewRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ApplicationsRoute
     }
   }
 }
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  FakeRoute: FakeRoute,
-  ApiGenerateRoute: ApiGenerateRoute,
+interface ApplicationsRouteChildren {
+  ApplicationsApplicationIdRoute: typeof ApplicationsApplicationIdRoute
+  ApplicationsNewRoute: typeof ApplicationsNewRoute
+  ApplicationsIndexRoute: typeof ApplicationsIndexRoute
+}
+
+const ApplicationsRouteChildren: ApplicationsRouteChildren = {
   ApplicationsApplicationIdRoute: ApplicationsApplicationIdRoute,
   ApplicationsNewRoute: ApplicationsNewRoute,
+  ApplicationsIndexRoute: ApplicationsIndexRoute,
+}
+
+const ApplicationsRouteWithChildren = ApplicationsRoute._addFileChildren(
+  ApplicationsRouteChildren,
+)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  SplatRoute: SplatRoute,
+  ApplicationsRoute: ApplicationsRouteWithChildren,
+  FakeRoute: FakeRoute,
+  ApiGenerateRoute: ApiGenerateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

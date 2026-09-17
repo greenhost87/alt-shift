@@ -38,9 +38,9 @@ function getGoalBanner(page: Page) {
 test('desktop primitives match the design geometry and typography', async ({ page }) => {
   await page.setViewportSize({ height: 1300, width: 1440 });
   await seedApplications(page);
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/applications', { waitUntil: 'networkidle' });
 
-  await expect(page.getByRole('button', { name: 'Home' })).toHaveAccessibleName('Home');
+  await expect(page.getByRole('link', { name: 'Home' })).toHaveAccessibleName('Home');
 
   const mainBox = await page.locator('main').boundingBox();
   expect(mainBox?.x).toBe(160);
@@ -97,10 +97,14 @@ test('desktop primitives match the design geometry and typography', async ({ pag
 
 async function expectMobileStatusLayout(page: Page) {
   const brand = await page.getByAltText('Alt+Shift').boundingBox();
-  const home = await page.getByRole('button', { name: 'Home' }).boundingBox();
+  const home = await page.getByRole('link', { name: 'Home' }).boundingBox();
   const status = page.getByText('0/5 applications generated');
   const label = await status.boundingBox();
-  const progress = await status.locator('..').locator('progress').locator('..').boundingBox();
+  const progress = await page
+    .locator('header')
+    .getByRole('progressbar')
+    .locator('..')
+    .boundingBox();
   expect(home?.y).toBe(brand?.y);
   expect(label?.y).toBeGreaterThanOrEqual((home?.y ?? 0) + (home?.height ?? 0));
   expect(progress?.x).toBeGreaterThanOrEqual((label?.x ?? 0) + (label?.width ?? 0));
@@ -144,7 +148,7 @@ async function expectLengthError(options: LengthErrorOptions) {
 
 for (const width of RESPONSIVE_WIDTHS) {
   test(`responsive screens fit at ${width}px`, async ({ page }) => {
-    await openResponsivePage(page, width, '/');
+    await openResponsivePage(page, width, '/applications');
     await expectPageWidth(page, width);
     if (width < 768) await expectMobileStatusLayout(page);
     await expect(page.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
@@ -158,7 +162,7 @@ for (const width of RESPONSIVE_WIDTHS) {
       path: `test-results/responsive-generator-${width}.png`,
       fullPage: true,
     });
-    await page.getByRole('button', { name: 'Home' }).click();
+    await page.getByRole('link', { name: 'Home' }).click();
     await page.screenshot({ path: `test-results/responsive-empty-${width}.png`, fullPage: true });
   });
 }
@@ -250,13 +254,13 @@ for (const { label, limit } of [
 
 test('mobile actions have touch targets of at least 44 pixels', async ({ page }) => {
   await page.setViewportSize({ height: 812, width: 375 });
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/applications', { waitUntil: 'networkidle' });
 
   await expectContentFitsViewport(page);
 });
 
 test('dashboard uses the compact layout at 320 pixels', async ({ page }) => {
-  await openSeededMobilePage(page, '/');
+  await openSeededMobilePage(page, '/applications');
 
   await expectContentFitsViewport(page);
 
@@ -265,7 +269,7 @@ test('dashboard uses the compact layout at 320 pixels', async ({ page }) => {
   expect(mainBox?.width).toBe(296);
 
   const brandBox = await page.getByAltText('Alt+Shift').boundingBox();
-  const homeBox = await page.getByRole('button', { name: 'Home' }).boundingBox();
+  const homeBox = await page.getByRole('link', { name: 'Home' }).boundingBox();
   const statusBox = await page.getByText('3/5 applications generated').boundingBox();
   expect(brandBox?.width).toBe(128);
   expect(homeBox?.y).toBe(brandBox?.y);

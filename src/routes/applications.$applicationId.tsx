@@ -9,6 +9,16 @@ import { useApplicationStore } from '../system/state/application';
 
 export const Route = createFileRoute('/applications/$applicationId')({
   component: StoredApplicationPage,
+  head: () => ({
+    meta: [
+      { title: 'Saved Cover Letter — Alt+Shift' },
+      {
+        content: 'Review a cover letter saved privately in your browser.',
+        name: 'description',
+      },
+      { content: 'noindex, nofollow', name: 'robots' },
+    ],
+  }),
 });
 
 function StoredApplicationPage() {

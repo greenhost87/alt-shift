@@ -145,7 +145,7 @@
   .storedPanel.storedPanel {
     --rs-unit-workspace-secondary-available-height: calc(
       100dvh - var(--rs-unit-mobile-page-top) - var(--rs-unit-control-height) - var(--rs-unit-x3) -
-        var(--rs-unit-x6) - var(--rs-unit-x8)
+        var(--rs-unit-x6) - var(--rs-unit-x8) - var(--rs-unit-x6)
     );
   }
 }

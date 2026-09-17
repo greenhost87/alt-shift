@@ -26,6 +26,7 @@ function copyServerMigrations(): Plugin {
 
 export default defineConfig({
   define: { 'import.meta.main': 'false' },
+  envPrefix: ['VITE_', 'PUBLIC_'],
   resolve: {
     alias: {
       '@/system/config/environment': fileURLToPath(

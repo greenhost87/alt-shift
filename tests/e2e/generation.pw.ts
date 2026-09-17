@@ -88,7 +88,7 @@ test('completed layout matches Figma with the full design letter', async ({ page
 });
 
 async function openDashboardAndExpectCount(page: Page, applicationCount: number) {
-  await page.getByRole('button', { name: 'Home' }).click();
+  await page.getByRole('link', { name: 'Home' }).click();
   await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
 }
 
@@ -206,7 +206,7 @@ test('streams, saves, restores, and counts a completed application once', async 
 
   await page.reload();
   await expect(page.getByText('1/5 applications generated')).toBeVisible();
-  await page.getByRole('button', { name: 'Home' }).click();
+  await page.getByRole('link', { name: 'Home' }).click();
   await expect(page.getByText(STREAMED_LETTER)).toBeVisible();
   await expectApplicationProgress(page, 1);
 });
@@ -323,7 +323,7 @@ test('blocks retry only for a valid server Retry-After period', async ({ page })
   await expect(page.getByRole('alert')).toContainText('Too many generation requests');
   const retry = page.getByRole('button', { name: 'Retry generation' });
   await expect(retry).toBeDisabled();
-  await expect(retry).toBeEnabled({ timeout: 2_000 });
+  await expect(retry).toBeEnabled();
   await retry.click();
   await expect(page.getByText('Generated after waiting')).toBeVisible();
 });

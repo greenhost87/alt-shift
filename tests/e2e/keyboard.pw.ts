@@ -10,12 +10,13 @@ async function pressTabAndExpectFocus(page: Page, target: Locator) {
 
 test('cycles through every dashboard action in document order', async ({ page }) => {
   await seedApplications(page, 1);
-  await page.goto('/');
+  await page.goto('/applications');
   await expect(page.getByRole('button', { name: 'Delete' })).toBeVisible();
 
   const brand = page.getByRole('link', { name: 'Alt+Shift' });
+  const applications = page.getByRole('link', { name: '1/5 applications generated' });
   const language = page.getByRole('button', { name: 'Language' });
-  const home = page.getByRole('button', { name: 'Home' });
+  const home = page.getByRole('link', { name: 'Home' });
   const createButtons = page.getByRole('button', { name: 'Create New' });
   const openApplication = page.getByRole('link', {
     name: 'Open application for Role 1 at Company 1',
@@ -25,6 +26,7 @@ test('cycles through every dashboard action in document order', async ({ page })
 
   for (const target of [
     brand,
+    applications,
     language,
     home,
     createButtons.first(),
@@ -39,7 +41,7 @@ test('cycles through every dashboard action in document order', async ({ page })
 
 test('traps keyboard focus in the deletion dialog and restores it on close', async ({ page }) => {
   await seedApplications(page, 1);
-  await page.goto('/');
+  await page.goto('/applications');
   const trigger = page.getByRole('button', { name: 'Delete' });
   await expect(trigger).toBeVisible();
   await trigger.focus();

@@ -12,10 +12,10 @@ test('switches to Russian, persists the locale, and submits it for generation', 
     }
   });
 
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/applications', { waitUntil: 'networkidle' });
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   const languageSelect = page.getByRole('button', { name: 'Language' });
-  const homeButton = page.getByRole('button', { name: 'Home' });
+  const homeButton = page.getByRole('link', { name: 'Home' });
   await expect(languageSelect.getByText('🇬🇧', { exact: true })).toBeVisible();
   await expect(page.getByRole('option', { name: '🇬🇧 English' })).toBeHidden();
   const languageSelectBox = await languageSelect.boundingBox();

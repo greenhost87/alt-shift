@@ -5,7 +5,7 @@ async function expectNotFoundAndReturnHome(page: Page) {
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
   await expect(page.getByText('The page you are looking for does not exist.')).toBeVisible();
   await page.getByRole('link', { name: 'Back to applications' }).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).toHaveURL('/applications');
   await expect(page.getByRole('heading', { name: 'Applications', exact: true })).toBeVisible();
 }
 

@@ -70,7 +70,7 @@ test('preserves an application and reports a storage write failure during deleti
 }) => {
   await seedApplications(page, 1);
   await rejectApplicationStorageWrites(page);
-  await page.goto('/');
+  await page.goto('/applications');
   await expectApplicationProgress(page, 1);
 
   const dialog = await openDeletionDialog(page);
@@ -104,7 +104,7 @@ test('shows card placeholders while browser storage is initialized', async ({ pa
     observer.observe(document, { childList: true, subtree: true });
   });
 
-  await page.goto('/');
+  await page.goto('/applications');
 
   await expect.poll(() => loadingCardCount).toBe(2);
   expect(loadingCardHeight).toBe(240);

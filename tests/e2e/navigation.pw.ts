@@ -24,7 +24,7 @@ test('core navigation does not raise uncaught page errors', async ({ page }) => 
   expect(pageErrors, 'dashboard reload errors').toEqual([]);
 });
 
-test('logo links to the home page', async ({ page }) => {
+test('home control links to applications', async ({ page }) => {
   await page.goto('/applications/new');
 
   await navigateHome(page);

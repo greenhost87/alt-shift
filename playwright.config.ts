@@ -4,6 +4,7 @@ import * as v from 'valibot';
 import { getOptionalEnv, setEnv } from './src/server/config/environment';
 
 const DYNAMIC_PORT_START = 49_152;
+const E2E_TIMEOUT_MS = 5_000;
 const INTERNAL_PORT_KEY = 'ALT_SHIFT_E2E_PORT';
 const dynamicPortSchema = v.pipe(
   v.string(),
@@ -21,8 +22,10 @@ setEnv(INTERNAL_PORT_KEY, String(port));
 const baseURL = `https://127.0.0.1:${port}`;
 
 export default defineConfig({
+  expect: { timeout: E2E_TIMEOUT_MS },
   testDir: './tests/e2e',
   testMatch: '**/*.pw.ts',
+  timeout: E2E_TIMEOUT_MS,
   use: {
     baseURL,
     ignoreHTTPSErrors: true,
@@ -32,4 +35,5 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
     url: baseURL,
   },
+  workers: 4,
 });

@@ -66,13 +66,12 @@ async function requestGeneration(
 }
 
 async function submitApplication(page: Page) {
-  const response = page.waitForResponse(
+  const request = page.waitForRequest(
     (candidate) =>
-      new URL(candidate.url()).pathname === '/api/generate' &&
-      candidate.request().method() === 'POST',
+      new URL(candidate.url()).pathname === '/api/generate' && candidate.method() === 'POST',
   );
   await page.locator('form button[type="submit"]').click();
-  return response;
+  return request;
 }
 
 test('sends browser device signals through the production generation path', async ({ page }) => {
@@ -82,7 +81,8 @@ test('sends browser device signals through the production generation path', asyn
   await page.getByLabel('I am good at...').fill(input.strengths);
   await page.getByLabel('Additional details').fill(input.details);
 
-  expect((await submitApplication(page)).status()).not.toBe(400);
+  const request = await submitApplication(page);
+  expect(request.headers()['x-client-device-signals']).toMatch(/^[a-f0-9]{64}$/);
   await page.goto('/');
 
   expect((await requestGeneration(page, true, null)).status).toBe(400);

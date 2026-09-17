@@ -82,10 +82,10 @@ export async function submitApplicationForm(page: Page, path: string) {
 }
 
 export async function navigateHome(page: Page) {
-  const brand = page.getByRole('link', { name: 'Alt+Shift' });
-  await brand.focus();
-  await brand.press('Enter');
-  await expect(page).toHaveURL('/');
+  const home = page.getByRole('link', { name: 'Home' });
+  await home.focus();
+  await home.press('Enter');
+  await expect(page).toHaveURL('/applications');
 }
 
 export async function openSubscriptionModal(page: Page): Promise<Locator> {

@@ -15,6 +15,7 @@ type ButtonProps = {
   children?: ReactNode;
   disabled?: boolean;
   endIcon?: ReactNode;
+  href?: string;
   icon?: ReactNode;
   loading?: boolean | undefined;
   onClick?: (event: ButtonInteractionEvent) => void;
@@ -97,6 +98,7 @@ export function Button({
   children,
   disabled,
   endIcon,
+  href,
   icon,
   loading,
   onClick,
@@ -122,10 +124,11 @@ export function Button({
       }}
       className={[styles['button'], styles[resolvedVariant], BUTTON_SIZE_CLASS_NAMES[resolvedSize]]}
       disabled={resolvedDisabled}
+      href={href}
       onClick={onClick}
       ref={ref}
       touchHitbox={BUTTON_TOUCH_HITBOX[resolvedSize]}
-      type={submit ? 'submit' : 'button'}
+      type={href ? undefined : submit ? 'submit' : 'button'}
     >
       {renderButtonContent(children, icon, endIcon, resolvedLoading)}
       {resolvedLoading ? <span className={styles['spinner']} aria-hidden="true" /> : null}
