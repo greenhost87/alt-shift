@@ -1,6 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
-import { View } from 'reshaped';
 import * as m from '../../../paraglide/messages.js';
 import { useApplicationStore } from '../../../system/state/application';
 import { brandSize } from '../../../system/theme/tokens.ts';
@@ -31,14 +30,7 @@ export function Shell({ children }: ShellProps) {
 
   return (
     <div className={styles['page']}>
-      <View
-        align={{ s: 'start', m: 'center' }}
-        as="header"
-        className={styles['header']}
-        direction="row"
-        justify="space-between"
-        wrap={{ s: true, m: false }}
-      >
+      <header className={styles['header']}>
         <Link className={styles['brandLink']} to="/">
           <img
             alt="Alt+Shift"
@@ -48,14 +40,8 @@ export function Shell({ children }: ShellProps) {
             width={brandSize.width}
           />
         </Link>
-        <View
-          align="center"
-          className={styles['controls']}
-          direction="row"
-          gap={{ s: 3, m: 6 }}
-          justify="end"
-        >
-          <View align="center" className={styles['status']} direction="row" gap={{ s: 2, m: 4 }}>
+        <div className={styles['controls']}>
+          <div className={styles['status']}>
             <span>{m.applications_generated({ current: safeCurrent, total: safeTotal })}</span>
             {isComplete ? (
               <span aria-hidden="true" className={styles['doneBadge']}>
@@ -71,7 +57,7 @@ export function Shell({ children }: ShellProps) {
                 variant="dots"
               />
             )}
-          </View>
+          </div>
           <div className={styles['homeControl']}>
             <LanguageSwitcher />
             <Button
@@ -88,8 +74,8 @@ export function Shell({ children }: ShellProps) {
               variant="secondary"
             />
           </div>
-        </View>
-      </View>
+        </div>
+      </header>
       <main className={styles['main']}>{children}</main>
     </div>
   );

@@ -1,8 +1,9 @@
 import { useEffect, useId, useState } from 'react';
-import { Modal, View } from 'reshaped';
+import { Modal } from 'reshaped';
 import * as m from '../../../paraglide/messages.js';
 import { Button } from '../button/Button';
 import { Message } from '../message/Message';
+import styles from './ConfirmationDialog.module.css';
 
 type ConfirmationDialogProps = {
   active: boolean;
@@ -67,7 +68,7 @@ export function ConfirmationDialog({
     >
       <span data-dialog-ready={ready} hidden />
       <Message title={title} description={description} descriptionId={descriptionId} level="h2">
-        <View direction="row" gap={3} justify="end">
+        <div className={styles['actions']}>
           <Button
             ariaDisabled={!ready}
             variant="secondary"
@@ -85,7 +86,7 @@ export function ConfirmationDialog({
           >
             {m.confirm_deletion()}
           </Button>
-        </View>
+        </div>
       </Message>
     </Modal>
   );

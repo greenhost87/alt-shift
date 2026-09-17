@@ -1,0 +1,7 @@
+.main {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-unit-x4);
+  padding: var(--rs-unit-x8);
+}

@@ -41,6 +41,7 @@ Apply these constraints while designing a change. `AGENTS.md` remains authoritat
 
 - Keep shared primitives in UI, shell/chrome in layout, and domain UI in its feature. Features cannot import other features; UI and layout cannot import features.
 - Use shared UI from application views. Low-level UI libraries and ad-hoc markup/styles belong only inside configured UI/layout boundaries.
+- Keep application-owned structural layout and responsive styling exclusively in CSS Modules. Do not pass responsive objects or fixed structural-layout props such as alignment, columns, direction, gaps, dimensions, or padding to third-party layout primitives; use semantic HTML with CSS classes instead. Reserve third-party components for behavior-rich controls and non-layout semantics; their documented visual variants remain allowed.
 - Do not spread props into JSX or element-construction prop bags. Fixed specialization props must follow forwarded props; prefer the primitive directly.
 - Keep render and memo calculations pure. Do not mutate props/state aliases, call impure APIs during render, set state during render, create nested components, or construct unstable context values.
 - Follow Hooks dependencies and ordering. Supply stable keys, explicit button types, safe target links and iframes, controlled-input handlers/readOnly, and valid DOM properties.

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { Text, View } from 'reshaped';
+import { Text } from 'reshaped';
 import { Heading } from './Heading';
+import styles from './Message.module.css';
 
 type MessageProps = {
   title: string;
@@ -11,13 +12,17 @@ type MessageProps = {
 };
 
 export function Message({ title, description, descriptionId, level, children }: MessageProps) {
+  const heading =
+    level === 'h1' ? (
+      <Heading kind="messagePage">{title}</Heading>
+    ) : (
+      <Heading kind="messageDialog">{title}</Heading>
+    );
   return (
-    <View gap={4}>
-      <Heading kind="message" level={level}>
-        {title}
-      </Heading>
+    <div className={styles['message']}>
+      {heading}
       <Text attributes={{ id: descriptionId }}>{description}</Text>
       {children}
-    </View>
+    </div>
   );
 }
