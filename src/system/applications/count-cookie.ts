@@ -1,4 +1,6 @@
 import * as v from 'valibot';
+import { getCookiePath } from '../config/base-path';
+import { BASE_PATH } from '../config/environment';
 
 export const APPLICATION_COUNT_COOKIE_NAME = 'ALT_SHIFT_APPLICATION_COUNT';
 
@@ -20,5 +22,5 @@ export function parseApplicationCountCookie(value: string | undefined, limit: nu
 }
 
 export function writeApplicationCountCookie(count: number, ttlSeconds: number): void {
-  document.cookie = `${APPLICATION_COUNT_COOKIE_NAME}=${count}; Max-Age=${ttlSeconds}; Path=/; SameSite=Lax`;
+  document.cookie = `${APPLICATION_COUNT_COOKIE_NAME}=${count}; Max-Age=${ttlSeconds}; Path=${getCookiePath(BASE_PATH)}; SameSite=Lax`;
 }

@@ -1,6 +1,8 @@
 import { createLink, Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import * as m from '../../../paraglide/messages.js';
+import { withBasePath } from '../../../system/config/base-path';
+import { BASE_PATH } from '../../../system/config/environment';
 import { useApplicationStore } from '../../../system/state/application';
 import { brandSize } from '../../../system/theme/tokens.ts';
 import { Button } from '../../ui/button/Button';
@@ -39,13 +41,13 @@ export function Shell({ children }: ShellProps) {
             alt="Alt+Shift"
             className={styles['brand']}
             height={brandSize.height}
-            src="/brand.svg"
+            src={withBasePath(BASE_PATH, '/brand.svg')}
             width={brandSize.width}
           />
         </Link>
         <div className={styles['controls']}>
           <div className={styles['status']}>
-            <Button href="/applications" variant="ghost">
+            <Button href={withBasePath(BASE_PATH, '/applications')} variant="ghost">
               {m.applications_generated({ current: safeCurrent, total: safeTotal })}
             </Button>
             {isComplete ? (

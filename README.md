@@ -68,6 +68,12 @@ bun run build
 | `bun test`            | Run Bun tests                                               |
 | `bun run test:e2e`    | Run Playwright tests                                        |
 
+## Deployment
+
+GitHub Actions runs frozen installation, formatting, type checks, unit tests, the production build, and Playwright on every pull request and push to `main`. A push to `main` also builds `alt-shift.tar.gz` and deploys it to a systemd service with an atomic release swap, `/api/health` verification, and rollback on failure.
+
+Configure these repository secrets: `SERVER_HOST`, `SERVER_USERNAME`, `SERVER_SSH_PORT`, `APP_PORT`, `BASE_PATH`, `PUBLIC_SITE_URL`, and `PROD_SERVER_SSH_KEY`. Set `BASE_PATH` to the URL prefix, for example `/alt-shift`, and set `PUBLIC_SITE_URL` to the complete public URL with the same prefix. The SSH user must run as root because deployment manages systemd and `/opt/data` paths. Install Bun, `curl`, and `ss` on the server, then create `/opt/data/config/alt-shift.env` from [the production environment template](.github/workflows/scripts/production.env.example). Keep `SQLITE_PATH` outside `/opt/data/alt-shift` so database state survives release swaps.
+
 ## Troubleshooting
 
 The reported `reportAllChanges` signature does not occur in the application source or dependency lockfile. A source named `VM…` with only `<anonymous>` frames indicates runtime-generated code and is consistent with externally injected page code, but this repository cannot identify the injector. Reproduce the error in a fresh browser profile or a private window with extensions disabled, then check extensions, DevTools add-ons, and other browser-side page instrumentation. The Playwright navigation suite checks the application's core routes for uncaught page errors in a clean browser context.

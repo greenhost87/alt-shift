@@ -7,6 +7,8 @@ import {
   CSRF_HEADER,
   VERIFIED_SESSION_HEADER,
 } from '../../system/security/session';
+import { getCookiePath } from '../../system/config/base-path';
+import { BASE_PATH } from '../../system/config/environment';
 import { getSessionSecret, getSessionTtlMs } from './config';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -75,7 +77,7 @@ function createSession(currentTime: number): SessionCredentials {
 
 function cookieAttributes(credentials: SessionCredentials): string {
   const maxAge = Math.max(1, Math.floor((credentials.expiresAtMs - Date.now()) / 1_000));
-  return `Path=/; Max-Age=${maxAge}; Secure; SameSite=Strict`;
+  return `Path=${getCookiePath(BASE_PATH)}; Max-Age=${maxAge}; Secure; SameSite=Strict`;
 }
 
 function sessionCookie(credentials: SessionCredentials): string {

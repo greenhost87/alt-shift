@@ -1,6 +1,8 @@
 import { createParser } from 'eventsource-parser';
 import * as v from 'valibot';
 import * as m from '../../paraglide/messages.js';
+import { withBasePath } from '../config/base-path';
+import { BASE_PATH } from '../config/environment';
 import { getBrowserCsrfToken, CSRF_HEADER } from '../security/session';
 import { getClientDeviceSignal } from './device-signal';
 import { createEventStreamCompletionTracker } from './event-stream';
@@ -206,7 +208,7 @@ function rethrowGenerationError(error: Error, controller: AbortController): neve
 
 export async function generateApplication(
   request: GenerationRequest,
-  { endpoint = '/api/generate', signal, onOpen, onDelta }: GenerateOptions,
+  { endpoint = withBasePath(BASE_PATH, '/api/generate'), signal, onOpen, onDelta }: GenerateOptions,
 ): Promise<void> {
   const controller = new AbortController();
   const unlinkCallerSignal = linkCallerSignal(controller, signal);

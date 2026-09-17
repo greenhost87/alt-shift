@@ -7,6 +7,11 @@ import viteReact from '@vitejs/plugin-react';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import { defineConfig } from 'vite';
 import type { Plugin } from 'vite';
+import { getOptionalEnv, setEnv } from './src/server/config/environment.ts';
+import { normalizeBasePath } from './src/system/config/base-path.ts';
+
+const basePath = normalizeBasePath(getOptionalEnv('BASE_PATH'));
+setEnv('PUBLIC_BASE_PATH', basePath || undefined);
 
 function copyServerMigrations(): Plugin {
   return {
@@ -25,6 +30,7 @@ function copyServerMigrations(): Plugin {
 }
 
 export default defineConfig({
+  base: basePath ? `${basePath}/` : '/',
   define: { 'import.meta.main': 'false' },
   envPrefix: ['VITE_', 'PUBLIC_'],
   resolve: {

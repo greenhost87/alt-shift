@@ -1,0 +1,86 @@
+name: PROD - Build and Deploy Alt Shift
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prod-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SERVER_HOST: ${{ secrets.SERVER_HOST }}
+  SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
+  SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}
+  APP_PORT: ${{ secrets.APP_PORT }}
+  BASE_PATH: ${{ secrets.BASE_PATH }}
+  PUBLIC_SITE_URL: ${{ secrets.PUBLIC_SITE_URL }}
+  PROJECT_NAME: 'alt-shift'
+  ARTIFACT_NAME: 'alt-shift.tar.gz'
+  DEPLOY_PATH: '/opt/data/deploy/alt-shift'
+  APP_PATH: '/opt/data/alt-shift'
+  ENV_FILE_PATH: '/opt/data/config/alt-shift.env'
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy Application
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4.2'
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build deployment artifact
+        env:
+          BASE_PATH: ${{ env.BASE_PATH }}
+          PUBLIC_SITE_URL: ${{ env.PUBLIC_SITE_URL }}
+        run: bash .github/workflows/scripts/build-artifact.sh
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USERNAME }}
+          port: ${{ env.SERVER_SSH_PORT }}
+          key: ${{ secrets.PROD_SERVER_SSH_KEY }}
+          source: '${{ env.ARTIFACT_NAME }},.github/workflows/scripts/run-archive.sh,.github/workflows/scripts/alt-shift.service'
+          target: ${{ env.DEPLOY_PATH }}
+
+      - name: Execute deployment script
+        env:
+          PROJECT_NAME: ${{ env.PROJECT_NAME }}
+          ARTIFACT_PATH: ${{ env.DEPLOY_PATH }}/${{ env.ARTIFACT_NAME }}
+          APP_PATH: ${{ env.APP_PATH }}
+          ENV_FILE_PATH: ${{ env.ENV_FILE_PATH }}
+          APP_PORT: ${{ env.APP_PORT }}
+          BASE_PATH: ${{ env.BASE_PATH }}
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USERNAME }}
+          port: ${{ env.SERVER_SSH_PORT }}
+          key: ${{ secrets.PROD_SERVER_SSH_KEY }}
+          envs: PROJECT_NAME,ARTIFACT_PATH,APP_PATH,ENV_FILE_PATH,APP_PORT,BASE_PATH
+          script: |
+            cd ${{ env.DEPLOY_PATH }}
+            chmod +x .github/workflows/scripts/run-archive.sh
+            .github/workflows/scripts/run-archive.sh

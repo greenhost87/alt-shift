@@ -10,6 +10,8 @@ import {
   APPLICATION_COUNT_COOKIE_NAME,
   parseApplicationCountCookie,
 } from '../system/applications/count-cookie';
+import { BASE_PATH } from '../system/config/environment';
+import { withBasePath } from '../system/config/base-path';
 import { ApplicationStateProvider } from '../system/state/application';
 import '../styles/global.css';
 
@@ -30,7 +32,7 @@ export const Route = createRootRoute({
     return config;
   },
   head: () => ({
-    links: [{ href: '/favicon.svg', rel: 'icon', type: 'image/svg+xml' }],
+    links: [{ href: withBasePath(BASE_PATH, '/favicon.svg'), rel: 'icon', type: 'image/svg+xml' }],
     meta: [
       { charSet: 'utf-8' },
       { content: 'width=device-width, initial-scale=1', name: 'viewport' },
