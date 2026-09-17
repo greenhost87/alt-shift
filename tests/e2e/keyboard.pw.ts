@@ -8,6 +8,16 @@ async function pressTabAndExpectFocus(page: Page, target: Locator) {
   await expect(target).toBeFocused();
 }
 
+async function activateDashboardButton(page: Page, applicationCount: number, name: string) {
+  await seedApplications(page, applicationCount);
+  await page.goto('/applications');
+  const trigger = page.getByRole('button', { name });
+  await expect(trigger).toBeVisible();
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  return trigger;
+}
+
 test('cycles through every dashboard action in document order', async ({ page }) => {
   await seedApplications(page, 1);
   await page.goto('/applications');
@@ -39,13 +49,27 @@ test('cycles through every dashboard action in document order', async ({ page })
   }
 });
 
+test('traps keyboard focus in the subscription modal and restores it on Escape', async ({
+  page,
+}) => {
+  const trigger = await activateDashboardButton(page, 5, 'Subscribe');
+
+  const dialog = page.getByRole('dialog', { name: 'Unlock unlimited applications' });
+  const close = dialog.getByRole('button', { name: 'Close' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveCSS('opacity', '1');
+  await expect(close).toBeFocused();
+  await pressTabAndExpectFocus(page, close);
+  await page.keyboard.press('Shift+Tab');
+  await expect(close).toBeFocused();
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
 test('traps keyboard focus in the deletion dialog and restores it on close', async ({ page }) => {
-  await seedApplications(page, 1);
-  await page.goto('/applications');
-  const trigger = page.getByRole('button', { name: 'Delete' });
-  await expect(trigger).toBeVisible();
-  await trigger.focus();
-  await page.keyboard.press('Enter');
+  const trigger = await activateDashboardButton(page, 1, 'Delete');
 
   const dialog = page.getByRole('dialog', { name: 'Delete application?' });
   const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });

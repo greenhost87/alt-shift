@@ -181,4 +181,28 @@
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .hero > button,
+  .cta > button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 479px) {
+  .title h1 {
+    font-size: 2rem;
+    line-height: 2.5rem;
+    overflow-wrap: anywhere;
+  }
+
+  .sectionHeading h2,
+  .cta h2 {
+    font-size: 1.75rem;
+    line-height: 2.25rem;
+    overflow-wrap: anywhere;
+  }
+
+  .cta div {
+    min-width: 0;
+  }
 }

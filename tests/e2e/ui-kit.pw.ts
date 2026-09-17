@@ -3,25 +3,11 @@ import type { Locator, Page } from '@playwright/test';
 import {
   expectApplicationFields,
   expectBlankGenerator,
+  openSubscriptionModal,
   seedApplications,
 } from '../support/applications';
 import { rejectClipboardWrites } from '../support/clipboard';
-
-async function expectContentFitsViewport(page: Page) {
-  const viewportWidth = await page.evaluate(() => document.documentElement.clientWidth);
-  const contentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-  expect(contentWidth).toBe(viewportWidth);
-
-  const actions = page.getByRole('button');
-  const actionCount = await actions.count();
-  for (let index = 0; index < actionCount; index += 1) {
-    const box = await actions.nth(index).boundingBox();
-    expect(box?.x).toBeGreaterThanOrEqual(0);
-    expect(box?.height).toBeGreaterThanOrEqual(44);
-    expect(box?.width).toBeGreaterThanOrEqual(44);
-    expect((box?.x ?? viewportWidth) + (box?.width ?? 1)).toBeLessThanOrEqual(viewportWidth);
-  }
-}
+import { expectContentFitsViewport, expectDialogFitsViewport } from '../support/viewport';
 
 async function openSeededMobilePage(page: Page, path: string) {
   await page.setViewportSize({ height: 568, width: 320 });
@@ -257,6 +243,22 @@ test('mobile actions have touch targets of at least 44 pixels', async ({ page })
   await page.goto('/applications', { waitUntil: 'networkidle' });
 
   await expectContentFitsViewport(page);
+});
+
+test('subscription modal fits at 320 pixels without overlapping its close action', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 568, width: 320 });
+  await seedApplications(page, 5);
+  await page.goto('/applications', { waitUntil: 'networkidle' });
+
+  const modal = await openSubscriptionModal(page);
+  await expectDialogFitsViewport(
+    page,
+    modal,
+    modal.getByRole('button', { name: 'Close' }),
+    modal.getByRole('heading', { name: 'Unlock unlimited applications' }),
+  );
 });
 
 test('dashboard uses the compact layout at 320 pixels', async ({ page }) => {
