@@ -20,7 +20,7 @@ jobs:
       - run: bun run i18n:compile
       - run: bunx oxfmt --check .
       - run: bunx tsc --noEmit
-      - run: bun test
+      - run: bun run test
       - run: bun run build
       - run: bunx playwright install --with-deps chromium webkit
       - run: bun run test:e2e
