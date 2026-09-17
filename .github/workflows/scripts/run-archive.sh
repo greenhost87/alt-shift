@@ -42,12 +42,14 @@ wait_for_health() {
     base_path=""
   fi
   local health_url="http://127.0.0.1:$APP_PORT${base_path}/api/health"
+  local asset_url="http://127.0.0.1:$APP_PORT${base_path}/brand.svg"
   local attempt
 
   health_response=''
   for attempt in {1..30}; do
     health_response="$(curl --fail --silent --max-time 5 "$health_url" || true)"
-    if echo "$health_response" | grep -q '"status":"healthy"'; then
+    if echo "$health_response" | grep -q '"status":"healthy"' &&
+      curl --fail --silent --max-time 5 --output /dev/null "$asset_url"; then
       return 0
     fi
     echo "Health check attempt $attempt/30 failed"

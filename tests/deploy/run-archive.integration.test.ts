@@ -152,6 +152,7 @@ test('activates the candidate and removes the previous release only after a heal
   expect(result.finalUnit).toContain('WorkingDirectory=/workspace/app');
   expect(result.finalUnit).toContain('Environment=BASE_PATH=/alt-shift');
   expect(result.commands).toContain('http://127.0.0.1:3000/alt-shift/api/health');
+  expect(result.commands).toContain('http://127.0.0.1:3000/alt-shift/brand.svg');
   expect(result.commands.indexOf('bun install')).toBeLessThan(
     result.commands.indexOf('systemctl stop'),
   );
@@ -206,6 +207,6 @@ test('restores the previous release and unit when the candidate remains unhealth
     restartCount: 2,
     outputIncludes: 'Health check attempt 30/30 failed',
   });
-  expect(result.commands.match(/curl /g)).toHaveLength(31);
+  expect(result.commands.match(/curl /g)).toHaveLength(32);
   expect(result.commands.match(/^sleep 2$/gm)).toHaveLength(30);
 });
