@@ -1,0 +1,42 @@
+.editor,
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.editor,
+.form {
+  gap: var(--rs-unit-x4);
+}
+
+.fieldRow {
+  display: grid;
+  gap: var(--rs-unit-x4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.error,
+.rateLimit {
+  margin: 0;
+}
+
+.error {
+  color: var(--rs-color-foreground-critical);
+}
+
+.rateLimit {
+  color: var(--rs-color-foreground-neutral-faded);
+}
+
+@media (--rs-viewport-s) {
+  .fieldRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 479px) {
+  .editor,
+  .form {
+    gap: var(--rs-unit-x3);
+  }
+}

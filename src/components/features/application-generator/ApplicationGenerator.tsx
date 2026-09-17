@@ -12,16 +12,13 @@ import type { GenerationPhase } from '../../../system/state/application-store';
 import { GenerationError, generateApplication } from '../../../system/generation/client';
 import { safeParseGenerationRequest } from '../../../system/generation/schema';
 import type { GenerationRequest } from '../../../system/generation/schema';
-import { SectionHeader } from '../../layout/section-header/SectionHeader';
 import { Shell } from '../../layout/shell/Shell';
-import { Workspace } from '../../layout/workspace/Workspace';
+import workspaceStyles from '../../layout/workspace/Workspace.module.css';
 import { GoalBanner } from '../../ui/banner/Banner';
-import { Button } from '../../ui/button/Button';
-import { CopyButton } from '../../ui/button/CopyButton';
-import { TextAreaField } from '../../ui/field/TextAreaField';
-import { TextField } from '../../ui/field/TextField';
-import { RepeatIcon } from '../../ui/icon/Icon';
-import typographyStyles from '../../ui/text/Typography.module.css';
+import { ApplicationForm } from './ApplicationForm';
+import type { ApplicationFormValues } from './ApplicationForm';
+import { ApplicationPreview } from './ApplicationPreview';
+import previewStyles from './ApplicationPreview.module.css';
 import styles from './ApplicationGenerator.module.css';
 
 const ACTIVE_PHASES: GenerationPhase[] = ['submitting', 'waiting-for-first-token', 'streaming'];
@@ -42,13 +39,6 @@ type SubmissionOptions = {
   setLetter: (letter: string) => void;
   setPhase: (phase: GenerationPhase) => void;
   setRetryAvailableAt: (value: number | undefined) => void;
-};
-
-type FormActionsOptions = {
-  canRetry: boolean;
-  isCompleted: boolean;
-  isGenerating: boolean;
-  submissionBlocked: boolean;
 };
 
 const generationErrorSchema = v.instance(Error);
@@ -125,52 +115,6 @@ async function submitApplication(request: GenerationRequest, options: Submission
   }
 }
 
-function renderApplicationPreview(
-  letter: string,
-  isCompleted: boolean,
-  isGenerating: boolean,
-  isViewing: boolean,
-  onCopy: () => Promise<boolean>,
-) {
-  const copyButton = <CopyButton onClick={onCopy} />;
-  if (letter) {
-    return (
-      <div className={[styles['preview'], isCompleted ? styles['completedPreview'] : ''].join(' ')}>
-        {isViewing ? <div className={styles['mobilePreviewAction']}>{copyButton}</div> : null}
-        <p className={[styles['letter'], typographyStyles['body']].join(' ')}>
-          {letter}
-          {isGenerating ? (
-            <span
-              aria-hidden="true"
-              className={styles['generationCaret']}
-              data-testid="generation-caret"
-            />
-          ) : null}
-        </p>
-        <div className={styles['previewAction']}>{copyButton}</div>
-      </div>
-    );
-  }
-  if (isGenerating) {
-    return (
-      <output aria-label={m.generating_application()} className={styles['loadingPreview']}>
-        <span className={styles['orb']}>
-          <span className={styles['orbGlow']} />
-          <span className={styles['orbCore']} />
-        </span>
-      </output>
-    );
-  }
-  return (
-    <div className={styles['preview']}>
-      <p className={[styles['placeholder'], typographyStyles['body']].join(' ')}>
-        {m.application_preview_placeholder()}
-      </p>
-      <div className={styles['previewAction']}>{copyButton}</div>
-    </div>
-  );
-}
-
 function useRetryAvailability(
   retryAvailableAt: number | undefined,
   setRetryAvailableAt: (value: number | undefined) => void,
@@ -212,65 +156,14 @@ function getApplicationTitle(jobTitle: string, company: string) {
     : m.new_application();
 }
 
-function renderAlert(message: string) {
-  return message ? (
-    <p className={styles['error']} role="alert">
-      {message}
-    </p>
-  ) : null;
-}
-
-function renderRetryMessage(retryBlocked: boolean) {
-  return retryBlocked ? (
-    <p className={styles['rateLimit']}>{m.generation_retry_unavailable()}</p>
-  ) : null;
-}
-
-function renderFormAction(options: FormActionsOptions) {
-  if (options.isGenerating) {
-    return (
-      <Button disabled fullWidth loading size="large" type="submit">
-        {m.generate_now()}
-      </Button>
-    );
-  }
-  if (options.isCompleted) {
-    return (
-      <Button
-        disabled={options.submissionBlocked}
-        fullWidth
-        icon={<RepeatIcon />}
-        size="large"
-        type="submit"
-        variant="secondary"
-      >
-        {m.try_again()}
-      </Button>
-    );
-  }
-  return (
-    <Button disabled={options.submissionBlocked} fullWidth size="large" type="submit">
-      {options.canRetry ? m.retry_generation() : m.generate_now()}
-    </Button>
-  );
-}
-
 type ApplicationWorkspaceProps = {
   application?: StoredApplication;
   generationEndpoint?: string;
 };
 
-type WorkspaceValues = {
-  jobTitle: string;
-  company: string;
-  strengths: string;
-  details: string;
-  letter: string;
-};
-
 function resolveWorkspaceValues(
   application: StoredApplication | undefined,
-  generatorValues: WorkspaceValues,
+  generatorValues: ApplicationFormValues,
 ) {
   if (application) {
     return {
@@ -298,28 +191,6 @@ function getIsGenerating(isViewing: boolean, phase: GenerationPhase) {
 
 function getIsCompleted(isViewing: boolean, phase: GenerationPhase) {
   return isViewing || phase === 'completed';
-}
-
-function renderWorkspaceFormAction(
-  isViewing: boolean,
-  options: FormActionsOptions,
-  startNewApplication: () => void,
-) {
-  if (!isViewing) return renderFormAction(options);
-
-  return (
-    <Button
-      disabled={options.submissionBlocked}
-      fullWidth
-      icon={<RepeatIcon />}
-      onClick={startNewApplication}
-      size="large"
-      type="button"
-      variant="secondary"
-    >
-      {m.try_again()}
-    </Button>
-  );
 }
 
 function shouldShowGoalBanner(
@@ -409,9 +280,6 @@ export function ApplicationWorkspace({
   const applicationLimitReached = applicationCount >= applicationLimit;
   const fieldsDisabled = getFieldsDisabled(isViewing, isGenerating, applicationLimitReached);
   const retryBlocked = isRetryBlocked(retryAvailableAt);
-  const hasApplicationTitle = [displayedValues.jobTitle, displayedValues.company].every(
-    (value) => value.trim().length > 0,
-  );
   const applicationTitle = getApplicationTitle(displayedValues.jobTitle, displayedValues.company);
   const submissionBlocked = isSubmissionBlocked(
     parsedRequest.success,
@@ -460,89 +328,62 @@ export function ApplicationWorkspace({
 
   const canRetry = phase === 'failed';
   const isCompleted = getIsCompleted(isViewing, phase);
+  const secondaryClasses = [
+    workspaceStyles['secondary'],
+    isViewing ? previewStyles['storedPanel'] : '',
+  ].join(' ');
 
   return (
     <Shell>
       <div className={styles['content']}>
-        <Workspace
-          primary={
-            <div className={styles['editor']}>
-              <SectionHeader
-                level="section"
-                muted={!hasApplicationTitle}
-                title={applicationTitle}
+        <div className={workspaceStyles['workspace']}>
+          <section className={workspaceStyles['primary']}>
+            <ApplicationForm
+              actions={{ canRetry, isCompleted, isGenerating, submissionBlocked }}
+              copyError={copyError}
+              error={error}
+              fieldLimits={fieldLimits}
+              fieldsDisabled={fieldsDisabled}
+              isViewing={isViewing}
+              onCompanyChange={setCompany}
+              onDetailsChange={setDetails}
+              onJobTitleChange={setJobTitle}
+              onStartNew={startNewApplication}
+              onStrengthsChange={setStrengths}
+              onSubmit={submit}
+              retryMessage={retryBlocked ? m.generation_retry_unavailable() : ''}
+              title={applicationTitle}
+              values={displayedValues}
+            />
+          </section>
+          <section className={secondaryClasses}>
+            {isViewing ? (
+              <ApplicationPreview
+                letter={displayedValues.letter}
+                mode="viewing"
+                onCopy={copyApplication}
               />
-              <form
-                className={styles['form']}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  submit();
-                }}
-              >
-                <div className={styles['fieldRow']}>
-                  <TextField
-                    characterLimit={fieldLimits.jobTitle}
-                    disabled={fieldsDisabled}
-                    id="job-title"
-                    label={m.job_title()}
-                    name="jobTitle"
-                    onChange={setJobTitle}
-                    value={displayedValues.jobTitle}
-                  />
-                  <TextField
-                    characterLimit={fieldLimits.company}
-                    disabled={fieldsDisabled}
-                    id="company"
-                    label={m.company()}
-                    name="company"
-                    onChange={setCompany}
-                    value={displayedValues.company}
-                  />
-                </div>
-                <TextField
-                  characterLimit={fieldLimits.strengths}
-                  disabled={fieldsDisabled}
-                  id="strengths"
-                  label={m.strengths()}
-                  name="strengths"
-                  onChange={setStrengths}
-                  value={displayedValues.strengths}
-                />
-                <TextAreaField
-                  characterLimit={fieldLimits.details}
-                  disabled={fieldsDisabled}
-                  id="details"
-                  label={m.additional_details()}
-                  name="details"
-                  onChange={setDetails}
-                  placeholder={m.additional_details_placeholder()}
-                  value={displayedValues.details}
-                />
-                {renderAlert(error)}
-                {renderAlert(copyError)}
-                {renderRetryMessage(retryBlocked)}
-                {renderWorkspaceFormAction(
-                  isViewing,
-                  {
-                    canRetry,
-                    isCompleted,
-                    isGenerating,
-                    submissionBlocked,
-                  },
-                  startNewApplication,
-                )}
-              </form>
-            </div>
-          }
-          secondary={renderApplicationPreview(
-            displayedValues.letter,
-            isCompleted,
-            isGenerating,
-            isViewing,
-            copyApplication,
-          )}
-          secondaryClassName={isViewing ? styles['storedPanel'] : undefined}
-        />
+            ) : isCompleted ? (
+              <ApplicationPreview
+                letter={displayedValues.letter}
+                mode="completed"
+                onCopy={copyApplication}
+              />
+            ) : isGenerating ? (
+              <ApplicationPreview
+                letter={displayedValues.letter}
+                mode="generating"
+                onCopy={copyApplication}
+              />
+            ) : (
+              <ApplicationPreview
+                letter={displayedValues.letter}
+                mode="idle"
+                onCopy={copyApplication}
+              />
+            )}
+          </section>
+        </div>
         <GoalBanner
           current={applicationCount}
           description={m.goal_description()}

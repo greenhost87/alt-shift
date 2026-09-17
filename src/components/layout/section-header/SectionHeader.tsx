@@ -5,20 +5,14 @@ import styles from './SectionHeader.module.css';
 type SectionHeaderProps = {
   action?: ReactNode;
   level?: 'page' | 'section';
-  muted?: boolean;
   title: string;
 };
 
-export function SectionHeader({
-  action,
-  level = 'page',
-  muted = false,
-  title,
-}: SectionHeaderProps) {
+export function SectionHeader({ action, level = 'page', title }: SectionHeaderProps) {
   const classes = [styles['header'], styles[level]].join(' ');
   return (
     <header className={classes}>
-      <Heading kind={muted ? 'placeholder' : level}>{title}</Heading>
+      <Heading kind={level}>{title}</Heading>
       {action ? <div className={styles['action']}>{action}</div> : null}
     </header>
   );

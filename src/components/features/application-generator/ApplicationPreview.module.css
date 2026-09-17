@@ -1,0 +1,201 @@
+.preview {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--rs-unit-x6);
+  min-height: calc(var(--rs-unit-panel-height) - var(--rs-unit-x12));
+}
+
+.placeholder,
+.letter {
+  margin: 0;
+}
+
+.letter {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.generationCaret {
+  animation: blink 800ms steps(1, end) infinite alternate;
+  background: currentcolor;
+  display: inline-block;
+  height: 1em;
+  margin-inline-start: 2px;
+  vertical-align: -0.1em;
+  width: 2px;
+}
+
+.completedPreview {
+  gap: var(--rs-unit-x4);
+  min-height: calc(var(--rs-unit-completed-panel-height) - var(--rs-unit-x12));
+}
+
+.storedPanel.storedPanel {
+  --rs-unit-workspace-secondary-available-height: calc(
+    100dvh - var(--rs-unit-page-top) - var(--rs-unit-brand-height) - var(--rs-unit-x8)
+  );
+  --rs-unit-workspace-secondary-height: var(--rs-unit-panel-height);
+  --rs-unit-workspace-secondary-max-height: min(
+    var(--rs-unit-workspace-secondary-height),
+    var(--rs-unit-workspace-secondary-available-height)
+  );
+
+  align-self: start;
+  box-sizing: border-box;
+  max-height: var(--rs-unit-workspace-secondary-max-height);
+  overflow: hidden;
+}
+
+.storedPanel .preview {
+  max-height: calc(var(--rs-unit-workspace-secondary-max-height) - var(--rs-unit-x12));
+  min-height: min(
+    calc(var(--rs-unit-completed-panel-height) - var(--rs-unit-x12)),
+    calc(var(--rs-unit-workspace-secondary-max-height) - var(--rs-unit-x12))
+  );
+}
+
+.storedPanel .letter {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.mobilePreviewAction {
+  display: none;
+}
+
+.previewAction {
+  align-items: center;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.loadingPreview {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: calc(var(--rs-unit-panel-height) - var(--rs-unit-x12));
+  overflow: hidden;
+}
+
+.orb {
+  align-items: center;
+  animation: drift 1.6s ease-in-out infinite alternate;
+  display: flex;
+  height: 160px;
+  justify-content: center;
+  position: relative;
+  width: 160px;
+}
+
+.orbGlow,
+.orbCore {
+  border-radius: 50%;
+  position: absolute;
+}
+
+.orbGlow {
+  background: var(--rs-color-white);
+  filter: blur(var(--rs-unit-x10));
+  height: 160px;
+  width: 160px;
+}
+
+.orbCore {
+  background:
+    radial-gradient(
+      64.85% 64.85% at 74.22% 21.88%,
+      var(--rs-color-white) 0%,
+      rgb(255 255 255 / 16%) 100%
+    ),
+    radial-gradient(
+      141.42% 141.42% at 0 0,
+      var(--rs-color-white) 0%,
+      var(--rs-color-border-neutral) 100%
+    );
+  box-shadow: inset 0 -2px var(--rs-unit-x8) rgb(16 24 40 / 8%);
+  height: 80px;
+  width: 80px;
+}
+
+@keyframes drift {
+  from {
+    opacity: 1;
+    transform: translateY(0.5px);
+  }
+
+  to {
+    opacity: 0.48;
+    transform: translateY(-15.5px);
+  }
+}
+
+@keyframes blink {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@media (--rs-viewport-s) {
+  .storedPanel.storedPanel {
+    --rs-unit-workspace-secondary-available-height: calc(
+      100dvh - var(--rs-unit-mobile-page-top) - var(--rs-unit-control-height) - var(--rs-unit-x3) -
+        var(--rs-unit-x6) - var(--rs-unit-x8)
+    );
+  }
+}
+
+@media (max-width: 899px) {
+  .storedPanel.storedPanel {
+    --rs-unit-workspace-secondary-height: var(--rs-unit-panel-height-mobile);
+  }
+
+  .preview,
+  .completedPreview,
+  .loadingPreview {
+    min-height: calc(var(--rs-unit-panel-height-mobile) - var(--rs-unit-x8));
+  }
+
+  .storedPanel .preview {
+    max-height: calc(var(--rs-unit-workspace-secondary-max-height) - var(--rs-unit-x8));
+    min-height: min(
+      calc(var(--rs-unit-panel-height-mobile) - var(--rs-unit-x8)),
+      calc(var(--rs-unit-workspace-secondary-max-height) - var(--rs-unit-x8))
+    );
+  }
+}
+
+@media (max-width: 479px) {
+  .storedPanel.storedPanel {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .storedPanel .preview {
+    max-height: none;
+    min-height: calc(var(--rs-unit-panel-height-mobile) - var(--rs-unit-x8));
+  }
+
+  .storedPanel .letter {
+    flex: none;
+    overflow-y: visible;
+  }
+
+  .mobilePreviewAction {
+    align-items: center;
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb,
+  .generationCaret {
+    animation: none;
+  }
+}
