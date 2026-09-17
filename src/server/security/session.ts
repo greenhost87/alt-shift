@@ -8,10 +8,11 @@ import {
   VERIFIED_SESSION_HEADER,
 } from '../../system/security/session';
 import { getCookiePath } from '../../system/config/base-path';
-import { BASE_PATH } from '../../system/config/environment';
+import { BASE_PATH, PUBLIC_SITE_URL } from '../../system/config/environment';
 import { getSessionSecret, getSessionTtlMs } from './config';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const PUBLIC_SITE_ORIGIN = new URL(PUBLIC_SITE_URL).origin;
 
 type SessionCredentials = {
   id: string;
@@ -105,7 +106,8 @@ function securityError(status: number, code: string, message: string): Response 
 function hasValidRequestSource(request: Request): boolean {
   const origin = request.headers.get('origin');
   const fetchSite = request.headers.get('sec-fetch-site');
-  return origin === new URL(request.url).origin && fetchSite === 'same-origin';
+  const requestOrigin = new URL(request.url).origin;
+  return (origin === requestOrigin || origin === PUBLIC_SITE_ORIGIN) && fetchSite === 'same-origin';
 }
 
 function hasValidCsrfToken(request: Request, csrfTokenHash: string): boolean {

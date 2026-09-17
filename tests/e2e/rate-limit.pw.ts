@@ -88,6 +88,27 @@ test('sends browser device signals through the production generation path', asyn
   expect((await requestGeneration(page, true, null)).status).toBe(400);
 });
 
+test('accepts the public origin when running behind a reverse proxy', async ({ page }) => {
+  await page.goto('/');
+  const csrfCookie = (await page.context().cookies()).find(
+    (cookie) => cookie.name === 'ALT_SHIFT_CSRF',
+  );
+  expect(csrfCookie).toBeDefined();
+
+  const response = await page.request.post('/api/generate', {
+    data: { ...input, company: '' },
+    headers: {
+      'content-type': 'application/json',
+      origin: 'https://seo.example.test',
+      'sec-fetch-site': 'same-origin',
+      'x-csrf-token': csrfCookie?.value ?? '',
+    },
+  });
+
+  expect(response.status()).toBe(400);
+  expect(await response.json()).toEqual(generationFixtures.invalidFieldsError);
+});
+
 test('releases failed streams and enforces the application limit', async ({ page }) => {
   await page.goto('/');
   const interrupted = await requestGeneration(
