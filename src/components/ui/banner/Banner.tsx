@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Modal } from 'reshaped';
 import * as m from '../../../paraglide/messages.js';
@@ -23,7 +24,6 @@ type BannerHeadingProps = {
 };
 
 type SubscriptionModalProps = {
-  active: boolean;
   onClose: () => void;
 };
 
@@ -37,12 +37,24 @@ function BannerHeading({ action, description, title }: BannerHeadingProps) {
   );
 }
 
-export function SubscriptionModal({ active, onClose }: SubscriptionModalProps) {
+export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
   const title = m.subscription_banner_title();
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        queueMicrotask(onClose);
+      }
+    };
+    document.addEventListener('keydown', closeOnEscape, true);
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape, true);
+    };
+  }, [onClose]);
 
   return (
     <Modal
-      active={active}
+      active
       ariaLabel={title}
       className={styles['subscriptionModal']}
       onClose={onClose}

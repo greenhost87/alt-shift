@@ -207,6 +207,13 @@ function getIsCompleted(isViewing: boolean, phase: GenerationPhase) {
   return isViewing || phase === 'completed';
 }
 
+function getPreviewMode(isViewing: boolean, isCompleted: boolean, isGenerating: boolean) {
+  if (isViewing) return 'viewing';
+  if (isCompleted) return 'completed';
+  if (isGenerating) return 'generating';
+  return 'idle';
+}
+
 function shouldShowGoalBanner(
   isViewing: boolean,
   isCompleted: boolean,
@@ -214,6 +221,11 @@ function shouldShowGoalBanner(
   applicationLimit: number,
 ) {
   return !isViewing && isCompleted && applicationCount < applicationLimit;
+}
+
+function renderSubscriptionModal(visible: boolean, onClose: () => void) {
+  if (!visible) return null;
+  return <SubscriptionModal onClose={onClose} />;
 }
 
 export function ApplicationWorkspace({
@@ -396,35 +408,12 @@ export function ApplicationWorkspace({
             />
           </section>
           <section className={secondaryClasses}>
-            {isViewing ? (
-              <ApplicationPreview
-                copyFeedbackTimeoutMs={copyFeedbackTimeoutMs}
-                letter={displayedValues.letter}
-                mode="viewing"
-                onCopy={copyApplication}
-              />
-            ) : isCompleted ? (
-              <ApplicationPreview
-                copyFeedbackTimeoutMs={copyFeedbackTimeoutMs}
-                letter={displayedValues.letter}
-                mode="completed"
-                onCopy={copyApplication}
-              />
-            ) : isGenerating ? (
-              <ApplicationPreview
-                copyFeedbackTimeoutMs={copyFeedbackTimeoutMs}
-                letter={displayedValues.letter}
-                mode="generating"
-                onCopy={copyApplication}
-              />
-            ) : (
-              <ApplicationPreview
-                copyFeedbackTimeoutMs={copyFeedbackTimeoutMs}
-                letter={displayedValues.letter}
-                mode="idle"
-                onCopy={copyApplication}
-              />
-            )}
+            <ApplicationPreview
+              copyFeedbackTimeoutMs={copyFeedbackTimeoutMs}
+              letter={displayedValues.letter}
+              mode={getPreviewMode(isViewing, isCompleted, isGenerating)}
+              onCopy={copyApplication}
+            />
           </section>
         </div>
         <GoalBanner
@@ -434,7 +423,7 @@ export function ApplicationWorkspace({
           total={applicationLimit}
           visible={shouldShowGoalBanner(isViewing, isCompleted, applicationCount, applicationLimit)}
         />
-        <SubscriptionModal active={subscriptionModalVisible} onClose={hideSubscriptionModal} />
+        {renderSubscriptionModal(subscriptionModalVisible, hideSubscriptionModal)}
       </div>
     </Shell>
   );

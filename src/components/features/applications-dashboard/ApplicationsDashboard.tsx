@@ -40,6 +40,11 @@ function shouldShowApplications(status: StorageStatus, applicationCount: number)
   return status !== 'loading' && applicationCount > 0;
 }
 
+function renderSubscriptionModal(visible: boolean, onClose: () => void) {
+  if (!visible) return null;
+  return <SubscriptionModal onClose={onClose} />;
+}
+
 function renderCreateAction(
   creationBlocked: boolean,
   onCreate: () => void,
@@ -86,7 +91,6 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
     setCopyError(error);
     return !error;
   };
-
   return (
     <div className={styles['content']}>
       <ConfirmationDialog
@@ -159,7 +163,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
           total={applicationLimit}
         />
       ) : null}
-      <SubscriptionModal active={subscriptionModalVisible} onClose={hideSubscriptionModal} />
+      {renderSubscriptionModal(subscriptionModalVisible, hideSubscriptionModal)}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, notFound } from '@tanstack/react-router';
 import { ApplicationWorkspace } from '../components/features/application-generator/ApplicationGenerator';
 import { handleGenerateRequest } from '../server/generation/handler';
 
@@ -23,6 +23,9 @@ function createFakeGenerationResponse(incomplete: boolean) {
 }
 
 export const Route = createFileRoute('/fake')({
+  beforeLoad: () => {
+    if (import.meta.env.PROD) notFound({ throw: true });
+  },
   component: FakeApplicationGeneratorPage,
   head: () => ({
     meta: [
@@ -34,6 +37,8 @@ export const Route = createFileRoute('/fake')({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        if (import.meta.env.PROD) return new Response(null, { status: 404 });
+
         const response = await handleGenerateRequest(
           request,
           async () => {
