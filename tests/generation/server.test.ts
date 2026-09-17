@@ -4,12 +4,15 @@ import {
   getGenerationFieldLimits,
   getGenerationSystemPrompt,
 } from '../../src/server/config/application';
+import { getClientFingerprint } from '../../src/server/generation/client-fingerprint';
 import { requestGeneration } from '../../src/server/generation/client';
 import { handleGenerateRequest } from '../../src/server/generation/handler';
 import { createGenerationRateLimiter } from '../../src/server/generation/rate-limit';
 import { buildGenerationPrompt } from '../../src/server/generation/prompt';
 import { safeParseGenerationRequest } from '../../src/system/generation/schema';
+import { VERIFIED_SESSION_HEADER } from '../../src/system/security/session';
 import generationFixtures from '../fixtures/generation.json' with { type: 'json' };
+import { useIsolatedTestDatabase as setupIsolatedTestDatabase } from '../setup/testDatabase';
 
 const input = {
   jobTitle: 'Product manager',
@@ -64,6 +67,8 @@ if (serverPort === undefined) throw new Error('The test server did not bind to a
 
 afterAll(async () => server.stop());
 
+const getTestDatabase = setupIsolatedTestDatabase('generation-server');
+
 describe('generation server contract', () => {
   test('rejects malformed, incomplete, and over-limit structured input', async () => {
     const fieldLimits = getGenerationFieldLimits();
@@ -98,6 +103,97 @@ describe('generation server contract', () => {
     );
     expect(unsupportedLocaleResponse.status).toBe(400);
     expect(await unsupportedLocaleResponse.json()).toEqual(generationFixtures.invalidFieldsError);
+  });
+
+  test('derives a process-local fingerprint from network and browser signals', () => {
+    const firstHeaders = {
+      'accept-language': 'en-US,en;q=0.9',
+      'sec-ch-ua-platform': '"macOS"',
+      'user-agent': 'Example Browser',
+      [VERIFIED_SESSION_HEADER]: 'session-a',
+      'x-client-device-signals': 'a'.repeat(64),
+    };
+    const first = new Request('http://localhost/api/generate', { headers: firstHeaders });
+    const rotatedSession = new Request(first, {
+      headers: { ...firstHeaders, [VERIFIED_SESSION_HEADER]: 'session-b' },
+    });
+    const spoofedNetworkHeaders = new Request(first, {
+      headers: {
+        ...firstHeaders,
+        'cf-connecting-ip': '203.0.113.10',
+        'x-forwarded-for': '203.0.113.11',
+        'x-real-ip': '203.0.113.12',
+      },
+    });
+    const differentDevice = new Request(first, {
+      headers: { ...firstHeaders, 'x-client-device-signals': 'b'.repeat(64) },
+    });
+
+    expect(getClientFingerprint(first)).toMatch(/^[a-f0-9]{64}$/);
+    expect(getClientFingerprint(rotatedSession)).toBe(getClientFingerprint(first));
+    expect(getClientFingerprint(spoofedNetworkHeaders)).toBe(getClientFingerprint(first));
+    expect(getClientFingerprint(differentDevice)).not.toBe(getClientFingerprint(first));
+  });
+
+  test('rejects a secured request without a valid browser device signal', async () => {
+    let upstreamCalls = 0;
+    const response = await handleGenerateRequest(
+      new Request('http://localhost/api/generate', {
+        method: 'POST',
+        headers: { [VERIFIED_SESSION_HEADER]: 'session-a' },
+        body: JSON.stringify(input),
+      }),
+      async () => {
+        upstreamCalls += 1;
+        await sleep(0);
+        return new Response();
+      },
+    );
+
+    expect(response.status).toBe(400);
+    expect(upstreamCalls).toBe(0);
+  });
+
+  test('keeps separate client buckets within the global generation budget', () => {
+    let currentTime = 0;
+    const rateLimit = createGenerationRateLimiter(() => currentTime, 2, 60_000, 4);
+
+    expect(rateLimit('client-a')).toBeUndefined();
+    expect(rateLimit('client-a')).toBeUndefined();
+    expect(rateLimit('client-a')).toBe(60);
+    expect(rateLimit('client-b')).toBeUndefined();
+    expect(rateLimit('client-b')).toBeUndefined();
+    expect(rateLimit('client-c')).toBe(60);
+
+    currentTime = 60_000;
+    expect(rateLimit('client-a')).toBeUndefined();
+  });
+
+  test('shares persisted rate-limit requests and reports the first available slot', () => {
+    let currentTime = 0;
+    const database = () => getTestDatabase();
+    const firstRateLimit = createGenerationRateLimiter(() => currentTime, 2, 60_000, 4, database);
+    const secondRateLimit = createGenerationRateLimiter(() => currentTime, 2, 60_000, 4, database);
+
+    expect(firstRateLimit('client-a')).toBeUndefined();
+    currentTime = 30_000;
+    expect(secondRateLimit('client-a')).toBeUndefined();
+    currentTime = 31_000;
+    expect(firstRateLimit('client-a')).toBe(29);
+
+    currentTime = 60_000;
+    expect(secondRateLimit('client-a')).toBeUndefined();
+  });
+
+  test('reports the first globally available slot', () => {
+    let currentTime = 0;
+    const rateLimit = createGenerationRateLimiter(() => currentTime, 10, 60_000, 2);
+
+    expect(rateLimit('client-a')).toBeUndefined();
+    currentTime = 30_000;
+    expect(rateLimit('client-b')).toBeUndefined();
+    currentTime = 31_000;
+    expect(rateLimit('client-c')).toBe(29);
   });
 
   test('limits generation requests before calling the upstream service', async () => {

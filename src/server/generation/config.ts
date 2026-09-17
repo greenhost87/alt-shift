@@ -33,6 +33,10 @@ export function getGenerationRateLimit(): number {
   return getPositiveIntegerEnv('GENERATION_RATE_LIMIT') ?? DEFAULT_RATE_LIMIT;
 }
 
+export function getGenerationGlobalRateLimit(): number {
+  return getPositiveIntegerEnv('GENERATION_GLOBAL_RATE_LIMIT') ?? getGenerationRateLimit();
+}
+
 export function getGenerationRateWindowMs(): number {
   return getPositiveIntegerEnv('GENERATION_RATE_WINDOW_MS') ?? DEFAULT_RATE_WINDOW_MS;
 }

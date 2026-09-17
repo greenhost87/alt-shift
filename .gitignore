@@ -9,6 +9,7 @@ yarn.lock
 .nitro/
 .tanstack/
 dist/
+data/
 *.tsbuildinfo
 
 # Tests

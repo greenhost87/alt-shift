@@ -1,9 +1,11 @@
 import * as v from 'valibot';
 import { getGenerationFieldLimits } from '../config/application';
 import { createGenerationRequestSchema } from '../../system/generation/schema';
+import { getClientFingerprint, hasValidClientDeviceSignal } from './client-fingerprint';
 import { GenerationRequestError, requestGeneration } from './client';
 import { getGenerationInactivityTimeoutMs } from './config';
 import { createGenerationRateLimiter } from './rate-limit';
+import { VERIFIED_SESSION_HEADER } from '../../system/security/session';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const takeGenerationSlot = createGenerationRateLimiter();
@@ -100,7 +102,7 @@ async function createUpstreamErrorResponse(upstream: Response) {
 export async function handleGenerateRequest(
   request: Request,
   generate: typeof requestGeneration = requestGeneration,
-  rateLimit: () => number | undefined = takeGenerationSlot,
+  rateLimit: (clientFingerprint: string) => number | undefined = takeGenerationSlot,
 ) {
   const parsed = v.safeParse(
     v.pipe(v.string(), v.parseJson(), createGenerationRequestSchema(getGenerationFieldLimits())),
@@ -117,7 +119,11 @@ export async function handleGenerateRequest(
     );
   }
 
-  const retryAfter = rateLimit();
+  if (request.headers.has(VERIFIED_SESSION_HEADER) && !hasValidClientDeviceSignal(request)) {
+    return errorResponse(400, 'invalid_client_signal', 'Client device signal rejected.');
+  }
+
+  const retryAfter = rateLimit(getClientFingerprint(request));
   if (retryAfter !== undefined) {
     return errorResponse(
       429,

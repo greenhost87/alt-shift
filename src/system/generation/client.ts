@@ -1,6 +1,8 @@
 import { createParser } from 'eventsource-parser';
 import * as v from 'valibot';
 import * as m from '../../paraglide/messages.js';
+import { getBrowserCsrfToken, CSRF_HEADER } from '../security/session';
+import { getClientDeviceSignal } from './device-signal';
 import type { GenerationRequest } from './schema';
 
 const generationDeltaSchema = v.strictObject({ text: v.string() });
@@ -105,9 +107,17 @@ async function requestGenerationStream(
   signal: AbortSignal,
   endpoint: string,
 ) {
+  const deviceSignal = await getClientDeviceSignal();
+  const csrfToken = getBrowserCsrfToken();
+  const headers = new Headers({
+    'content-type': 'application/json',
+    accept: 'text/event-stream',
+    'x-client-device-signals': deviceSignal,
+  });
+  if (csrfToken !== undefined) headers.set(CSRF_HEADER, csrfToken);
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+    headers,
     body: JSON.stringify(request),
     signal,
   });

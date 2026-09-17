@@ -26,13 +26,14 @@ Install dependencies:
 bun install
 ```
 
-Create the local environment file and set the server-only API token:
+Create the local environment file, set the server-only API token, and generate a session secret:
 
 ```bash
 cp .env.example .env
+openssl rand -hex 32
 ```
 
-Generation provider settings, field limits, product goals, initial content, and browser storage identifiers are documented in `.env.example`. `GENERATION_API_TOKEN` is the only required value without a default. Fresh browser storage starts with an empty application list and an empty generator form; the initial-content variables can provide explicit seed data when needed.
+Set the printed value as `SESSION_SECRET` in `.env`. Generation provider settings, field limits, product goals, initial content, and browser storage identifiers are documented in `.env.example`. `GENERATION_API_TOKEN` and `SESSION_SECRET` are the required values without defaults. Fresh browser storage starts with an empty application list and an empty generator form; the initial-content variables can provide explicit seed data when needed.
 
 Start the development server:
 
