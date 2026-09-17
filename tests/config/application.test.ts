@@ -7,6 +7,8 @@ import { getOptionalEnv, setEnv } from '../../src/server/config/environment';
 
 const CONFIG_KEYS = [
   'APPLICATION_LIMIT',
+  'APPLICATION_COUNT_COOKIE_TTL_SECONDS',
+  'COPY_FEEDBACK_TIMEOUT_MS',
   'APPLICATION_INITIAL_FORM_JSON',
   'APPLICATION_INITIAL_APPLICATIONS_JSON',
   'APPLICATION_STORAGE_KEY',
@@ -38,6 +40,8 @@ describe('application environment configuration', () => {
 
   test('loads product, field, content, and storage settings', () => {
     setEnv('APPLICATION_LIMIT', '7');
+    setEnv('APPLICATION_COUNT_COOKIE_TTL_SECONDS', '86400');
+    setEnv('COPY_FEEDBACK_TIMEOUT_MS', '750');
     setEnv(
       'APPLICATION_INITIAL_FORM_JSON',
       '{"jobTitle":"Engineer","company":"Variant","strengths":"TypeScript","details":"Delivery"}',
@@ -56,7 +60,9 @@ describe('application environment configuration', () => {
     setEnv('GENERATION_SYSTEM_PROMPT', 'Custom system prompt');
 
     expect(getApplicationConfig()).toEqual({
+      applicationCountCookieTtlSeconds: 86_400,
       applicationLimit: 7,
+      copyFeedbackTimeoutMs: 750,
       fieldLimits: { jobTitle: 101, company: 102, strengths: 103, details: 104 },
       initialForm: {
         jobTitle: 'Engineer',

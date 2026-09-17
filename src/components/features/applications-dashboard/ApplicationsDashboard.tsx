@@ -58,14 +58,16 @@ function shouldShowApplications(status: StorageStatus, applicationCount: number)
 }
 
 export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) {
-  const { applicationLimit, applications, applicationCount, storageStatus } = useApplicationStore(
-    useShallow((state) => ({
-      applicationLimit: state.config.applicationLimit,
-      applications: state.applications,
-      applicationCount: state.applicationCount,
-      storageStatus: state.storageStatus,
-    })),
-  );
+  const { applicationLimit, applications, applicationCount, copyFeedbackTimeoutMs, storageStatus } =
+    useApplicationStore(
+      useShallow((state) => ({
+        applicationLimit: state.config.applicationLimit,
+        applications: state.applications,
+        applicationCount: state.applicationCount,
+        copyFeedbackTimeoutMs: state.config.copyFeedbackTimeoutMs,
+        storageStatus: state.storageStatus,
+      })),
+    );
   const deleteApplication = useApplicationStore((state) => state.deleteApplication);
   const copyError = useApplicationStore((state) => state.dashboardCopyError);
   const setCopyError = useApplicationStore((state) => state.setDashboardCopyError);
@@ -113,6 +115,7 @@ export function ApplicationsDashboard({ onCreate }: ApplicationsDashboardProps) 
             {applications.map((application) => (
               <ApplicationCard
                 application={application}
+                copyFeedbackTimeoutMs={copyFeedbackTimeoutMs}
                 key={application.id}
                 onCopy={copyApplication}
                 onDelete={setPendingDeletion}

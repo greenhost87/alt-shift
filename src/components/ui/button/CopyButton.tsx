@@ -4,20 +4,21 @@ import { CopyIcon } from '../icon/Icon';
 import { Button } from './Button';
 
 type CopyButtonProps = {
+  feedbackTimeoutMs: number;
   onClick: () => Promise<boolean>;
 };
 
-export function CopyButton({ onClick }: CopyButtonProps) {
+export function CopyButton({ feedbackTimeoutMs, onClick }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return undefined;
     const timeout = window.setTimeout(() => {
       setCopied(false);
-    }, 2000);
+    }, feedbackTimeoutMs);
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [copied]);
+  }, [copied, feedbackTimeoutMs]);
 
   const copy = async () => {
     setCopied(false);

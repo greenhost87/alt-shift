@@ -6,13 +6,19 @@ import styles from './ApplicationPreview.module.css';
 type PreviewMode = 'idle' | 'generating' | 'completed' | 'viewing';
 
 type ApplicationPreviewProps = {
+  copyFeedbackTimeoutMs: number;
   letter: string;
   mode: PreviewMode;
   onCopy: () => Promise<boolean>;
 };
 
-export function ApplicationPreview({ letter, mode, onCopy }: ApplicationPreviewProps) {
-  const copyButton = <CopyButton onClick={onCopy} />;
+export function ApplicationPreview({
+  copyFeedbackTimeoutMs,
+  letter,
+  mode,
+  onCopy,
+}: ApplicationPreviewProps) {
+  const copyButton = <CopyButton feedbackTimeoutMs={copyFeedbackTimeoutMs} onClick={onCopy} />;
   if (letter) {
     return (
       <div

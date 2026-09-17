@@ -4,6 +4,7 @@ import {
   getGenerationFieldLimits,
   getGenerationSystemPrompt,
 } from '../../src/server/config/application';
+import { getOptionalEnv, setEnv } from '../../src/server/config/environment';
 import { getClientFingerprint } from '../../src/server/generation/client-fingerprint';
 import { requestGeneration } from '../../src/server/generation/client';
 import { handleGenerateRequest } from '../../src/server/generation/handler';
@@ -133,6 +134,26 @@ describe('generation server contract', () => {
     expect(getClientFingerprint(rotatedSession)).toBe(getClientFingerprint(first));
     expect(getClientFingerprint(spoofedNetworkHeaders)).toBe(getClientFingerprint(first));
     expect(getClientFingerprint(differentDevice)).not.toBe(getClientFingerprint(first));
+  });
+
+  test('limits fingerprint header input using environment configuration', () => {
+    const key = 'CLIENT_FINGERPRINT_HEADER_MAX_LENGTH';
+    const originalValue = getOptionalEnv(key);
+    setEnv(key, '8');
+    try {
+      const headers = {
+        'user-agent': 'shared-pdifferent-a',
+        'x-client-device-signals': 'a'.repeat(64),
+      };
+      const first = new Request('http://localhost/api/generate', { headers });
+      const second = new Request(first, {
+        headers: { ...headers, 'user-agent': 'shared-pdifferent-b' },
+      });
+
+      expect(getClientFingerprint(first)).toBe(getClientFingerprint(second));
+    } finally {
+      setEnv(key, originalValue);
+    }
   });
 
   test('rejects a secured request without a valid browser device signal', async () => {

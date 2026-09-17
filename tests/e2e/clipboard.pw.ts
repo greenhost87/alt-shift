@@ -13,4 +13,14 @@ test('copies an application through the browser clipboard on the HTTPS origin', 
   expect(await page.evaluate(() => window.isSecureContext)).toBe(true);
   await expectSuccessfulCopy(page);
   expect(await page.evaluate(async () => navigator.clipboard.readText())).toBe('Cover letter 1');
+  await expect(page.getByRole('button', { name: 'Copy to clipboard' }).first()).toBeVisible({
+    timeout: 1_500,
+  });
+
+  const countCookie = (await context.cookies()).find(
+    (cookie) => cookie.name === 'ALT_SHIFT_APPLICATION_COUNT',
+  );
+  expect(countCookie?.value).toBe('1');
+  expect(countCookie?.expires).toBeGreaterThan(Date.now() / 1_000 + 90);
+  expect(countCookie?.expires).toBeLessThan(Date.now() / 1_000 + 130);
 });

@@ -9,6 +9,8 @@ import type {
 import { getOptionalEnv, getPositiveIntegerEnv } from './environment';
 
 const DEFAULT_APPLICATION_LIMIT = 5;
+const DEFAULT_APPLICATION_COUNT_COOKIE_TTL_SECONDS = 31_536_000;
+const DEFAULT_COPY_FEEDBACK_TIMEOUT_MS = 2_000;
 const DEFAULT_INITIAL_FORM: InitialApplicationForm = {
   jobTitle: '',
   company: '',
@@ -55,7 +57,12 @@ export function getGenerationSystemPrompt(): string {
 
 export function getApplicationConfig(): ApplicationConfig {
   return {
+    applicationCountCookieTtlSeconds:
+      getPositiveIntegerEnv('APPLICATION_COUNT_COOKIE_TTL_SECONDS') ??
+      DEFAULT_APPLICATION_COUNT_COOKIE_TTL_SECONDS,
     applicationLimit: getPositiveIntegerEnv('APPLICATION_LIMIT') ?? DEFAULT_APPLICATION_LIMIT,
+    copyFeedbackTimeoutMs:
+      getPositiveIntegerEnv('COPY_FEEDBACK_TIMEOUT_MS') ?? DEFAULT_COPY_FEEDBACK_TIMEOUT_MS,
     fieldLimits: getGenerationFieldLimits(),
     initialForm: parseConfiguredJson(
       'APPLICATION_INITIAL_FORM_JSON',

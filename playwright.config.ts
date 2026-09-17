@@ -28,7 +28,7 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
   webServer: {
-    command: `SQLITE_PATH=test-results/e2e-${port}.sqlite SESSION_SECRET=e2e-only-session-secret-at-least-32-characters GENERATION_RATE_LIMIT=2 GENERATION_GLOBAL_RATE_LIMIT=100 bun run dev -- --host 127.0.0.1 --port ${port} --strictPort`,
+    command: `SQLITE_PATH=test-results/e2e-${port}.sqlite SESSION_SECRET=e2e-only-session-secret-at-least-32-characters GENERATION_RATE_LIMIT=2 GENERATION_GLOBAL_RATE_LIMIT=100 APPLICATION_COUNT_COOKIE_TTL_SECONDS=120 COPY_FEEDBACK_TIMEOUT_MS=500 bun run dev -- --host 127.0.0.1 --port ${port} --strictPort`,
     ignoreHTTPSErrors: true,
     url: baseURL,
   },

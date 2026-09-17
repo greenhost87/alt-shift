@@ -87,7 +87,7 @@ export function createApplicationStore(
   ) => {
     const applicationCount = nextState.applications.length;
     if (nextState.status === 'ready' || nextState.status === 'invalid') {
-      writeApplicationCountCookie(applicationCount);
+      writeApplicationCountCookie(applicationCount, config.applicationCountCookieTtlSeconds);
     }
     set({
       applications: nextState.applications,

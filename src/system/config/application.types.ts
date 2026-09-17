@@ -22,7 +22,9 @@ export type ApplicationStorageConfig = {
 };
 
 export type ApplicationConfig = {
+  applicationCountCookieTtlSeconds: number;
   applicationLimit: number;
+  copyFeedbackTimeoutMs: number;
   fieldLimits: GenerationFieldLimits;
   initialForm: InitialApplicationForm;
   storage: ApplicationStorageConfig;

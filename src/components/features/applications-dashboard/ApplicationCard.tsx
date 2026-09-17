@@ -8,11 +8,17 @@ import styles from './ApplicationCard.module.css';
 
 type ApplicationCardProps = {
   application: StoredApplication;
+  copyFeedbackTimeoutMs: number;
   onCopy: (letter: string) => Promise<boolean>;
   onDelete: (applicationId: string) => void;
 };
 
-export function ApplicationCard({ application, onCopy, onDelete }: ApplicationCardProps) {
+export function ApplicationCard({
+  application,
+  copyFeedbackTimeoutMs,
+  onCopy,
+  onDelete,
+}: ApplicationCardProps) {
   return (
     <article className={styles['card']}>
       <Link
@@ -41,7 +47,10 @@ export function ApplicationCard({ application, onCopy, onDelete }: ApplicationCa
         >
           {m.delete()}
         </Button>
-        <CopyButton onClick={async () => onCopy(application.letter)} />
+        <CopyButton
+          feedbackTimeoutMs={copyFeedbackTimeoutMs}
+          onClick={async () => onCopy(application.letter)}
+        />
       </div>
     </article>
   );

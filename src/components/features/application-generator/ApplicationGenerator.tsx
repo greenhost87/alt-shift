@@ -257,7 +257,7 @@ export function ApplicationWorkspace({
     })),
   );
   const abortController = useRef<AbortController | null>(null);
-  const { applicationLimit, fieldLimits } = config;
+  const { applicationLimit, copyFeedbackTimeoutMs, fieldLimits } = config;
   const displayedValues = resolveWorkspaceValues(application, {
     jobTitle,
     company,
@@ -359,24 +359,28 @@ export function ApplicationWorkspace({
           <section className={secondaryClasses}>
             {isViewing ? (
               <ApplicationPreview
+                copyFeedbackTimeoutMs={copyFeedbackTimeoutMs}
                 letter={displayedValues.letter}
                 mode="viewing"
                 onCopy={copyApplication}
               />
             ) : isCompleted ? (
               <ApplicationPreview
+                copyFeedbackTimeoutMs={copyFeedbackTimeoutMs}
                 letter={displayedValues.letter}
                 mode="completed"
                 onCopy={copyApplication}
               />
             ) : isGenerating ? (
               <ApplicationPreview
+                copyFeedbackTimeoutMs={copyFeedbackTimeoutMs}
                 letter={displayedValues.letter}
                 mode="generating"
                 onCopy={copyApplication}
               />
             ) : (
               <ApplicationPreview
+                copyFeedbackTimeoutMs={copyFeedbackTimeoutMs}
                 letter={displayedValues.letter}
                 mode="idle"
                 onCopy={copyApplication}
