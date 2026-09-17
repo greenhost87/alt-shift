@@ -34,7 +34,7 @@ test('desktop primitives match the design geometry and typography', async ({ pag
   expect(mainBox?.width).toBe(1120);
 
   const banner = getGoalBanner(page);
-  await expect(banner).toHaveCSS('padding', '54px 64px');
+  await expect(banner).toHaveCSS('padding', '48px 64px');
 
   const card = page.locator('article').first();
   const cardBox = await card.boundingBox();

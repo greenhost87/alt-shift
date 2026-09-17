@@ -4,7 +4,7 @@
   gap: var(--rs-unit-x12);
 }
 
-@media (max-width: 479px) {
+@media (--rs-viewport-xs) {
   .content {
     gap: var(--rs-unit-x8);
   }

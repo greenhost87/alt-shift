@@ -17,13 +17,13 @@
 }
 
 .generationCaret {
-  animation: blink 800ms steps(1, end) infinite alternate;
+  animation: blink var(--rs-duration-spinner) steps(1, end) infinite alternate;
   background: currentcolor;
   display: inline-block;
   height: 1em;
-  margin-inline-start: 2px;
+  margin-inline-start: var(--rs-unit-x0-5);
   vertical-align: -0.1em;
-  width: 2px;
+  width: var(--rs-unit-x0-5);
 }
 
 .completedPreview {
@@ -114,7 +114,7 @@
       var(--rs-color-white) 0%,
       var(--rs-color-border-neutral) 100%
     );
-  box-shadow: inset 0 -2px var(--rs-unit-x8) rgb(16 24 40 / 8%);
+  box-shadow: inset 0 calc(-1 * var(--rs-unit-x0-5)) var(--rs-unit-x8) rgb(16 24 40 / 8%);
   height: 80px;
   width: 80px;
 }
@@ -150,7 +150,7 @@
   }
 }
 
-@media (max-width: 899px) {
+@media not all and (--rs-viewport-l) {
   .storedPanel.storedPanel {
     --rs-unit-workspace-secondary-height: var(--rs-unit-panel-height-mobile);
   }
@@ -170,7 +170,7 @@
   }
 }
 
-@media (max-width: 479px) {
+@media (--rs-viewport-xs) {
   .storedPanel.storedPanel {
     max-height: none;
     overflow: visible;

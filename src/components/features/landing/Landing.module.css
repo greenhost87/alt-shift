@@ -188,17 +188,17 @@
   }
 }
 
-@media (max-width: 479px) {
+@media (--rs-viewport-xs) {
   .title h1 {
-    font-size: 2rem;
-    line-height: 2.5rem;
+    font-size: var(--rs-font-size-featured-2);
+    line-height: var(--rs-line-height-featured-2);
     overflow-wrap: anywhere;
   }
 
   .sectionHeading h2,
   .cta h2 {
-    font-size: 1.75rem;
-    line-height: 2.25rem;
+    font-size: var(--rs-font-size-featured-3);
+    line-height: var(--rs-line-height-featured-3);
     overflow-wrap: anywhere;
   }
 

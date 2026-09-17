@@ -44,7 +44,7 @@
 }
 
 .languageSelect {
-  width: 64px;
+  width: var(--rs-unit-x16);
 }
 
 .languageOption {
@@ -88,8 +88,8 @@
 
 .doneBadge svg {
   display: block;
-  height: 12px;
-  width: 14px;
+  height: var(--rs-unit-x3);
+  width: var(--rs-unit-x3);
 }
 
 .main {
@@ -152,7 +152,7 @@
   }
 }
 
-@media (max-width: 479px) {
+@media (--rs-viewport-xs) {
   .page {
     padding: var(--rs-unit-x4) var(--rs-unit-x3) var(--rs-unit-x12);
   }

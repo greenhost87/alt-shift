@@ -33,7 +33,7 @@
   }
 }
 
-@media (max-width: 479px) {
+@media (--rs-viewport-xs) {
   .header {
     align-items: stretch;
     flex-direction: column;
@@ -41,8 +41,8 @@
   }
 
   .header h1 {
-    font-size: 1.75rem;
-    line-height: 2.25rem;
+    font-size: var(--rs-font-size-featured-3);
+    line-height: var(--rs-line-height-featured-3);
     overflow-wrap: anywhere;
   }
 

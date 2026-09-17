@@ -38,7 +38,7 @@
   }
 }
 
-@media (max-width: 479px) {
+@media (--rs-viewport-xs) {
   .editor,
   .form {
     gap: var(--rs-unit-x3);

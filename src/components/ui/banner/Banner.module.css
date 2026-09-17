@@ -9,7 +9,7 @@
 .subscriptionModal {
   align-items: center;
   background: var(--rs-color-background-positive-faded);
-  padding: 54px var(--rs-unit-x16);
+  padding: var(--rs-unit-x12) var(--rs-unit-x16);
   text-align: center;
 }
 
@@ -64,7 +64,7 @@
   }
 }
 
-@media (max-width: 479px) {
+@media (--rs-viewport-xs) {
   .banner,
   .subscriptionModal {
     padding-block: var(--rs-unit-x8);
@@ -84,8 +84,8 @@
   }
 
   .title {
-    font-size: 2rem;
-    line-height: 2.5rem;
+    font-size: var(--rs-font-size-featured-2);
+    line-height: var(--rs-line-height-featured-2);
   }
 
   .action,

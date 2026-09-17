@@ -90,7 +90,7 @@
   }
 }
 
-@media (max-width: 479px) {
+@media (--rs-viewport-xs) {
   .textarea,
   .textareaError {
     min-height: 200px;

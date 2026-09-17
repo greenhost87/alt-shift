@@ -22,8 +22,8 @@
 
 .detailsLink:focus-visible {
   border-radius: var(--rs-radius-small);
-  outline: 2px solid var(--rs-color-border-primary);
-  outline-offset: 2px;
+  outline: var(--rs-unit-x0-5) solid var(--rs-color-border-primary);
+  outline-offset: var(--rs-unit-x0-5);
 }
 
 .letter {
@@ -43,7 +43,7 @@
     transparent 0%,
     var(--rs-color-background-neutral-faded) 100%
   );
-  bottom: 56px;
+  bottom: var(--rs-unit-x12);
   height: var(--rs-unit-x10);
   left: var(--rs-unit-x6);
   pointer-events: none;
@@ -117,14 +117,14 @@
   }
 }
 
-@media (max-width: 479px) {
+@media (--rs-viewport-xs) {
   .card {
     height: 220px;
     padding: var(--rs-unit-x5);
   }
 
   .fade {
-    bottom: 52px;
+    bottom: var(--rs-unit-x12);
     left: var(--rs-unit-x5);
     right: var(--rs-unit-x5);
   }
