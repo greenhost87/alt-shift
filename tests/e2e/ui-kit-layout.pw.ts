@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test';
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { openSubscriptionModal, seedApplications } from '../support/applications';
 import {
-  expectApplicationFields,
-  expectBlankGenerator,
-  openSubscriptionModal,
-  seedApplications,
-} from '../support/applications';
-import { rejectClipboardWrites } from '../support/clipboard';
-import { expectContentFitsViewport, expectDialogFitsViewport } from '../support/viewport';
+  expectContentFitsViewport,
+  expectDialogFitsViewport,
+  expectPageWidth,
+  openResponsivePage,
+  RESPONSIVE_WIDTHS,
+} from '../support/viewport';
 
 async function openSeededMobilePage(page: Page, path: string) {
   await page.setViewportSize({ height: 568, width: 320 });
@@ -101,37 +101,6 @@ async function expectMobileStatusLayout(page: Page) {
   ).toBeLessThanOrEqual(1);
 }
 
-async function expectPageWidth(page: Page, width: number) {
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
-}
-
-async function openResponsivePage(page: Page, width: number, path: string) {
-  await page.setViewportSize({ height: 900, width });
-  await page.goto(path, { waitUntil: 'networkidle' });
-}
-
-type LengthErrorOptions = {
-  field: Locator;
-  generate: Locator;
-  lengthAlert: Locator;
-  message: string;
-  value: string;
-};
-
-const RESPONSIVE_WIDTHS = [320, 375, 480, 767, 768, 899, 900, 1024, 1440] as const;
-
-async function expectLengthError(options: LengthErrorOptions) {
-  await expect(options.field).toHaveValue(options.value);
-  await expect(options.field).toHaveAttribute('aria-invalid', 'true');
-  await expect(options.lengthAlert).toHaveText(options.message);
-  const errorId = await options.lengthAlert.getAttribute('id');
-  expect(errorId).toBeTruthy();
-  if (errorId === null) throw new Error('The length alert must have an id.');
-  await expect(options.field).toHaveAttribute('aria-describedby', errorId);
-  await expect(options.generate).toBeDisabled();
-  return errorId;
-}
-
 for (const width of RESPONSIVE_WIDTHS) {
   test(`responsive screens fit at ${width}px`, async ({ page }) => {
     await openResponsivePage(page, width, '/applications');
@@ -150,91 +119,6 @@ for (const width of RESPONSIVE_WIDTHS) {
     });
     await page.getByRole('link', { name: 'Home' }).click();
     await page.screenshot({ path: `test-results/responsive-empty-${width}.png`, fullPage: true });
-  });
-}
-
-test('empty preview retains its copy action without copying placeholder text', async ({ page }) => {
-  await rejectClipboardWrites(page, 1);
-  await page.goto('/applications/new', { waitUntil: 'networkidle' });
-  for (const label of ['Job title', 'Company', 'I am good at...', 'Additional details']) {
-    await page.getByLabel(label, { exact: true }).fill('');
-  }
-  await expectBlankGenerator(page);
-  await expect(page.getByText('0/1200')).toBeVisible();
-  const copy = page.getByRole('button', { name: 'Copy to clipboard' });
-  await expect(copy).toBeVisible();
-  await copy.click();
-  await expect(page.getByRole('alert')).toHaveCount(0);
-});
-
-test('textarea exposes the over-limit error state without truncating input', async ({ page }) => {
-  await page.goto('/applications/new', { waitUntil: 'networkidle' });
-
-  const details = page.getByLabel('Additional details');
-  const generate = page.getByRole('button', { name: 'Generate Now' });
-  const overLimitValue = 'a'.repeat(1201);
-
-  await page.getByLabel('Job title').fill('Engineer');
-  await page.getByLabel('Company').fill('Variant');
-  await page.getByLabel('I am good at...').fill('TypeScript');
-  await details.fill(overLimitValue);
-
-  const lengthAlert = page.getByRole('alert');
-  const lengthAlertId = await expectLengthError({
-    field: details,
-    generate,
-    lengthAlert,
-    message: '1201/1200',
-    value: overLimitValue,
-  });
-  await expect(page.getByRole('button', { name: 'Copy to clipboard' })).toBeVisible();
-
-  await details.fill(overLimitValue.slice(0, 1200));
-  await expect(details).toHaveValue(overLimitValue.slice(0, 1200));
-  await expect(details).toHaveAttribute('aria-invalid', 'false');
-  await expect(lengthAlert).toHaveCount(0);
-  const boundaryDescriptionId = await details.getAttribute('aria-describedby');
-  expect(boundaryDescriptionId).toBeTruthy();
-  expect(boundaryDescriptionId).not.toBe(lengthAlertId);
-  if (boundaryDescriptionId === null) throw new Error('The field must have a description.');
-  await expect(page.locator(`#${boundaryDescriptionId}`)).toHaveText('1200/1200');
-  await expect(generate).toBeEnabled();
-
-  await generate.click();
-  await expect(generate).toHaveAttribute('aria-busy', 'true');
-  await expect(generate).toHaveAccessibleName('Generate Now, loading');
-  await expect(generate).toBeDisabled();
-  const loadingBox = await generate.boundingBox();
-  expect(loadingBox?.height).toBe(56);
-  await expect(page.getByRole('button', { name: 'Cancel generation' })).toHaveCount(0);
-});
-
-for (const { label, limit } of [
-  { label: 'Job title', limit: 200 },
-  { label: 'Company', limit: 200 },
-  { label: 'I am good at...', limit: 2_000 },
-]) {
-  test(`${label} exposes an error when its character limit is exceeded`, async ({ page }) => {
-    await page.goto('/applications/new', { waitUntil: 'networkidle' });
-    const field = page.getByLabel(label, { exact: true });
-    const generate = page.getByRole('button', { name: 'Generate Now' });
-    const overLimitValue = 'a'.repeat(limit + 1);
-
-    await field.fill(overLimitValue);
-
-    const lengthAlert = page.getByRole('alert');
-    await expectLengthError({
-      field,
-      generate,
-      lengthAlert,
-      message: `${limit + 1}/${limit}`,
-      value: overLimitValue,
-    });
-
-    await field.fill(overLimitValue.slice(0, limit));
-    await expect(field).toHaveAttribute('aria-invalid', 'false');
-    await expect(field).not.toHaveAttribute('aria-describedby', /.+/);
-    await expect(lengthAlert).toHaveCount(0);
   });
 }
 
@@ -322,77 +206,6 @@ test('dashboard uses the compact layout at 320 pixels', async ({ page }) => {
   const emptyState = page.getByRole('heading', { name: 'No applications yet' }).locator('../..');
   await expect(emptyState).toHaveCSS('min-height', '240px');
   await expectContentFitsViewport(page);
-});
-
-for (const width of RESPONSIVE_WIDTHS) {
-  test(`stored application fits and stays read-only at ${width}px`, async ({ page }) => {
-    await seedApplications(page);
-    await openResponsivePage(page, width, '/applications/00000000-0000-4000-8000-000000000003');
-
-    await expectPageWidth(page, width);
-    await expect(page.getByRole('heading', { name: 'Role 3, Company 3' })).toBeVisible();
-    await expectApplicationFields(page, 'disabled');
-    const details = page.getByLabel('Additional details');
-    const preview = page.getByText('Cover letter 3');
-    const detailsBox = await details.boundingBox();
-    const previewBox = await preview.boundingBox();
-    if (width < 900) expect(previewBox?.y).toBeGreaterThan(detailsBox?.y ?? 0);
-    else expect(previewBox?.x).toBeGreaterThan(detailsBox?.x ?? 0);
-    await page.screenshot({
-      path: `test-results/responsive-stored-application-${width}.png`,
-      fullPage: true,
-    });
-  });
-}
-
-test('stored application scrolls its letter except on phones', async ({ page }) => {
-  const letterPrefix = `Scrollable marker ${'Long application text. '.repeat(300)}`;
-  const path = '/applications/00000000-0000-4000-8000-000000000001';
-  await seedApplications(page, 1, letterPrefix);
-
-  for (const width of [600, 768, 1024]) {
-    await page.setViewportSize({ height: 500, width });
-    await page.goto(path, { waitUntil: 'networkidle' });
-    const letter = page.getByText('Scrollable marker', { exact: false });
-    const panel = page.locator('main section').filter({ has: letter });
-    const mainBox = await page.locator('main').boundingBox();
-    const panelBox = await panel.boundingBox();
-    const availableHeight = 500 - (mainBox?.y ?? 0);
-    expect(panelBox?.height).toBeLessThanOrEqual(availableHeight + 1);
-    await expect(letter).toHaveCSS('overflow-y', 'auto');
-    expect(await letter.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
-      true,
-    );
-    await expect(panel.getByRole('button', { name: 'Copy to clipboard' })).toHaveCount(1);
-  }
-
-  await page.setViewportSize({ height: 900, width: 1024 });
-  await page.goto(path, { waitUntil: 'networkidle' });
-  const desktopLetter = page.getByText('Scrollable marker', { exact: false });
-  const desktopSections = page.locator('main section');
-  const primaryBox = await desktopSections.first().boundingBox();
-  const desktopPanelBox = await desktopSections.filter({ has: desktopLetter }).boundingBox();
-  expect(desktopPanelBox?.height).toBeLessThanOrEqual((primaryBox?.height ?? 0) + 1);
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollHeight === document.documentElement.clientHeight,
-    ),
-  ).toBe(true);
-
-  await openResponsivePage(page, 375, path);
-  const phoneLetter = page.getByText('Scrollable marker', { exact: false });
-  const phonePanel = page.locator('main section').filter({ has: phoneLetter });
-  const copyButtons = phonePanel.getByRole('button', { name: 'Copy to clipboard' });
-  await expect(phoneLetter).toHaveCSS('overflow-y', 'visible');
-  expect(
-    await phoneLetter.evaluate((element) => element.scrollHeight === element.clientHeight),
-  ).toBe(true);
-  await expect(copyButtons).toHaveCount(2);
-  const firstCopyBox = await copyButtons.first().boundingBox();
-  const letterBox = await phoneLetter.boundingBox();
-  const lastCopyBox = await copyButtons.last().boundingBox();
-  expect(firstCopyBox?.y).toBeLessThan(letterBox?.y ?? 0);
-  expect(lastCopyBox?.y).toBeGreaterThan(letterBox?.y ?? Number.POSITIVE_INFINITY);
 });
 
 test('generator uses the compact layout at 320 pixels', async ({ page }) => {

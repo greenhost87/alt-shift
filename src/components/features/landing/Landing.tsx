@@ -36,8 +36,8 @@ export function Landing({ onCreate }: LandingProps) {
             <span>{m.landing_step_strengths_description()}</span>
           </li>
           <li>
-            <strong>{m.landing_step_letter_title()}</strong>
-            <span>{m.landing_step_letter_description()}</span>
+            <h3 className={styles['stepTitle']}>{m.landing_step_letter_title()}</h3>
+            <p className={styles['stepDescription']}>{m.landing_step_letter_description()}</p>
           </li>
         </ol>
       </section>
@@ -69,7 +69,7 @@ export function Landing({ onCreate }: LandingProps) {
           </details>
           <details>
             <summary>{m.landing_faq_input_question()}</summary>
-            <p>{m.landing_faq_input_answer()}</p>
+            <div className={styles['faqAnswer']}>{m.landing_faq_input_answer()}</div>
           </details>
         </div>
       </section>
