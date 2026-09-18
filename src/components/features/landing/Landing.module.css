@@ -63,8 +63,10 @@
 .sectionHeading p,
 .cta p,
 .steps span,
+.stepDescription,
 .benefits li,
-.faq p {
+.faq p,
+.faqAnswer {
   color: var(--rs-color-foreground-neutral-faded);
   font-family: var(--rs-font-family-body);
   font-size: var(--rs-font-size-body-1);
@@ -107,10 +109,12 @@
   font-weight: var(--rs-font-weight-semibold);
 }
 
-.steps strong {
+.steps strong,
+.stepTitle {
   font-family: var(--rs-font-family-title);
   font-size: var(--rs-font-size-featured-6);
   line-height: var(--rs-line-height-featured-6);
+  margin: 0;
 }
 
 .benefits li::before {
@@ -137,7 +141,8 @@
   line-height: var(--rs-line-height-featured-6);
 }
 
-.faq p {
+.faq p,
+.faqAnswer {
   margin: var(--rs-unit-x3) 0 0;
   max-width: 760px;
 }

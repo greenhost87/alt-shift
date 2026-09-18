@@ -1,6 +1,17 @@
 import { expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
+export const RESPONSIVE_WIDTHS = [320, 375, 480, 767, 768, 899, 900, 1024, 1440] as const;
+
+export async function expectPageWidth(page: Page, width: number) {
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+}
+
+export async function openResponsivePage(page: Page, width: number, path: string) {
+  await page.setViewportSize({ height: 900, width });
+  await page.goto(path, { waitUntil: 'networkidle' });
+}
+
 export async function expectContentFitsViewport(page: Page) {
   const viewportWidth = await page.evaluate(() => document.documentElement.clientWidth);
   const contentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
