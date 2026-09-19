@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import type { Database } from 'bun:sqlite';
 import { getGenerationFieldLimits } from '../config/application';
 import { createEventStreamCompletionTracker } from '../../system/generation/event-stream';
 import { createGenerationRequestSchema } from '../../system/generation/schema';
@@ -10,8 +11,6 @@ import { createGenerationRateLimiter } from './rate-limit';
 import { VERIFIED_SESSION_HEADER } from '../../system/security/session';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
-const takeApplicationGenerationSlot = createApplicationGenerationLimiter();
-const takeGenerationRateLimitSlot = createGenerationRateLimiter();
 const upstreamErrorSchema = v.strictObject({
   error: v.strictObject({
     code: v.string(),
@@ -156,13 +155,84 @@ function reserveGenerationStream(
   return createReservedGenerationStream(upstreamBody, reservation);
 }
 
+type GenerationRateLimit = (clientFingerprint: string) => number | undefined;
+type GenerationApplicationLimit = (
+  sessionId: string,
+) => ApplicationGenerationReservation | undefined;
+type GenerationDatabase = () => Database;
+
+type ApplicationReservationResult = {
+  limited: boolean;
+  reservation: ApplicationGenerationReservation | undefined;
+};
+
+function rejectInvalidClientSignal(request: Request): Response | undefined {
+  if (request.headers.has(VERIFIED_SESSION_HEADER) && !hasValidClientDeviceSignal(request)) {
+    return errorResponse(400, 'invalid_client_signal', 'Client device signal rejected.');
+  }
+  return undefined;
+}
+
+function rejectRateLimited(
+  clientFingerprint: string,
+  rateLimit: GenerationRateLimit | undefined,
+  database: GenerationDatabase | undefined,
+): Response | undefined {
+  let activeRateLimit = rateLimit;
+  if (activeRateLimit === undefined) {
+    if (database === undefined) {
+      throw new Error('A database connection is required for generation limits.');
+    }
+    activeRateLimit = createGenerationRateLimiter(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      database,
+    );
+  }
+  const retryAfter = activeRateLimit(clientFingerprint);
+  if (retryAfter === undefined) return undefined;
+  return errorResponse(
+    429,
+    'rate_limited',
+    'Too many generation requests. Please try again later.',
+    { 'retry-after': String(retryAfter) },
+  );
+}
+
+function resolveApplicationReservation(
+  sessionId: string | null,
+  applicationLimit: GenerationApplicationLimit | undefined,
+  database: GenerationDatabase | undefined,
+): ApplicationReservationResult {
+  if (sessionId === null) return { limited: false, reservation: undefined };
+  let limiter = applicationLimit;
+  if (limiter === undefined) {
+    if (database === undefined) {
+      throw new Error('A database connection is required for generation limits.');
+    }
+    limiter = createApplicationGenerationLimiter(undefined, undefined, database);
+  }
+  const reservation = limiter(sessionId);
+  if (reservation === undefined) return { limited: true, reservation: undefined };
+  return { limited: false, reservation };
+}
+
+function getUpstreamEventStream(upstream: Response): ReadableStream<Uint8Array> | undefined {
+  if (!upstream.body) return undefined;
+  const contentType = upstream.headers.get('content-type');
+  if (!contentType) return undefined;
+  if (!contentType.toLowerCase().includes('text/event-stream')) return undefined;
+  return upstream.body;
+}
+
 export async function handleGenerateRequest(
   request: Request,
   generate: typeof requestGeneration = requestGeneration,
-  rateLimit: (clientFingerprint: string) => number | undefined = takeGenerationRateLimitSlot,
-  applicationLimit: (
-    sessionId: string,
-  ) => ApplicationGenerationReservation | undefined = takeApplicationGenerationSlot,
+  rateLimit?: GenerationRateLimit,
+  applicationLimit?: GenerationApplicationLimit,
+  database?: GenerationDatabase,
 ) {
   const parsed = v.safeParse(
     v.pipe(v.string(), v.parseJson(), createGenerationRequestSchema(getGenerationFieldLimits())),
@@ -179,30 +249,26 @@ export async function handleGenerateRequest(
     );
   }
 
-  if (request.headers.has(VERIFIED_SESSION_HEADER) && !hasValidClientDeviceSignal(request)) {
-    return errorResponse(400, 'invalid_client_signal', 'Client device signal rejected.');
-  }
+  const invalidSignal = rejectInvalidClientSignal(request);
+  if (invalidSignal) return invalidSignal;
 
-  const clientFingerprint = getClientFingerprint(request);
-  const retryAfter = rateLimit(clientFingerprint);
-  if (retryAfter !== undefined) {
-    return errorResponse(
-      429,
-      'rate_limited',
-      'Too many generation requests. Please try again later.',
-      { 'retry-after': String(retryAfter) },
-    );
-  }
+  const rateLimited = rejectRateLimited(getClientFingerprint(request), rateLimit, database);
+  if (rateLimited) return rateLimited;
 
   const sessionId = request.headers.get(VERIFIED_SESSION_HEADER);
-  const reservation = sessionId === null ? undefined : applicationLimit(sessionId);
-  if (sessionId !== null && reservation === undefined) {
+  const applicationReservation = resolveApplicationReservation(
+    sessionId,
+    applicationLimit,
+    database,
+  );
+  if (applicationReservation.limited) {
     return errorResponse(
       429,
       'application_limit_reached',
       'The application generation limit has been reached.',
     );
   }
+  const reservation = applicationReservation.reservation;
 
   let upstream: Response;
   try {
@@ -220,10 +286,8 @@ export async function handleGenerateRequest(
     return createUpstreamErrorResponse(upstream);
   }
 
-  if (
-    !upstream.body ||
-    !upstream.headers.get('content-type')?.toLowerCase().includes('text/event-stream')
-  ) {
+  const streamBody = getUpstreamEventStream(upstream);
+  if (!streamBody) {
     reservation?.release();
     return errorResponse(
       502,
@@ -233,7 +297,7 @@ export async function handleGenerateRequest(
     );
   }
 
-  return new Response(reserveGenerationStream(upstream.body, reservation), {
+  return new Response(reserveGenerationStream(streamBody, reservation), {
     status: 200,
     headers: {
       'cache-control': 'no-cache, no-store',

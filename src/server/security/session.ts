@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import { getDatabase } from '../database/connection';
+import type { Database } from 'bun:sqlite';
 import { findAnonymousSession, storeAnonymousSession } from '../database/session/session.dao';
 import {
   ANONYMOUS_SESSION_COOKIE,
@@ -57,8 +57,7 @@ function parseSessionId(value: string | undefined): string | undefined {
   return timingSafeEqual(receivedBuffer, expectedBuffer) ? id : undefined;
 }
 
-function createSession(currentTime: number): SessionCredentials {
-  const database = getDatabase();
+function createSession(database: Database, currentTime: number): SessionCredentials {
   const credentials = {
     id: randomBytes(32).toString('base64url'),
     csrfToken: randomBytes(32).toString('base64url'),
@@ -120,12 +119,16 @@ function hasValidCsrfToken(request: Request, csrfTokenHash: string): boolean {
   return timingSafeEqual(actualBuffer, expectedBuffer);
 }
 
-function authorizeRequest(request: Request, currentTime: number): SessionSecurityResult {
+function authorizeRequest(
+  request: Request,
+  currentTime: number,
+  database: Database,
+): SessionSecurityResult {
   const sessionId = parseSessionId(readCookie(request, ANONYMOUS_SESSION_COOKIE));
   const session =
-    sessionId === undefined ? null : findAnonymousSession(getDatabase(), sessionId, currentTime);
+    sessionId === undefined ? null : findAnonymousSession(database, sessionId, currentTime);
   if (session === null) {
-    const credentials = createSession(currentTime);
+    const credentials = createSession(database, currentTime);
     if (SAFE_METHODS.has(request.method)) return { request, credentials };
     return {
       response: securityError(401, 'session_required', 'A valid session is required.'),
@@ -159,8 +162,9 @@ function authorizeRequest(request: Request, currentTime: number): SessionSecurit
 export async function handleSessionSecurity(
   request: Request,
   resolve: (securedRequest: Request) => Promise<Response>,
+  database: Database,
 ): Promise<Response> {
-  const result = authorizeRequest(request, Date.now());
+  const result = authorizeRequest(request, Date.now(), database);
   if (result.response !== undefined) {
     return result.credentials === undefined
       ? result.response

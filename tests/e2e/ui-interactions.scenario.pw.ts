@@ -44,6 +44,13 @@ async function clickButton(page: Page, name: string): Promise<void> {
   await page.getByRole('button', { name }).click();
 }
 
+async function openSavedGenerator(page: Page): Promise<void> {
+  await installGenerationSupport(page);
+  await storeApplications(page, createApplicationFixtures(1), 'init');
+  await page.goto('/applications/00000000-0000-4000-8000-000000000001');
+  await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
+}
+
 scenario('landing.create-application', async ({ page, given, when, then }) => {
   await given('the landing page is ready', async () => {
     await installGenerationSupport(page);
@@ -60,17 +67,23 @@ scenario('landing.create-application', async ({ page, given, when, then }) => {
 });
 
 scenario('generator.generate-application', async ({ page, given, when, then }) => {
-  await given('a completed application form', async () => {
+  await given('an empty application form', async () => {
     await installGenerationSupport(page);
     await page.goto('/applications/new', { waitUntil: 'networkidle' });
-    await fillApplicationFields(page);
   });
   await when(
     {
-      description: 'generate the application',
-      covers: 'ApplicationForm.onSubmit@ApplicationGenerator.submit',
+      description: 'complete the application form and generate',
+      covers: [
+        'TextField.onChange@ApplicationGenerator.setJobTitle',
+        'TextField.onChange@ApplicationGenerator.setCompany',
+        'TextField.onChange@ApplicationGenerator.setStrengths',
+        'TextAreaField.onChange@ApplicationGenerator.setDetails',
+        'ApplicationForm.onSubmit@ApplicationGenerator.submit',
+      ],
     },
     async () => {
+      await fillApplicationFields(page);
       await clickButton(page, 'Generate Now');
     },
   );
@@ -80,22 +93,18 @@ scenario('generator.generate-application', async ({ page, given, when, then }) =
   });
 });
 
-scenario('generator.start-new-application', async ({ page, given, when, then }) => {
-  await given('a saved application', async () => {
-    await installGenerationSupport(page);
-    await storeApplications(page, createApplicationFixtures(1), 'init');
-    await page.goto('/applications/00000000-0000-4000-8000-000000000001');
-    await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
-  });
+scenario('generator.saved-application-actions', async ({ page, given, when, then }) => {
+  await given('a saved application is open', async () => openSavedGenerator(page));
   await when(
     {
-      description: 'start another application',
+      description: 'copy the letter and start another application',
       covers: [
-        'Button.onClick@ApplicationForm.onStartNew',
+        'Button.onClick@ApplicationGenerator.copyApplication',
         'Button.onClick@ApplicationGenerator.startNewApplication',
       ],
     },
     async () => {
+      await clickButton(page, 'Copy to clipboard');
       await page.getByRole('button', { name: 'Try Again' }).click();
     },
   );
@@ -115,7 +124,7 @@ scenario('generator.subscription', async ({ page, given, when, then }) => {
     {
       description: 'open and close the subscription modal',
       covers: [
-        'Button.onClick@ApplicationForm.onSubscribe',
+        'Button.onClick@ApplicationGenerator.showSubscriptionModal',
         'Button.onClick@ApplicationGenerator.onClose',
       ],
     },
@@ -135,10 +144,7 @@ scenario('dashboard.create-application', async ({ page, given, when, then }) => 
   await when(
     {
       description: 'create the first application',
-      covers: [
-        'Button.onClick@ApplicationsDashboard.onCreate',
-        'Button.onClick@applications.index.navigate',
-      ],
+      covers: 'Button.onClick@applications.index.navigate',
     },
     async () => {
       await page.getByRole('button', { name: 'Create your first application' }).click();
@@ -173,7 +179,10 @@ scenario('dashboard.copy-application', async ({ page, given, when, then }) => {
   await when(
     {
       description: 'copy the application',
-      covers: 'Button.onClick@CopyButton.copy',
+      covers: [
+        'Button.onClick@ApplicationsDashboard.copyApplication',
+        'Button.onClick@CopyButton.copy',
+      ],
     },
     async () => {
       await clickButton(page, 'Copy to clipboard');
@@ -204,5 +213,24 @@ scenario('dashboard.delete-application', async ({ page, given, when, then }) => 
   );
   await then('the dashboard is empty', async () => {
     await expect(page.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
+  });
+});
+
+scenario('shell.change-language', async ({ page, given, when, then }) => {
+  await given('the applications dashboard is ready', async () => {
+    await page.goto('/applications', { waitUntil: 'networkidle' });
+  });
+  await when(
+    {
+      description: 'switch the language to Russian',
+      covers: 'LanguageSwitcher.onChange@LanguageSwitcher.changeLanguage',
+    },
+    async () => {
+      await page.getByRole('button', { name: 'Language' }).click();
+      await page.getByRole('option', { name: '🇷🇺 Русский' }).click();
+    },
+  );
+  await then('the interface uses Russian', async () => {
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
   });
 });

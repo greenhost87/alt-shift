@@ -5,6 +5,7 @@ import handler from '@tanstack/react-start/server-entry';
 import { paraglideMiddleware } from './paraglide/server.js';
 import { runDatabaseMigrations } from './server/database/migrate';
 import { getSessionSecret } from './server/security/config';
+import { getDatabase } from './server/database/connection';
 import { BASE_PATH } from './system/config/environment';
 import { handleSessionSecurity } from './server/security/session';
 import { startInstance } from './start';
@@ -81,8 +82,11 @@ export default {
     const assetResponse = serveClientAsset(request);
     if (assetResponse !== undefined) return assetResponse;
 
-    return handleSessionSecurity(request, async (securedRequest) =>
-      paraglideMiddleware(securedRequest, async () => handler.fetch(securedRequest)),
+    return handleSessionSecurity(
+      request,
+      async (securedRequest) =>
+        paraglideMiddleware(securedRequest, async () => handler.fetch(securedRequest)),
+      getDatabase(),
     );
   },
 };

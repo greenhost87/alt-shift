@@ -55,13 +55,13 @@ const when: ScenarioWhen = async (details, body) => {
 };
 
 export const scenario = playwright.test.extend<ScenarioPhases>({
-  given: async ({}, provide) => {
+  given: async ({ browserName: _browserName }, provide) => {
     await provide(phase('given'));
   },
-  when: async ({}, provide) => {
+  when: async ({ browserName: _browserName }, provide) => {
     await provide(when);
   },
-  then: async ({}, provide) => {
+  then: async ({ browserName: _browserName }, provide) => {
     await provide(phase('then'));
   },
 });

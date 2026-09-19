@@ -1,10 +1,8 @@
-import type { ReactNode } from 'react';
-import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router';
+import { Outlet, createRootRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { getCookie } from '@tanstack/react-start/server';
-import { Reshaped } from 'reshaped';
 import { NotFound } from '../components/layout/not-found/NotFound';
-import { getLocale } from '../paraglide/runtime.js';
+import { RootDocument } from '../components/layout/theme/RootDocument';
 import { getApplicationConfig } from '../server/config/application';
 import {
   APPLICATION_COUNT_COOKIE_NAME,
@@ -50,28 +48,8 @@ function RootComponent() {
   return (
     <RootDocument>
       <ApplicationStateProvider config={config} initialApplicationCount={initialApplicationCount}>
-        <Reshaped colorMode="light" theme="variant">
-          <Outlet />
-        </Reshaped>
+        <Outlet />
       </ApplicationStateProvider>
     </RootDocument>
-  );
-}
-
-type RootDocumentProps = {
-  children: ReactNode;
-};
-
-function RootDocument({ children }: RootDocumentProps) {
-  return (
-    <html data-rs-color-mode="light" data-rs-theme="variant" dir="ltr" lang={getLocale()}>
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
   );
 }

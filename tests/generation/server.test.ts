@@ -235,7 +235,7 @@ describe('generation server contract', () => {
 
   test('keeps separate client buckets within the global generation budget', () => {
     let currentTime = 0;
-    const rateLimit = createGenerationRateLimiter(() => currentTime, 2, 60_000, 4);
+    const rateLimit = createGenerationRateLimiter(() => currentTime, 2, 60_000, 4, getTestDatabase);
 
     expect(rateLimit('client-a')).toBeUndefined();
     expect(rateLimit('client-a')).toBeUndefined();
@@ -266,7 +266,7 @@ describe('generation server contract', () => {
 
   test('reports the first globally available slot', () => {
     let currentTime = 0;
-    const rateLimit = createGenerationRateLimiter(() => currentTime, 10, 60_000, 2);
+    const rateLimit = createGenerationRateLimiter(() => currentTime, 10, 60_000, 2, getTestDatabase);
 
     expect(rateLimit('client-a')).toBeUndefined();
     currentTime = 30_000;
@@ -278,7 +278,13 @@ describe('generation server contract', () => {
   test('limits generation requests before calling the upstream service', async () => {
     let currentTime = 0;
     let upstreamCalls = 0;
-    const rateLimit = createGenerationRateLimiter(() => currentTime);
+    const rateLimit = createGenerationRateLimiter(
+      () => currentTime,
+      undefined,
+      undefined,
+      undefined,
+      getTestDatabase,
+    );
     const generate = async () => {
       upstreamCalls += 1;
       return Promise.resolve(
@@ -334,6 +340,9 @@ describe('generation server contract', () => {
       }),
       async () =>
         Promise.resolve(new Response('limited', { status: 429, headers: { 'retry-after': '17' } })),
+      undefined,
+      undefined,
+      getTestDatabase,
     );
 
     expect(response.status).toBe(429);
@@ -348,6 +357,9 @@ describe('generation server contract', () => {
         body: JSON.stringify(input),
       }),
       async () => Promise.reject(new Error('connection failed')),
+      undefined,
+      undefined,
+      getTestDatabase,
     );
     expect(unavailable.status).toBe(502);
     expect(await unavailable.json()).toEqual(generationFixtures.unavailableError);
@@ -358,6 +370,9 @@ describe('generation server contract', () => {
         body: JSON.stringify(input),
       }),
       async () => Promise.resolve(new Response('internal details', { status: 500 })),
+      undefined,
+      undefined,
+      getTestDatabase,
     );
     expect(failed.status).toBe(502);
     expect(await failed.json()).toEqual(generationFixtures.failedError);
@@ -406,6 +421,9 @@ describe('generation server contract', () => {
           url: `http://127.0.0.1:${serverPort}/stream`,
         });
       },
+      undefined,
+      undefined,
+      getTestDatabase,
     ).then(async (response) => {
       const reader = response.body?.getReader();
       const firstRead = await reader?.read();

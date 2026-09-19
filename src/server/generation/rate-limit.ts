@@ -1,5 +1,4 @@
 import type { Database } from 'bun:sqlite';
-import { getDatabase } from '../database/connection';
 import { takeGenerationRateLimitSlot } from '../database/generation/rate-limit.dao';
 import {
   getGenerationGlobalRateLimit,
@@ -16,7 +15,7 @@ export function createGenerationRateLimiter(
   requestLimit = getGenerationRateLimit(),
   windowMs = getGenerationRateWindowMs(),
   globalRequestLimit = getGenerationGlobalRateLimit(),
-  database: () => Database = getDatabase,
+  database: () => Database,
 ) {
   return (clientFingerprint: string) => {
     const currentTime = now();

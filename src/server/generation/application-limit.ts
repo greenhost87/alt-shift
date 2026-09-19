@@ -1,6 +1,5 @@
 import type { Database } from 'bun:sqlite';
 import { getApplicationConfig } from '../config/application';
-import { getDatabase } from '../database/connection';
 import {
   releaseApplicationGenerationSlot,
   takeApplicationGenerationSlot,
@@ -9,7 +8,7 @@ import {
 export function createApplicationGenerationLimiter(
   now: () => number = Date.now,
   applicationLimit = getApplicationConfig().applicationLimit,
-  database: () => Database = getDatabase,
+  database: () => Database,
 ) {
   return (sessionId: string) => {
     const activeDatabase = database();
