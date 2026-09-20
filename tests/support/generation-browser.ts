@@ -23,6 +23,25 @@ export async function installCopyableGenerationResponse(page: Page) {
   });
 }
 
+export async function holdGenerationStream(page: Page) {
+  let releaseStream = () => {};
+  const streamReleased = new Promise<void>((resolve) => {
+    releaseStream = resolve;
+  });
+  await page.exposeFunction('waitToFinishGeneration', async () => streamReleased);
+  return releaseStream;
+}
+
+export async function useDelayedCopyableStream(page: Page) {
+  await page.addInitScript(() => {
+    window.respondToGeneration = () =>
+      window.delayedGenerationResponse(
+        window.waitToFinishGeneration,
+        window.generationFixtures.copyableStream,
+      );
+  });
+}
+
 export async function installGenerationBrowserFixtures(page: Page) {
   await page.addInitScript((fixtures) => {
     window.generationFixtures = fixtures;

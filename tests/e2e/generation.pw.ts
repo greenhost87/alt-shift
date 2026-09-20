@@ -10,8 +10,10 @@ import {
 } from '../support/applications';
 import { rejectClipboardWrites } from '../support/clipboard';
 import {
+  holdGenerationStream,
   installCopyableGenerationResponse,
   installGenerationBrowserFixtures,
+  useDelayedCopyableStream,
 } from '../support/generation-browser';
 import { rejectApplicationStorageWrites } from '../support/storage';
 
@@ -86,25 +88,6 @@ test('completed layout matches Figma with the full design letter', async ({ page
 async function openDashboardAndExpectCount(page: Page, applicationCount: number) {
   await page.getByRole('link', { name: 'Home' }).click();
   await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(applicationCount);
-}
-
-async function holdGenerationStream(page: Page) {
-  let releaseStream = () => {};
-  const streamReleased = new Promise<void>((resolve) => {
-    releaseStream = resolve;
-  });
-  await page.exposeFunction('waitToFinishGeneration', async () => streamReleased);
-  return releaseStream;
-}
-
-async function useDelayedCopyableStream(page: Page) {
-  await page.addInitScript(() => {
-    window.respondToGeneration = () =>
-      window.delayedGenerationResponse(
-        window.waitToFinishGeneration,
-        window.generationFixtures.copyableStream,
-      );
-  });
 }
 
 async function readAnimationFrames(locator: Locator) {
