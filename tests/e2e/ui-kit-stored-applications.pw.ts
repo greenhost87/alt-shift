@@ -36,6 +36,7 @@ test('stored application scrolls its letter except on phones', async ({ page }) 
     const mainBox = await page.locator('main').boundingBox();
     const panelBox = await panel.boundingBox();
     const availableHeight = 500 - (mainBox?.y ?? 0);
+    await expect(letter).toBeVisible();
     expect(panelBox?.height).toBeLessThanOrEqual(availableHeight + 1);
     await expect(letter).toHaveCSS('overflow-y', 'auto');
     expect(await letter.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
@@ -48,6 +49,7 @@ test('stored application scrolls its letter except on phones', async ({ page }) 
   await page.goto(path, { waitUntil: 'networkidle' });
   const desktopLetter = page.getByText('Scrollable marker', { exact: false });
   const desktopSections = page.locator('main section');
+  await expect(desktopLetter).toBeVisible();
   const primaryBox = await desktopSections.first().boundingBox();
   const desktopPanelBox = await desktopSections.filter({ has: desktopLetter }).boundingBox();
   expect(desktopPanelBox?.height).toBeLessThanOrEqual((primaryBox?.height ?? 0) + 1);
@@ -61,6 +63,7 @@ test('stored application scrolls its letter except on phones', async ({ page }) 
   const phoneLetter = page.getByText('Scrollable marker', { exact: false });
   const phonePanel = page.locator('main section').filter({ has: phoneLetter });
   const copyButtons = phonePanel.getByRole('button', { name: 'Copy to clipboard' });
+  await expect(phoneLetter).toBeVisible();
   await expect(phoneLetter).toHaveCSS('overflow-y', 'visible');
   expect(
     await phoneLetter.evaluate((element) => element.scrollHeight === element.clientHeight),
