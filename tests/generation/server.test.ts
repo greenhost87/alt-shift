@@ -266,7 +266,13 @@ describe('generation server contract', () => {
 
   test('reports the first globally available slot', () => {
     let currentTime = 0;
-    const rateLimit = createGenerationRateLimiter(() => currentTime, 10, 60_000, 2, getTestDatabase);
+    const rateLimit = createGenerationRateLimiter(
+      () => currentTime,
+      10,
+      60_000,
+      2,
+      getTestDatabase,
+    );
 
     expect(rateLimit('client-a')).toBeUndefined();
     currentTime = 30_000;

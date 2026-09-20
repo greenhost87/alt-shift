@@ -1,22 +1,26 @@
-import * as m from '../../../paraglide/messages.js';
 import { CopyButton } from '../../ui/button/CopyButton';
 import typographyStyles from '../../ui/text/Typography.module.css';
 import styles from './ApplicationPreview.module.css';
 
-type PreviewMode = 'idle' | 'generating' | 'completed' | 'viewing';
+const APPLICATION_PREVIEW_MODES = ['idle', 'generating', 'completed', 'viewing'] as const;
+export type ApplicationPreviewMode = (typeof APPLICATION_PREVIEW_MODES)[number];
 
 type ApplicationPreviewProps = {
   copyFeedbackTimeoutMs: number;
+  generatingLabel: string;
   letter: string;
-  mode: PreviewMode;
+  mode: ApplicationPreviewMode;
   onCopy: () => Promise<boolean>;
+  placeholder: string;
 };
 
 export function ApplicationPreview({
   copyFeedbackTimeoutMs,
+  generatingLabel,
   letter,
   mode,
   onCopy,
+  placeholder,
 }: ApplicationPreviewProps) {
   const copyButton = (
     <CopyButton feedbackTimeoutMs={copyFeedbackTimeoutMs} key={letter} onClick={onCopy} />
@@ -48,7 +52,7 @@ export function ApplicationPreview({
   }
   if (mode === 'generating') {
     return (
-      <output aria-label={m.generating_application()} className={styles['loadingPreview']}>
+      <output aria-label={generatingLabel} className={styles['loadingPreview']}>
         <span className={styles['orb']}>
           <span className={styles['orbGlow']} />
           <span className={styles['orbCore']} />
@@ -58,9 +62,7 @@ export function ApplicationPreview({
   }
   return (
     <div className={styles['preview']}>
-      <p className={[styles['placeholder'], typographyStyles['body']].join(' ')}>
-        {m.application_preview_placeholder()}
-      </p>
+      <p className={[styles['placeholder'], typographyStyles['body']].join(' ')}>{placeholder}</p>
       <div className={styles['previewAction']}>{copyButton}</div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useShallow } from 'zustand/react/shallow';
+import { ApplicationWorkspaceContainer } from '../application-workspace-container';
 import * as m from '../paraglide/messages.js';
-import { ApplicationWorkspace } from '../components/features/application-generator/ApplicationGenerator';
 import { NotFound } from '../components/layout/not-found/NotFound';
 import { Shell } from '../components/layout/shell/Shell';
 import { StorageStatusMessage } from '../components/layout/storage-status/StorageStatus';
@@ -47,5 +47,5 @@ function StoredApplicationPage() {
   const application = applications.find((candidate) => candidate.id === applicationId);
   if (!application) return <NotFound />;
 
-  return <ApplicationWorkspace application={application} />;
+  return <ApplicationWorkspaceContainer application={application} />;
 }

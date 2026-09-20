@@ -25,6 +25,7 @@ type BannerHeadingProps = {
 
 type SubscriptionModalProps = {
   onClose: () => void;
+  visible?: boolean;
 };
 
 function BannerHeading({ action, description, title }: BannerHeadingProps) {
@@ -37,7 +38,7 @@ function BannerHeading({ action, description, title }: BannerHeadingProps) {
   );
 }
 
-export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
+export function SubscriptionModal({ onClose, visible = true }: SubscriptionModalProps) {
   const title = m.subscription_banner_title();
 
   useEffect(() => {
@@ -51,6 +52,8 @@ export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
       document.removeEventListener('keydown', closeOnEscape, true);
     };
   }, [onClose]);
+
+  if (!visible) return null;
 
   return (
     <Modal

@@ -1,5 +1,5 @@
 import { createFileRoute, notFound } from '@tanstack/react-router';
-import { ApplicationWorkspace } from '../components/features/application-generator/ApplicationGenerator';
+import { ApplicationWorkspaceContainer } from '../application-workspace-container';
 import { handleGenerateRequest } from '../server/generation/handler';
 
 const FAKE_LETTER = `Dear Hiring Team,
@@ -55,5 +55,5 @@ export const Route = createFileRoute('/fake')({
 });
 
 function FakeApplicationGeneratorPage() {
-  return <ApplicationWorkspace generationEndpoint="/fake" />;
+  return <ApplicationWorkspaceContainer generationEndpoint="/fake" />;
 }

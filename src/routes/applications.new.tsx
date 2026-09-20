@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ApplicationWorkspace } from '../components/features/application-generator/ApplicationGenerator';
+import { ApplicationWorkspaceContainer } from '../application-workspace-container';
 
 export const Route = createFileRoute('/applications/new')({
   component: ApplicationGeneratorPage,
@@ -16,5 +16,5 @@ export const Route = createFileRoute('/applications/new')({
 });
 
 function ApplicationGeneratorPage() {
-  return <ApplicationWorkspace />;
+  return <ApplicationWorkspaceContainer />;
 }

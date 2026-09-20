@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Landing } from '../components/features/landing/Landing';
 import { Shell } from '../components/layout/shell/Shell';
+import * as m from '../paraglide/messages.js';
 import { PUBLIC_SITE_URL } from '../system/config/environment';
 
 export const Route = createFileRoute('/')({
@@ -54,7 +55,37 @@ function LandingPage() {
   };
   return (
     <Shell>
-      <Landing onCreate={createApplication} />
+      <Landing
+        onCreate={createApplication}
+        texts={{
+          eyebrow: m.landing_eyebrow(),
+          title: m.landing_title(),
+          description: m.landing_description(),
+          cta: m.landing_cta(),
+          forWhom: m.landing_for_whom(),
+          howTitle: m.landing_how_title(),
+          stepRoleTitle: m.landing_step_role_title(),
+          stepRoleDescription: m.landing_step_role_description(),
+          stepStrengthsTitle: m.landing_step_strengths_title(),
+          stepStrengthsDescription: m.landing_step_strengths_description(),
+          stepLetterTitle: m.landing_step_letter_title(),
+          stepLetterDescription: m.landing_step_letter_description(),
+          benefitsTitle: m.landing_benefits_title(),
+          benefitsDescription: m.landing_benefits_description(),
+          benefitTailored: m.landing_benefit_tailored(),
+          benefitFast: m.landing_benefit_fast(),
+          benefitPrivate: m.landing_benefit_private(),
+          faqTitle: m.landing_faq_title(),
+          faqEditQuestion: m.landing_faq_edit_question(),
+          faqEditAnswer: m.landing_faq_edit_answer(),
+          faqStorageQuestion: m.landing_faq_storage_question(),
+          faqStorageAnswer: m.landing_faq_storage_answer(),
+          faqInputQuestion: m.landing_faq_input_question(),
+          faqInputAnswer: m.landing_faq_input_answer(),
+          finalTitle: m.landing_final_title(),
+          finalDescription: m.landing_final_description(),
+        }}
+      />
     </Shell>
   );
 }

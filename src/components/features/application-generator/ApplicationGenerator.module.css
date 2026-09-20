@@ -4,6 +4,43 @@
   gap: var(--rs-unit-x12);
 }
 
+.workspace {
+  display: grid;
+  gap: var(--rs-unit-x6);
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+}
+
+.primary,
+.secondary {
+  min-width: 0;
+}
+
+.secondary {
+  background: var(--rs-color-background-neutral-faded);
+  border-radius: var(--rs-radius-large);
+  min-height: min(
+    var(--rs-unit-panel-height-mobile),
+    var(--rs-unit-workspace-secondary-max-height, 100dvh)
+  );
+  padding: var(--rs-unit-x4);
+}
+
+@media (--rs-viewport-l) {
+  .workspace {
+    gap: var(--rs-unit-x8);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .secondary {
+    min-height: min(
+      var(--rs-unit-panel-height),
+      var(--rs-unit-workspace-secondary-max-height, 100dvh)
+    );
+    padding: var(--rs-unit-x6);
+  }
+}
+
 @media (--rs-viewport-xs) {
   .content {
     gap: var(--rs-unit-x8);

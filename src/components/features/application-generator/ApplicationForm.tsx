@@ -1,6 +1,4 @@
-import * as m from '../../../paraglide/messages.js';
-import type { GenerationFieldLimits } from '../../../system/config/application.types';
-import { SectionHeader } from '../../layout/section-header/SectionHeader';
+import type { ReactNode } from 'react';
 import { Button } from '../../ui/button/Button';
 import { TextAreaField } from '../../ui/field/TextAreaField';
 import { TextField } from '../../ui/field/TextField';
@@ -15,7 +13,26 @@ export type ApplicationFormValues = {
   letter: string;
 };
 
-type FormActions = {
+export type ApplicationFieldLimits = {
+  jobTitle: number;
+  company: number;
+  strengths: number;
+  details: number;
+};
+
+export type ApplicationFormTexts = {
+  jobTitle: string;
+  company: string;
+  strengths: string;
+  additionalDetails: string;
+  additionalDetailsPlaceholder: string;
+  subscribe: string;
+  generateNow: string;
+  tryAgain: string;
+  retryGeneration: string;
+};
+
+export type ApplicationFormActions = {
   canRetry: boolean;
   isCompleted: boolean;
   isGenerating: boolean;
@@ -25,11 +42,12 @@ type FormActions = {
 };
 
 type ApplicationFormProps = {
-  actions: FormActions;
+  actions: ApplicationFormActions;
   copyError: string;
   error: string;
-  fieldLimits: GenerationFieldLimits;
+  fieldLimits: ApplicationFieldLimits;
   fieldsDisabled: boolean;
+  header: ReactNode;
   isViewing: boolean;
   onCompanyChange: (value: string) => void;
   onDetailsChange: (value: string) => void;
@@ -39,8 +57,15 @@ type ApplicationFormProps = {
   onStrengthsChange: (value: string) => void;
   onSubmit: () => void;
   retryMessage: string;
-  title: string;
+  texts: ApplicationFormTexts;
   values: ApplicationFormValues;
+};
+
+type FormActionTexts = {
+  subscribe: string;
+  generateNow: string;
+  tryAgain: string;
+  retryGeneration: string;
 };
 
 function renderAlert(message: string) {
@@ -51,18 +76,22 @@ function renderAlert(message: string) {
   ) : null;
 }
 
-function renderFormAction(actions: FormActions, onSubscribe: () => void) {
+function renderFormAction(
+  actions: ApplicationFormActions,
+  onSubscribe: () => void,
+  texts: FormActionTexts,
+) {
   if (actions.subscriptionRequired) {
     return (
       <Button onClick={onSubscribe} size="large">
-        {m.subscribe()}
+        {texts.subscribe}
       </Button>
     );
   }
   if (actions.isGenerating) {
     return (
       <Button disabled loading size="large" submit>
-        {m.generate_now()}
+        {texts.generateNow}
       </Button>
     );
   }
@@ -75,45 +104,62 @@ function renderFormAction(actions: FormActions, onSubscribe: () => void) {
         submit
         variant="secondary"
       >
-        {m.try_again()}
+        {texts.tryAgain}
       </Button>
     );
   }
   return (
     <Button disabled={actions.submissionBlocked} size="large" submit>
-      {actions.canRetry ? m.retry_generation() : m.generate_now()}
+      {actions.canRetry ? texts.retryGeneration : texts.generateNow}
     </Button>
   );
 }
 
-function renderFormActionForMode(
-  isViewing: boolean,
-  actions: FormActions,
-  onStartNew: () => void,
-  onSubscribe: () => void,
-) {
-  if (!isViewing) return renderFormAction(actions, onSubscribe);
-  if (actions.subscriptionRequired) return renderFormAction(actions, onSubscribe);
+type FormModeOptions = {
+  canRetry: boolean;
+  isCompleted: boolean;
+  isGenerating: boolean;
+  isViewing: boolean;
+  newApplicationBlocked: boolean;
+  onStartNew: () => void;
+  onSubscribe: () => void;
+  submissionBlocked: boolean;
+  subscriptionRequired: boolean;
+  texts: FormActionTexts;
+};
+
+function renderFormActionForMode(options: FormModeOptions) {
+  if (!options.isViewing) return renderFormAction(options, options.onSubscribe, options.texts);
+  if (options.subscriptionRequired)
+    return renderFormAction(options, options.onSubscribe, options.texts);
 
   return (
     <Button
-      disabled={actions.newApplicationBlocked}
+      disabled={options.newApplicationBlocked}
       icon={<RepeatIcon />}
-      onClick={onStartNew}
+      onClick={options.onStartNew}
       size="large"
       variant="secondary"
     >
-      {m.try_again()}
+      {options.texts.tryAgain}
     </Button>
   );
 }
 
 export function ApplicationForm({
-  actions,
+  actions: {
+    canRetry,
+    isCompleted,
+    isGenerating,
+    newApplicationBlocked,
+    submissionBlocked,
+    subscriptionRequired,
+  },
   copyError,
   error,
   fieldLimits,
   fieldsDisabled,
+  header,
   isViewing,
   onCompanyChange,
   onDetailsChange,
@@ -123,12 +169,18 @@ export function ApplicationForm({
   onStrengthsChange,
   onSubmit,
   retryMessage,
-  title,
+  texts,
   values,
 }: ApplicationFormProps) {
+  const actionTexts: FormActionTexts = {
+    subscribe: texts.subscribe,
+    generateNow: texts.generateNow,
+    tryAgain: texts.tryAgain,
+    retryGeneration: texts.retryGeneration,
+  };
   return (
     <div className={styles['editor']}>
-      <SectionHeader level="section" title={title} />
+      {header}
       <form
         className={styles['form']}
         onSubmit={(event) => {
@@ -141,7 +193,7 @@ export function ApplicationForm({
             characterLimit={fieldLimits.jobTitle}
             disabled={fieldsDisabled}
             id="job-title"
-            label={m.job_title()}
+            label={texts.jobTitle}
             name="jobTitle"
             onChange={onJobTitleChange}
             value={values.jobTitle}
@@ -150,7 +202,7 @@ export function ApplicationForm({
             characterLimit={fieldLimits.company}
             disabled={fieldsDisabled}
             id="company"
-            label={m.company()}
+            label={texts.company}
             name="company"
             onChange={onCompanyChange}
             value={values.company}
@@ -160,7 +212,7 @@ export function ApplicationForm({
           characterLimit={fieldLimits.strengths}
           disabled={fieldsDisabled}
           id="strengths"
-          label={m.strengths()}
+          label={texts.strengths}
           name="strengths"
           onChange={onStrengthsChange}
           value={values.strengths}
@@ -169,17 +221,28 @@ export function ApplicationForm({
           characterLimit={fieldLimits.details}
           disabled={fieldsDisabled}
           id="details"
-          label={m.additional_details()}
+          label={texts.additionalDetails}
           name="details"
           onChange={onDetailsChange}
-          placeholder={m.additional_details_placeholder()}
+          placeholder={texts.additionalDetailsPlaceholder}
           value={values.details}
         />
         {renderAlert(error)}
         {renderAlert(copyError)}
         {retryMessage ? <p className={styles['rateLimit']}>{retryMessage}</p> : null}
         <div className={styles['action']}>
-          {renderFormActionForMode(isViewing, actions, onStartNew, onSubscribe)}
+          {renderFormActionForMode({
+            canRetry,
+            isCompleted,
+            isGenerating,
+            isViewing,
+            newApplicationBlocked,
+            onStartNew,
+            onSubscribe,
+            submissionBlocked,
+            subscriptionRequired,
+            texts: actionTexts,
+          })}
         </div>
       </form>
     </div>

@@ -75,11 +75,11 @@ scenario('generator.generate-application', async ({ page, given, when, then }) =
     {
       description: 'complete the application form and generate',
       covers: [
-        'TextField.onChange@ApplicationGenerator.setJobTitle',
-        'TextField.onChange@ApplicationGenerator.setCompany',
-        'TextField.onChange@ApplicationGenerator.setStrengths',
-        'TextAreaField.onChange@ApplicationGenerator.setDetails',
-        'ApplicationForm.onSubmit@ApplicationGenerator.submit',
+        'TextField.onChange@application-workspace-container.setJobTitle',
+        'TextField.onChange@application-workspace-container.setCompany',
+        'TextField.onChange@application-workspace-container.setStrengths',
+        'TextAreaField.onChange@application-workspace-container.setDetails',
+        'ApplicationForm.onSubmit@application-workspace-container.submit',
       ],
     },
     async () => {
@@ -99,8 +99,8 @@ scenario('generator.saved-application-actions', async ({ page, given, when, then
     {
       description: 'copy the letter and start another application',
       covers: [
-        'Button.onClick@ApplicationGenerator.copyApplication',
-        'Button.onClick@ApplicationGenerator.startNewApplication',
+        'Button.onClick@application-workspace-container.copyApplication',
+        'Button.onClick@application-workspace-container.startNewApplication',
       ],
     },
     async () => {
@@ -124,8 +124,8 @@ scenario('generator.subscription', async ({ page, given, when, then }) => {
     {
       description: 'open and close the subscription modal',
       covers: [
-        'Button.onClick@ApplicationGenerator.showSubscriptionModal',
-        'Button.onClick@ApplicationGenerator.onClose',
+        'Button.onClick@application-workspace-container.showSubscriptionModal',
+        'Button.onClick@application-workspace-container.hideSubscriptionModal',
       ],
     },
     async () => {
@@ -144,7 +144,10 @@ scenario('dashboard.create-application', async ({ page, given, when, then }) => 
   await when(
     {
       description: 'create the first application',
-      covers: 'Button.onClick@applications.index.navigate',
+      covers: [
+        'src/components/ui/button/Button.tsx#Button.onClick:click@src/routes/applications.index.tsx#createApplication@119:4@src/routes/applications.index.tsx:69:4',
+        'src/components/ui/button/Button.tsx#Button.onClick:click@src/routes/applications.index.tsx#createApplication@119:4@src/routes/applications.index.tsx:74:6',
+      ],
     },
     async () => {
       await page.getByRole('button', { name: 'Create your first application' }).click();
@@ -165,8 +168,8 @@ scenario('dashboard.subscription', async ({ page, given, when, then }) => {
     {
       description: 'open and close the subscription modal',
       covers: [
-        'Button.onClick@ApplicationsDashboard.onSubscribe',
-        'Button.onClick@ApplicationsDashboard.onClose',
+        'Button.onClick@applications.index.showSubscriptionModal',
+        'Button.onClick@applications.index.hideSubscriptionModal',
       ],
     },
     async () => closeSubscriptionModal(page),
@@ -180,7 +183,7 @@ scenario('dashboard.copy-application', async ({ page, given, when, then }) => {
     {
       description: 'copy the application',
       covers: [
-        'Button.onClick@ApplicationsDashboard.copyApplication',
+        'Button.onClick@applications.index.copyApplication',
         'Button.onClick@CopyButton.copy',
       ],
     },
@@ -202,8 +205,8 @@ scenario('dashboard.delete-application', async ({ page, given, when, then }) => 
     {
       description: 'request and confirm application deletion',
       covers: [
-        'Button.onClick@ApplicationsDashboard.setPendingDeletion',
-        'Button.onClick@ApplicationsDashboard.deleteApplication',
+        'Button.onClick@applications.index.setPendingDeletion',
+        'Button.onClick@applications.index.deleteApplication',
       ],
     },
     async () => {

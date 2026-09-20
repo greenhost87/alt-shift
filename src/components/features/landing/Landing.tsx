@@ -1,86 +1,115 @@
-import * as m from '../../../paraglide/messages.js';
 import { Button } from '../../ui/button/Button';
 import { Heading } from '../../ui/message/Heading';
 import styles from './Landing.module.css';
 
-type LandingProps = {
-  onCreate: () => void;
+type LandingTexts = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  cta: string;
+  forWhom: string;
+  howTitle: string;
+  stepRoleTitle: string;
+  stepRoleDescription: string;
+  stepStrengthsTitle: string;
+  stepStrengthsDescription: string;
+  stepLetterTitle: string;
+  stepLetterDescription: string;
+  benefitsTitle: string;
+  benefitsDescription: string;
+  benefitTailored: string;
+  benefitFast: string;
+  benefitPrivate: string;
+  faqTitle: string;
+  faqEditQuestion: string;
+  faqEditAnswer: string;
+  faqStorageQuestion: string;
+  faqStorageAnswer: string;
+  faqInputQuestion: string;
+  faqInputAnswer: string;
+  finalTitle: string;
+  finalDescription: string;
 };
 
-export function Landing({ onCreate }: LandingProps) {
+type LandingProps = {
+  onCreate: () => void;
+  texts: LandingTexts;
+};
+
+export function Landing({ onCreate, texts }: LandingProps) {
   return (
     <div className={styles['landing']}>
       <section className={styles['hero']}>
-        <p className={styles['eyebrow']}>{m.landing_eyebrow()}</p>
+        <p className={styles['eyebrow']}>{texts.eyebrow}</p>
         <div className={styles['title']}>
-          <Heading kind="page">{m.landing_title()}</Heading>
+          <Heading kind="page">{texts.title}</Heading>
         </div>
-        <p className={styles['lead']}>{m.landing_description()}</p>
+        <p className={styles['lead']}>{texts.description}</p>
         <Button onClick={onCreate} size="large">
-          {m.landing_cta()}
+          {texts.cta}
         </Button>
       </section>
 
       <section aria-labelledby="how-it-works" className={styles['section']}>
         <div className={styles['sectionHeading']}>
-          <p className={styles['eyebrow']}>{m.landing_for_whom()}</p>
-          <h2 id="how-it-works">{m.landing_how_title()}</h2>
+          <p className={styles['eyebrow']}>{texts.forWhom}</p>
+          <h2 id="how-it-works">{texts.howTitle}</h2>
         </div>
         <ol className={styles['steps']}>
           <li>
-            <strong>{m.landing_step_role_title()}</strong>
-            <span>{m.landing_step_role_description()}</span>
+            <strong>{texts.stepRoleTitle}</strong>
+            <span>{texts.stepRoleDescription}</span>
           </li>
           <li>
-            <strong>{m.landing_step_strengths_title()}</strong>
-            <span>{m.landing_step_strengths_description()}</span>
+            <strong>{texts.stepStrengthsTitle}</strong>
+            <span>{texts.stepStrengthsDescription}</span>
           </li>
           <li>
-            <h3 className={styles['stepTitle']}>{m.landing_step_letter_title()}</h3>
-            <p className={styles['stepDescription']}>{m.landing_step_letter_description()}</p>
+            <h3 className={styles['stepTitle']}>{texts.stepLetterTitle}</h3>
+            <p className={styles['stepDescription']}>{texts.stepLetterDescription}</p>
           </li>
         </ol>
       </section>
 
       <section aria-labelledby="benefits" className={styles['section']}>
         <div className={styles['sectionHeading']}>
-          <h2 id="benefits">{m.landing_benefits_title()}</h2>
-          <p>{m.landing_benefits_description()}</p>
+          <h2 id="benefits">{texts.benefitsTitle}</h2>
+          <p>{texts.benefitsDescription}</p>
         </div>
         <ul className={styles['benefits']}>
-          <li>{m.landing_benefit_tailored()}</li>
-          <li>{m.landing_benefit_fast()}</li>
-          <li>{m.landing_benefit_private()}</li>
+          <li>{texts.benefitTailored}</li>
+          <li>{texts.benefitFast}</li>
+          <li>{texts.benefitPrivate}</li>
         </ul>
       </section>
 
       <section aria-labelledby="faq" className={styles['section']}>
         <div className={styles['sectionHeading']}>
-          <h2 id="faq">{m.landing_faq_title()}</h2>
+          <h2 id="faq">{texts.faqTitle}</h2>
         </div>
         <div className={styles['faq']}>
           <details>
-            <summary>{m.landing_faq_edit_question()}</summary>
-            <p>{m.landing_faq_edit_answer()}</p>
+            <summary>{texts.faqEditQuestion}</summary>
+            <p>{texts.faqEditAnswer}</p>
           </details>
           <details>
-            <summary>{m.landing_faq_storage_question()}</summary>
-            <p>{m.landing_faq_storage_answer()}</p>
+            <summary>{texts.faqStorageQuestion}</summary>
+            <p>{texts.faqStorageAnswer}</p>
           </details>
           <details>
-            <summary>{m.landing_faq_input_question()}</summary>
-            <div className={styles['faqAnswer']}>{m.landing_faq_input_answer()}</div>
+            <summary>{texts.faqInputQuestion}</summary>
+            <div className={styles['faqAnswer']}>{texts.faqInputAnswer}</div>
           </details>
         </div>
       </section>
 
       <section className={styles['cta']}>
         <div>
-          <h2>{m.landing_final_title()}</h2>
-          <p>{m.landing_final_description()}</p>
+          <h2>{texts.finalTitle}</h2>
+          <p>{texts.finalDescription}</p>
         </div>
         <Button onClick={onCreate} size="large">
-          {m.landing_cta()}
+          {texts.cta}
         </Button>
       </section>
     </div>

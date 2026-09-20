@@ -1,31 +1,37 @@
 import { Link } from '@tanstack/react-router';
-import * as m from '../../../paraglide/messages.js';
-import type { StoredApplication } from '../../../system/applications/schema';
 import { Button } from '../../ui/button/Button';
 import { CopyButton } from '../../ui/button/CopyButton';
 import { Icon } from '../../ui/icon/Icon';
 import styles from './ApplicationCard.module.css';
 
+export type DashboardCardApplication = {
+  id: string;
+  role: string;
+  company: string;
+  letter: string;
+};
+
 type ApplicationCardProps = {
-  application: StoredApplication;
+  application: DashboardCardApplication;
   copyFeedbackTimeoutMs: number;
+  deleteLabel: string;
   onCopy: (letter: string) => Promise<boolean>;
   onDelete: (applicationId: string) => void;
+  openLabel: string;
 };
 
 export function ApplicationCard({
   application,
   copyFeedbackTimeoutMs,
+  deleteLabel,
   onCopy,
   onDelete,
+  openLabel,
 }: ApplicationCardProps) {
   return (
     <article className={styles['card']}>
       <Link
-        aria-label={m.open_application({
-          role: application.role,
-          company: application.company,
-        })}
+        aria-label={openLabel}
         className={styles['detailsLink']}
         params={{ applicationId: application.id }}
         to="/applications/$applicationId"
@@ -45,7 +51,7 @@ export function ApplicationCard({
           }}
           variant="ghost"
         >
-          {m.delete()}
+          {deleteLabel}
         </Button>
         <CopyButton
           feedbackTimeoutMs={copyFeedbackTimeoutMs}
