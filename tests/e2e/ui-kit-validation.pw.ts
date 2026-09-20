@@ -41,7 +41,7 @@ test('textarea exposes the over-limit error state without truncating input', asy
   await page.goto('/applications/new', { waitUntil: 'networkidle' });
 
   const details = page.getByLabel('Additional details');
-  const generate = page.getByRole('button', { name: 'Generate Now' });
+  const generate = page.getByRole('button', { name: /Generate Now/ });
   const overLimitValue = 'a'.repeat(1201);
 
   await page.getByLabel('Job title').fill('Engineer');

@@ -12,6 +12,8 @@ import {
 } from '../support/generation-browser';
 import { expectContentFitsViewport, expectDialogFitsViewport } from '../support/viewport';
 
+test.describe.configure({ timeout: 15_000 });
+
 async function openFaqAnswers(page: Page, answers: string[]) {
   for (const answer of answers) {
     const details = page.locator('details').filter({ hasText: answer });
@@ -23,8 +25,10 @@ async function openFaqAnswers(page: Page, answers: string[]) {
 test('Russian screens and subscription modal fit at 320 pixels', async ({ page }) => {
   await page.setViewportSize({ height: 568, width: 320 });
   await page.goto('/applications', { waitUntil: 'networkidle' });
+  await expect(page.getByRole('heading', { name: 'No applications yet' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Language' }).click();
+  await expect(page.getByRole('option', { name: '🇷🇺 Русский' })).toBeVisible();
   await expectContentFitsViewport(page);
   await page.getByRole('option', { name: '🇷🇺 Русский' }).click();
   await expect(page.getByRole('heading', { name: 'Писем пока нет' })).toBeVisible();
@@ -48,6 +52,7 @@ test('Russian screens and subscription modal fit at 320 pixels', async ({ page }
 
   await storeApplications(page, createApplicationFixtures(5), 'now');
   await page.goto('/applications', { waitUntil: 'networkidle' });
+  await expect(page.getByRole('button', { name: 'Оформить подписку' })).toBeVisible();
   await page.getByRole('button', { name: 'Оформить подписку' }).click();
   const modal = page.getByRole('dialog', { name: 'Откройте безлимитную генерацию' });
   await expect(modal).toBeVisible();
@@ -76,6 +81,7 @@ test('streams and stores a completed application at 320 pixels', async ({ page }
 test('landing interactions fit at 320 pixels', async ({ page }) => {
   await page.setViewportSize({ height: 568, width: 320 });
   await page.goto('/', { waitUntil: 'networkidle' });
+  await expect(page.getByRole('heading', { name: 'AI Cover Letter Generator' })).toBeVisible();
 
   await expectContentFitsViewport(page);
   await openFaqAnswers(page, [
