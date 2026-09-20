@@ -9,7 +9,7 @@ export async function expectPageWidth(page: Page, width: number) {
 
 export async function openResponsivePage(page: Page, width: number, path: string) {
   await page.setViewportSize({ height: 900, width });
-  await page.goto(path, { waitUntil: 'networkidle' });
+  await page.goto(path, { waitUntil: 'domcontentloaded' });
 }
 
 export async function expectContentFitsViewport(page: Page) {
