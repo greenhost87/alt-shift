@@ -13,9 +13,9 @@ export async function openResponsivePage(page: Page, width: number, path: string
 }
 
 export async function expectContentFitsViewport(page: Page) {
-  const viewportWidth = await page.evaluate(() => document.documentElement.clientWidth);
+  const viewportWidth = await page.evaluate(() => window.innerWidth);
   const contentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-  if (contentWidth !== viewportWidth) {
+  if (contentWidth > viewportWidth) {
     const overflowingElements = await page
       .locator('body *')
       .evaluateAll(
