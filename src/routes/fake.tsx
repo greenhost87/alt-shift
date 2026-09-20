@@ -1,5 +1,6 @@
 import { createFileRoute, notFound } from '@tanstack/react-router';
 import { ApplicationWorkspaceContainer } from '../application-workspace-container';
+import { getDatabase } from '../server/database/connection';
 import { handleGenerateRequest } from '../server/generation/handler';
 
 const FAKE_LETTER = `Dear Hiring Team,
@@ -47,6 +48,8 @@ export const Route = createFileRoute('/fake')({
             return generated;
           },
           () => undefined,
+          undefined,
+          getDatabase,
         );
         return response;
       },
