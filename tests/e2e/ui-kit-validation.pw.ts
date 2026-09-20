@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
-import type { Locator } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { expectBlankGenerator } from '../support/applications';
+import { installGenerationBrowserFixtures } from '../support/generation-browser';
 import { rejectClipboardWrites } from '../support/clipboard';
 
 type LengthErrorOptions = {
@@ -10,6 +11,23 @@ type LengthErrorOptions = {
   message: string;
   value: string;
 };
+
+async function holdGeneration(page: Page) {
+  await installGenerationBrowserFixtures(page);
+  let releaseGeneration = () => {};
+  const generationPending = new Promise<void>((resolve) => {
+    releaseGeneration = resolve;
+  });
+  await page.exposeFunction('waitToFinishGeneration', async () => generationPending);
+  await page.addInitScript(() => {
+    window.respondToGeneration = () =>
+      window.delayedGenerationResponse(
+        window.waitToFinishGeneration,
+        window.generationFixtures.copyableStream,
+      );
+  });
+  return releaseGeneration;
+}
 
 async function expectLengthError(options: LengthErrorOptions) {
   await expect(options.field).toHaveValue(options.value);
@@ -38,6 +56,7 @@ test('empty preview retains its copy action without copying placeholder text', a
 });
 
 test('textarea exposes the over-limit error state without truncating input', async ({ page }) => {
+  const releaseGeneration = await holdGeneration(page);
   await page.goto('/applications/new', { waitUntil: 'networkidle' });
 
   const details = page.getByLabel('Additional details');
@@ -77,6 +96,7 @@ test('textarea exposes the over-limit error state without truncating input', asy
   const loadingBox = await generate.boundingBox();
   expect(loadingBox?.height).toBe(56);
   await expect(page.getByRole('button', { name: 'Cancel generation' })).toHaveCount(0);
+  releaseGeneration();
 });
 
 for (const { label, limit } of [
