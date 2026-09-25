@@ -1,0 +1,60 @@
+{
+  "designLetter": "Dear Apple Team,\n\nI am writing to express my interest in the Product Manager position.\n\nMy experience in the realm combined with my skills in HTML, CSS and doing things in time make me a strong candidate for this role\n\nI want to help you build awesome solutions to accomplish your goals and vision. I can create intuitive and aesthetically pleasing devices that are very easy to use.\n\nI am confident that my skills and enthusiasm would translate into valuable contributions to your esteemed organization.\n\nThank you for considering my application. I eagerly await the opportunity to discuss my qualifications further.",
+  "designStream": "event: delta\ndata: {\"text\":\"Dear Apple Team,\\n\\nI am writing to express my interest in the Product Manager position.\\n\\nMy experience in the realm combined with my skills in HTML, CSS and doing things in time make me a strong candidate for this role\\n\\nI want to help you build awesome solutions to accomplish your goals and vision. I can create intuitive and aesthetically pleasing devices that are very easy to use.\\n\\nI am confident that my skills and enthusiasm would translate into valuable contributions to your esteemed organization.\\n\\nThank you for considering my application. I eagerly await the opportunity to discuss my qualifications further.\"}\n\n",
+  "streamedLetter": "Dear Apple team,\n\nI would love to help build useful products.",
+  "firstAppleChunk": "event: delta\ndata: {\"text\":\"Dear Apple team,\\n\"}\n\n",
+  "secondAppleChunk": "event: delta\ndata: {\"text\":\"\\nI would love to help build useful products.\"}\n\n",
+  "copyableStream": "event: delta\ndata: {\"text\":\"Copyable application\"}\n\n",
+  "cancellableStream": "event: delta\ndata: {\"text\":\"Cancellable partial\"}\n\n",
+  "retriedStream": "event: delta\ndata: {\"text\":\"Retried application\"}\n\n",
+  "waitingStream": "event: delta\ndata: {\"text\":\"Generated after waiting\"}\n\n",
+  "reconnectingStream": "event: delta\ndata: {\"text\":\"Generated after reconnecting\"}\n\n",
+  "unsavedStream": "event: delta\ndata: {\"text\":\"Letter that could not be saved\"}\n\n",
+  "partialStream": "event: delta\ndata: {\"text\":\"Partial application\"}\n\n",
+  "recoveredStream": "event: delta\ndata: {\"text\":\"Recovered application\"}\n\n",
+  "unicodeStream": "event: delta\r\ndata: {\"text\":\"Hello 🌍\"}\r\n\r\nevent: delta\ndata: {\"text\":\"!\"}\n\n",
+  "unicodeLetter": "Hello 🌍!",
+  "tolerantFirstChunk": "event: delta\ndata: {\"text\":\"Tolerant \",\"index\":0,\"role\":\"assistant\"}\n\n",
+  "tolerantSecondChunk": "event: delta\ndata: {\"text\":\"letter\",\"usage\":{\"tokens\":2}}\n\n",
+  "tolerantLetter": "Tolerant letter",
+  "tolerantStream": "event: delta\ndata: {\"text\":\"Tolerant \",\"index\":0,\"role\":\"assistant\"}\n\nevent: delta\ndata: {\"text\":\"letter\",\"usage\":{\"tokens\":2}}\n\n",
+  "mixedFirstChunk": "event: delta\ndata: {\"text\":\"first\"}\n\r",
+  "mixedSecondChunk": "\nevent: delta\rdata: {\"text\":\"second\"}\r\n\revent: delta\ndata: {\"text\":\"incomplete\"}",
+  "firstServerStream": "event: delta\ndata: {\"text\":\"First\"}\n\n",
+  "secondServerStream": "event: delta\ndata: {\"text\":\"second\"}\n\n",
+  "helloServerStream": "event: delta\ndata: {\"text\":\"Hello\"}\n\n",
+  "incompleteServerStream": "event: delta\ndata: {\"text\":\"partial\"}",
+  "invalidJsonError": {
+    "error": { "code": "invalid_request", "message": "The request body must be valid JSON." }
+  },
+  "invalidFieldsError": {
+    "error": {
+      "code": "invalid_request",
+      "message": "Please complete all fields within their limits."
+    }
+  },
+  "rateLimitError": {
+    "error": {
+      "code": "rate_limited",
+      "message": "Too many generation requests. Please try again later."
+    }
+  },
+  "applicationLimitError": {
+    "error": {
+      "code": "application_limit_reached",
+      "message": "The application generation limit has been reached."
+    }
+  },
+  "unavailableError": {
+    "error": {
+      "code": "generation_unavailable",
+      "message": "The generation service is unavailable."
+    }
+  },
+  "failedError": {
+    "error": {
+      "code": "generation_failed",
+      "message": "The generation service could not complete the request."
+    }
+  }
+}

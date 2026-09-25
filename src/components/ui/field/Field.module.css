@@ -1,0 +1,118 @@
+.field label {
+  color: var(--rs-color-foreground-neutral-subtle);
+  display: block;
+  font-size: var(--rs-font-size-body-2);
+  font-weight: var(--rs-font-weight-medium);
+  line-height: var(--rs-line-height-body-2);
+  margin-bottom: var(--rs-unit-x1-5);
+}
+
+.caption {
+  color: var(--rs-color-text-subtle);
+  margin-top: var(--rs-unit-x1-5);
+}
+
+.caption[role='alert'] {
+  color: var(--rs-color-foreground-critical);
+}
+
+.control,
+.controlError,
+.textarea,
+.textareaError {
+  background: var(--rs-color-background-elevation-base);
+  border: var(--rs-unit-border-width) solid var(--rs-color-border-neutral);
+  border-radius: var(--rs-radius-medium);
+  box-shadow: var(--rs-shadow-control);
+  box-sizing: border-box;
+  color: var(--rs-color-foreground-neutral);
+  display: block;
+  font-family: var(--rs-font-family-body);
+  font-size: var(--rs-font-size-body-1);
+  font-weight: var(--rs-font-weight-regular);
+  line-height: var(--rs-line-height-body-1);
+  outline: none;
+  transition:
+    border-color var(--rs-duration-fast) var(--rs-easing-standard),
+    box-shadow var(--rs-duration-fast) var(--rs-easing-standard);
+  width: 100%;
+}
+
+.control {
+  min-height: var(--rs-unit-control-height);
+  padding: calc(var(--rs-unit-control-padding-vertical) - var(--rs-unit-border-width))
+    calc(var(--rs-unit-control-padding-horizontal) - var(--rs-unit-border-width));
+}
+
+.controlError {
+  min-height: var(--rs-unit-control-height);
+  padding: calc(var(--rs-unit-control-padding-vertical) - var(--rs-unit-border-width))
+    calc(var(--rs-unit-control-padding-horizontal) - var(--rs-unit-border-width));
+}
+
+.control,
+.textarea {
+  --field-focus-border: var(--rs-color-border-primary);
+  --field-focus-ring: var(--rs-color-border-primary-faded);
+}
+
+.controlError,
+.textareaError {
+  --field-focus-border: var(--rs-color-border-critical);
+  --field-focus-ring: var(--rs-color-error-ring);
+}
+
+.control:focus,
+.textarea:focus,
+.controlError,
+.controlError:focus,
+.textareaError,
+.textareaError:focus {
+  border-color: var(--field-focus-border);
+  border-radius: calc(var(--rs-radius-medium) + var(--rs-unit-x0-5));
+  box-shadow:
+    var(--rs-shadow-control),
+    0 0 0 var(--rs-unit-x1) var(--field-focus-ring);
+}
+
+.control:disabled,
+.controlError:disabled,
+.textarea:disabled,
+.textareaError:disabled {
+  background: var(--rs-color-background-disabled-faded);
+  border-color: var(--rs-color-border-disabled);
+  box-shadow: none;
+  color: var(--rs-color-foreground-disabled);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.textarea,
+.textareaError {
+  min-height: var(--rs-unit-textarea-height);
+  padding: calc(var(--rs-unit-textarea-padding-vertical) - var(--rs-unit-border-width))
+    calc(var(--rs-unit-textarea-padding-horizontal) - var(--rs-unit-border-width));
+  resize: none;
+}
+
+@media (--rs-viewport-l) {
+  .textarea:disabled {
+    min-height: calc(var(--rs-unit-textarea-height) + var(--rs-unit-x1));
+  }
+}
+
+@media (--rs-viewport-xs) {
+  .textarea,
+  .textareaError {
+    min-height: 200px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .control,
+  .controlError,
+  .textarea,
+  .textareaError {
+    transition-duration: var(--rs-duration-reduced-motion);
+  }
+}

@@ -1,0 +1,18 @@
+@import './fonts.css';
+@import '../themes/variant/theme.css';
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--rs-color-background-page);
+  margin: 0;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}

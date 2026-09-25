@@ -1,0 +1,5 @@
+.message {
+  display: block;
+  color: var(--rs-color-foreground-neutral-faded);
+  margin: 0;
+}

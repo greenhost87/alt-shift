@@ -1,0 +1,11 @@
+.aqg/
+.codex/
+dist/
+node_modules/
+playwright-report/
+src/paraglide/
+src/routeTree.gen.ts
+src/themes/variant/media.css
+src/themes/variant/theme.css
+src/themes/variant/theme.json
+test-results/

@@ -1,0 +1,132 @@
+.card {
+  background: var(--rs-color-background-neutral-faded);
+  border-radius: var(--rs-radius-large);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 240px;
+  justify-content: space-between;
+  min-width: 0;
+  overflow: hidden;
+  padding: var(--rs-unit-x6);
+  position: relative;
+  width: 100%;
+}
+
+.detailsLink {
+  color: inherit;
+  flex: 1 1 auto;
+  min-height: 0;
+  text-decoration: none;
+}
+
+.detailsLink:focus-visible {
+  border-radius: var(--rs-radius-small);
+  outline: var(--rs-unit-x0-5) solid var(--rs-color-border-primary);
+  outline-offset: var(--rs-unit-x0-5);
+}
+
+.letter {
+  color: var(--rs-color-foreground-neutral-faded);
+  font: var(--rs-font-weight-body-3) var(--rs-font-size-body-3) / var(--rs-line-height-body-3)
+    var(--rs-font-family-body);
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.fade {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--rs-color-background-neutral-faded) 65%,
+    var(--rs-color-background-neutral-faded) 100%
+  );
+  bottom: var(--rs-unit-x12);
+  height: var(--rs-unit-x16);
+  left: var(--rs-unit-x6);
+  pointer-events: none;
+  position: absolute;
+  right: var(--rs-unit-x6);
+}
+
+.actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: space-between;
+  gap: var(--rs-unit-x2);
+  padding-top: var(--rs-unit-x4);
+  position: relative;
+  z-index: 1;
+}
+
+.loadingCard {
+  animation: loadingPulse 1.4s ease-in-out infinite alternate;
+}
+
+.loadingCopy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-unit-x3);
+  width: 100%;
+}
+
+.loadingLine,
+.loadingLineShort,
+.loadingAction {
+  background: var(--rs-color-background-disabled);
+  border-radius: var(--rs-radius-small);
+  display: block;
+}
+
+.loadingLine,
+.loadingLineShort {
+  height: var(--rs-unit-x4);
+}
+
+.loadingLineShort {
+  width: 62%;
+}
+
+.loadingActions {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.loadingAction {
+  height: var(--rs-unit-button-height-medium);
+  width: calc(var(--rs-unit-x16) + var(--rs-unit-x4));
+}
+
+@keyframes loadingPulse {
+  from {
+    opacity: 0.55;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadingCard {
+    animation: none;
+  }
+}
+
+@media (--rs-viewport-xs) {
+  .card {
+    height: 220px;
+    padding: var(--rs-unit-x5);
+  }
+
+  .fade {
+    bottom: var(--rs-unit-x12);
+    left: var(--rs-unit-x5);
+    right: var(--rs-unit-x5);
+  }
+}

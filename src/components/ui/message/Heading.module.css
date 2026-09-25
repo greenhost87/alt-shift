@@ -1,0 +1,32 @@
+.heading {
+  color: var(--rs-color-foreground-neutral);
+  font-family: var(--rs-font-family-headline-2);
+  font-size: var(--rs-font-size-headline-2);
+  font-weight: var(--rs-font-weight-headline-2);
+  letter-spacing: var(--rs-letter-spacing-headline-2);
+  line-height: var(--rs-line-height-headline-2);
+  margin: 0;
+}
+
+.placeholder {
+  color: var(--rs-color-foreground-neutral-faded);
+}
+
+.messagePage,
+.messageDialog {
+  font-family: var(--rs-font-family-featured-3);
+  font-size: var(--rs-font-size-featured-3);
+  font-weight: var(--rs-font-weight-featured-3);
+  letter-spacing: var(--rs-letter-spacing-featured-3);
+  line-height: var(--rs-line-height-featured-3);
+}
+
+@media (--rs-viewport-m) {
+  .page {
+    font-family: var(--rs-font-family-headline-1);
+    font-size: var(--rs-font-size-headline-1);
+    font-weight: var(--rs-font-weight-headline-1);
+    letter-spacing: var(--rs-letter-spacing-headline-1);
+    line-height: var(--rs-line-height-headline-1);
+  }
+}

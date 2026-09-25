@@ -1,0 +1,11 @@
+.dialog {
+  box-sizing: border-box;
+  padding: var(--rs-unit-x6);
+  width: 440px;
+}
+
+.actions {
+  display: flex;
+  gap: var(--rs-unit-x3);
+  justify-content: flex-end;
+}

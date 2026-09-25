@@ -1,0 +1,95 @@
+.banner,
+.content,
+.heading {
+  display: flex;
+  flex-direction: column;
+}
+
+.banner,
+.subscriptionModal {
+  align-items: center;
+  background: var(--rs-color-background-positive-faded);
+  padding: var(--rs-unit-x12) var(--rs-unit-x16);
+  text-align: center;
+}
+
+.banner {
+  border-radius: var(--rs-radius-large);
+}
+
+.subscriptionModal {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  width: 480px;
+}
+
+.closeAction {
+  position: absolute;
+  right: var(--rs-unit-x4);
+  top: var(--rs-unit-x4);
+}
+
+.content {
+  align-items: center;
+  gap: var(--rs-unit-x8);
+  max-width: 480px;
+  width: 100%;
+}
+
+.heading {
+  align-items: center;
+  gap: var(--rs-unit-x4);
+}
+
+.title {
+  font-family: var(--rs-font-family-title);
+  font-size: var(--rs-font-size-featured-1);
+  font-weight: var(--rs-font-weight-semibold);
+  letter-spacing: var(--rs-letter-spacing-featured-1);
+  line-height: var(--rs-line-height-featured-1);
+  margin: 0;
+}
+
+.description {
+  margin: 0;
+}
+
+@media (--rs-viewport-s) {
+  .banner,
+  .subscriptionModal {
+    padding: var(--rs-unit-x10) var(--rs-unit-x4);
+  }
+}
+
+@media (--rs-viewport-xs) {
+  .banner,
+  .subscriptionModal {
+    padding-block: var(--rs-unit-x8);
+  }
+
+  .subscriptionModal {
+    padding-top: var(--rs-unit-x16);
+  }
+
+  .content {
+    gap: var(--rs-unit-x6);
+  }
+
+  .heading {
+    gap: var(--rs-unit-x3);
+    width: 100%;
+  }
+
+  .title {
+    font-size: var(--rs-font-size-featured-2);
+    line-height: var(--rs-line-height-featured-2);
+  }
+
+  .action,
+  .action > * {
+    width: 100%;
+  }
+}

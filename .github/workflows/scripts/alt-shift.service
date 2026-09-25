@@ -1,0 +1,27 @@
+[Unit]
+Description=alt-shift.service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=__APP_PATH__
+EnvironmentFile=__ENV_FILE_PATH__
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=__APP_PORT__
+Environment=BASE_PATH=__BASE_PATH__
+Environment=PATH=__BUN_BIN_PATH__:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=__BUN_PATH__ dist/server/server.js
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=15
+SyslogIdentifier=alt-shift
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

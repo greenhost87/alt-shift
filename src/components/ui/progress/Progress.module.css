@@ -1,0 +1,62 @@
+.progress {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-unit-x2);
+}
+
+.dots {
+  display: flex;
+}
+
+.native {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.segments {
+  display: flex;
+}
+
+.progress .segments {
+  gap: var(--rs-unit-x2);
+}
+
+.dots .segments {
+  gap: var(--rs-unit-x1);
+}
+
+.complete,
+.incomplete {
+  border-radius: var(--rs-radius-small);
+  height: var(--rs-unit-progress-size);
+}
+
+.progress .complete,
+.progress .incomplete {
+  width: var(--rs-unit-x8);
+}
+
+.dots .complete,
+.dots .incomplete {
+  width: var(--rs-unit-progress-size);
+}
+
+.complete {
+  background: var(--rs-color-foreground-neutral);
+}
+
+.incomplete {
+  background: var(--rs-color-progress-incomplete);
+}
+
+.label {
+  color: var(--rs-color-foreground-neutral-faded);
+  font: var(--rs-font-weight-body-3) var(--rs-font-size-body-3) / var(--rs-line-height-body-3)
+    var(--rs-font-family-body);
+}
